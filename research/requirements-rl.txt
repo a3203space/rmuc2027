@@ -1,0 +1,6 @@
+# Optional neural training runtime. Base uv.lock remains usable without RL.
+# Install torch with --torch-backend cpu (or an explicitly chosen CUDA backend).
+numpy==2.2.6
+gymnasium>=1.2,<2
+stable-baselines3==2.9.0
+torch>=2.8,<3

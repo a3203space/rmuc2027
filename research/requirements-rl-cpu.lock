@@ -1,0 +1,17 @@
+# Verified Linux CPython 3.10 CPU environment; install with uv --torch-backend cpu.
+# Platform-specific pins; portable dependency ranges remain in requirements-rl.txt.
+cloudpickle==3.1.2
+farama-notifications==0.0.6
+filelock==3.32.3
+fsspec==2026.7.0
+gymnasium==1.4.0
+jinja2==3.1.6
+markupsafe==3.0.3
+mpmath==1.3.0
+networkx==3.4.2
+numpy==2.2.6
+setuptools==78.1.0
+stable-baselines3==2.9.0
+sympy==1.14.0
+torch==2.14.1+cpu
+typing-extensions==4.16.0

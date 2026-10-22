@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.21)
+project(RMUC2027 LANGUAGES CXX)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+include(CTest)
+add_subdirectory(apps/client)

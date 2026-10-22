@@ -1,0 +1,17 @@
+{
+  "migration": "rmuc2027-layout-v1",
+  "obs_size": 116,
+  "obs_version": 1,
+  "sdk_hash": "6c7e3d69c4bcedcd98aa20bcdc3a1e19c9cd3e1f8215f9c3125cd9b3151daf3c",
+  "runtime_hash": "7dad752c8426cf8f18620518092e8783e3d507e0d8af351da35662a7f124edc1",
+  "engine_binary_sha256": "c6e057ac65e7912f35f4ffa25449ef05700b935c10cca8471338d6975e23ddee",
+  "rules_sha256": "e06b299c174e00b507cc7a84af8871f31969cc39fedfa47aa11dc813592c2252",
+  "source_runtimes": [
+    {
+      "sdk_hash": "6c7e3d69c4bcedcd98aa20bcdc3a1e19c9cd3e1f8215f9c3125cd9b3151daf3c",
+      "runtime_hash": "7dad752c8426cf8f18620518092e8783e3d507e0d8af351da35662a7f124edc1",
+      "engine_binary_sha256": "25b4cbf85612c830cfc8111d1f1b32a27de5564e4f1fda28fbe29b66ad14ee30",
+      "rules_sha256": "e06b299c174e00b507cc7a84af8871f31969cc39fedfa47aa11dc813592c2252"
+    }
+  ]
+}

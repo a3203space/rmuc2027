@@ -1,0 +1,20 @@
+[
+  {
+    "path": "assets/client/crosshair/crosshair_slid_circle_bg.png",
+    "source": "RM26_Client/resources/crosshair/crosshair_slid_circle_bg.png",
+    "sha256": "a726f25f708618f7d9159f5c9745993343612bf739725d532853c66ebd6fb565",
+    "approval": "Unmodified subset of original published resources/crosshair snapshot"
+  },
+  {
+    "path": "assets/client/crosshair/crosshair_middle.png",
+    "source": "RM26_Client/resources/crosshair/crosshair_middle.png",
+    "sha256": "2d8c2438e910417993777ed7aea59603fee2bb122c7a5b6a39478d8815e86766",
+    "approval": "Unmodified subset of original published resources/crosshair snapshot"
+  },
+  {
+    "path": "assets/client/crosshair/crosshair_bg_single.png",
+    "source": "RM26_Client/resources/crosshair/crosshair_bg_single.png",
+    "sha256": "c49e025c99a7056b2a69fca81f6c2654bc24bab54e00183212211c0dcfedf5e3",
+    "approval": "Unmodified subset of original published resources/crosshair snapshot"
+  }
+]

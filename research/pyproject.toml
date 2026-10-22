@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "rmuc2027-research"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["rmuc2027-core"]
+[tool.setuptools.packages.find]
+include = ["rmuc2027_research*"]
+[project.scripts]
+rmuc2027-research = "rmuc2027_research.cli:main"
+[tool.uv.sources]
+rmuc2027-core = { workspace = true }
