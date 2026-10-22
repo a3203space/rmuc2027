@@ -38,10 +38,8 @@ class ArchitectureTests(unittest.TestCase):
         for symbol in ('GameData', 'NetworkManager', 'ProtocolSimulator', 'Protobuf', 'FFMPEG', 'Paho', '--competition', 'RM26_ENABLE_ARENA'):
             self.assertNotIn(symbol, sources)
 
-        import xml.etree.ElementTree as ET
-        resource = ROOT / 'apps/client/qml/qml.qrc'
-        for entry in ET.parse(resource).getroot().iter('file'):
-            self.assertTrue((resource.parent / entry.text).is_file(), entry.text)
+        self.assertNotIn('QQuickWidget', sources)
+        self.assertTrue((ROOT / 'apps/client/web/OperatorHud.tsx').is_file())
         for record in json.loads((ROOT / 'docs/legal/client-assets.json').read_text()):
             import hashlib
             data = (ROOT / record['path']).read_bytes()

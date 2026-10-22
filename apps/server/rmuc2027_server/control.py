@@ -32,6 +32,7 @@ class HumanController:
         self.air_enabled = False
         self.air_target = "outpost"
         self.last_jump = False
+        self.folded = None
 
     def operation(self, name, value, robot):
         if name in ("pick", "assemble", "install"):
@@ -92,6 +93,10 @@ class HumanController:
                   "aim": yaw, "pitch": intent.pitch, "heading": yaw,
                   "fire": intent.fire, "skill": intent.boost, "crouch": intent.crouch,
                   "brake": not moving, "jump": 1.0 if intent.jump and not self.last_jump else 0.0}
+        if robot.get("transform_allowed"):
+            if intent.transform is not None: self.folded = intent.transform
+            if self.folded is None: self.folded = robot.get('transform_progress', 0) >= .5
+            action["transform"] = self.folded
         if robot.get("chassis_type") in ("wheel_legged", "serial_legged"):
             # Two-wheel legs cannot strafe. A/D steers the chassis while the
             # mouse continues to command the independent gimbal.
@@ -143,7 +148,17 @@ class HumanController:
                 else:
                     action = h.start_assembly(robot, ctx, difficulty, core, sdk.assembly_work_point(robot, ctx.arena), memory)
                     self.status = "前往装配区 / 等待等级解锁"
+        # The rulebook processes RPCs only on even source ticks. Keep one-shot
+        # operations queued across the intervening physics tick. Repeated RPCs
+        # of the same kind must also survive rather than overwrite each other.
+        due, remaining, emitted = [], [], set()
         for name, value in self.pending:
+            if observation["tick"] % 2 or name in emitted:
+                remaining.append((name, value))
+            else:
+                due.append((name, value))
+                emitted.add(name)
+        for name, value in due:
             if name in ("revive", "heal"):
                 action["revive" if name == "revive" else "remote_heal"] = True
             elif name == "ammo":
@@ -151,7 +166,7 @@ class HumanController:
                 action["buy_ammo"] = {"remote": remote, "amount": (10 if remote else 1) if robot["role"] == "heavy" else (100 if remote else 10)}
             elif name == "posture":
                 action["posture"] = value
-        self.pending.clear()
+        self.pending = remaining
         return action
 
     def _air(self, robot, ctx):

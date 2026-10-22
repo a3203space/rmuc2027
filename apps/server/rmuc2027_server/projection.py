@@ -5,6 +5,7 @@ Enemy pose fields are an exterior-only allowlist; radar adds its eight specified
 information categories without exposing opponents' weapon heat or controllers.
 """
 
+from .hud import actions, rules
 
 EXTERIOR = frozenset("id slot team role x y z vx vy vz quaternion angular_velocity heading aim pitch radius alive hp max_hp powered model_slot model_asset chassis_size_m chassis_type design_name muzzle_height_m muzzle_reach_m armor_center_z_m armor_side_center_z_m armor_hit_face_offset_m armor_inset_m armor_mount_offset_m armor_hit_times steering_angles wheel_angular_velocity suspension legs hip_angle self_righting grounded tipped upright crouched deployed transform_allowed transform_progress arm_count arm_joints arm2_joints arm_tip arm2_tip arm_mode arm2_mode arm_extension carried_units launcher".split())
 BUFFS = ("attack_multiplier", "defense_buff", "vulnerability", "cooling_multiplier",
@@ -26,7 +27,7 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
     seen = set(visible.get("enemies", [])) | set(visible.get("allies", []))
     base = frame["bases"][team]
     logistics = max(.05, min(1, 1 - max(0, base["max_hp"] - base["hp"]) / 20000))
-    result = {"protocol": 1, "match_id": match_id, "tick": frame["tick"],
+    result = {"protocol": 2, "match_id": match_id, "tick": frame["tick"],
               "team": team, "slot": slot, "self": own,
               "display": {"ui_blocked": blocked, "blocked_until": own.get("fpv_blocked_until", 0),
                           "camera_off": camera_off, "reason": "penalty" if blocked else "red_card" if red_card else
@@ -41,15 +42,19 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
     for robot in frame["robots"]:
         radar.append({**{k: robot[k] for k in ("id", "team", "slot", "role", "x", "y", "hp", "max_hp", "alive", "ammo")},
                       "buffs": {k: robot[k] for k in BUFFS if k in robot},
-                      "armor_hit_times": robot.get("armor_hit_times", [])})
+                      "armor_hit_times": robot.get("armor_hit_times", []),
+                      **({"heading": robot["heading"]} if robot["id"] in seen or robot["id"] == own["id"] else {})})
     result["tactical"] = {
         "robots": radar,
         "teams": {side: {k: values.get(k, 0) for k in ("resources", "total_resources", "control", "score")}
                   for side, values in frame["teams"].items()},
-        "zones": {key: {"active": bool(value.get("occupants")), "owner": value.get("owner")}
+        "zones": {key: {"active": bool(value.get("occupants")), "owner": value.get("owner"),
+                         "progress": value.get("progress", 0), "contested": value.get("contested", False),
+                         "active_teams": sorted({r.split("-")[0] for r in value.get("occupants", [])})}
                   for key, value in frame.get("zones", {}).items()},
         "positions": frame.get("positions", {}), "bases": frame["bases"], "outposts": frame["outposts"],
         "decoded": True, "sample_time": now,
+        "control_rules": {k: rules()["control"][k] for k in ("capture_s", "release_s")},
     }
     # Rust transport frames are immutable after publication. Share public values
     # between these projections instead of copying five full allies per player.
@@ -67,11 +72,13 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
     scene["events"] = []
     scene["runes"] = observation.get("runes", {})
     scene["assemblies"] = {team: observation.get("assemblies", {}).get(team, {})}
-    scene["zones"] = {key: {"owner": value.get("owner"), "progress": 0, "contested": False}
-                      for key, value in frame.get("zones", {}).items()}
+    scene["zones"] = result["tactical"]["zones"]
     # Renderer models need exterior animation fields, never the private enemy drone list.
     scene["teams"] = result["tactical"]["teams"]
     result["scene"] = scene
+    result["actions"] = actions(frame, own)
+    result["economy"] = {k: frame["teams"][team].get(k) for k in ("completed_difficulties", "energy_units_left", "launcher_unlock_s", "level_cap")}
+    result["events"] = [e for e in frame.get("events", []) if e.get("robot") == own["id"] and e.get("type") in ("ammo_purchase", "remote_heal", "respawn", "rpc_error")]
     result["assembly"] = observation.get("assemblies", {}).get(team, {})
     result["air"] = own.get("drones", []) if no_camera else []
     if include_static:

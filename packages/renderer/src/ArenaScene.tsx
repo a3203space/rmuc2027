@@ -283,7 +283,7 @@ function Zone({id,x,y,radius,elevation,feed,floorOnly}:{id:string;x:number;y:num
 }
 
 // A lineup-intro camera cut: the overlay names the segment, the camera frames it for `length` seconds.
-export type IntroShot={key:string;segment:IntroSegment;length:number};
+export type IntroShot={key:string;segment:IntroSegment;length:number;progress?:number};
 const ease=(u:number)=>u*u*(3-2*u);
 function introCamera(shot:IntroShot,u:number,frame:Frame,camera:THREE.Camera,look:THREE.Vector3){
   const s=shot.segment,e=ease(u);
@@ -309,7 +309,7 @@ function Director({mode,selected,feed,audio,onCanvas,onRender,shot}:{mode:Camera
   useEffect(()=>{const restore=()=>{gl.shadowMap.needsUpdate=true;};gl.domElement.addEventListener('webglcontextrestored',restore);return()=>gl.domElement.removeEventListener('webglcontextrestored',restore);},[gl]);
   useFrame(({clock},dt)=>{
     // The intro owns the camera; the chosen broadcast mode resumes from its default framing afterwards.
-    if(shot){const f=feed.current.frame;if(cut.current.key!==shot.key)cut.current={key:shot.key,at:clock.elapsedTime};if(f)introCamera(shot,Math.min(1,(clock.elapsedTime-cut.current.at)/Math.max(.2,shot.length)),f,camera,look);previousMode.current='intro';return;}
+    if(shot){const f=feed.current.frame;if(cut.current.key!==shot.key)cut.current={key:shot.key,at:clock.elapsedTime};if(f)introCamera(shot,shot.progress??Math.min(1,(clock.elapsedTime-cut.current.at)/Math.max(.2,shot.length)),f,camera,look);previousMode.current='intro';return;}
     if(previousMode.current!==mode){previousMode.current=mode;if(mode==='orbit'){camera.position.set(...BROADCAST_EYE);controls.current?.target.set(...BROADCAST_TARGET);}if(mode==='top'){camera.position.set(0,34,.01);target.set(0,0,0);camera.lookAt(target);}}
     if(mode==='cinematic'){const a=clock.elapsedTime*.052;camera.position.set(Math.sin(a)*26,21,Math.cos(a)*24);camera.lookAt(0,0,0);}
     if(mode==='follow'){const r=feed.current.frame?.robots.find(r=>r.id===selected);if(r){target.lerp(point(r,.40),Math.min(1,dt*6));const angle=r.heading;const desired=target.clone().add(new THREE.Vector3(-Math.cos(angle)*4,3.3,-Math.sin(angle)*4));const arena=feed.current.frame!.arena;desired.x=THREE.MathUtils.clamp(desired.x,-arena.width/2+.6,arena.width/2-.6);desired.z=THREE.MathUtils.clamp(desired.z,-arena.height/2+.6,arena.height/2-.6);camera.position.lerp(desired,Math.min(1,dt*3));camera.lookAt(target);}}
@@ -330,22 +330,33 @@ function Director({mode,selected,feed,audio,onCanvas,onRender,shot}:{mode:Camera
   return <OrbitControls ref={controls} enabled={mode==='orbit'&&!shot} enableDamping dampingFactor={.075} maxPolarAngle={Math.PI*.47} minDistance={4} maxDistance={72} target={BROADCAST_TARGET}/>;
 }
 
-class SceneBoundary extends Component<{children:ReactNode;onRetry:()=>void;audio?:ArenaAudio},{failed:boolean}>{
+class SceneBoundary extends Component<{children:ReactNode;onRetry:()=>void;audio?:ArenaAudio;onError?:(message:string)=>void},{failed:boolean}>{
   state={failed:false};
   static getDerivedStateFromError(){return {failed:true};}
-  componentDidCatch(){this.props.audio?.drones(null);}
+  componentDidCatch(error:Error){console.error('ARENA_SCENE_ERROR',error);this.props.onError?.(error.message);this.props.audio?.drones(null);}
   render(){return this.state.failed?<div className="scene-recovery"><p>战场模型暂时无法加载</p><button onClick={()=>{this.props.onRetry();this.setState({failed:false});}}>重新加载战场</button></div>:this.props.children;}
 }
-export function ArenaScene({frame,feed,mode,selected,audio,onSelect,onCanvas,onRender,shot,playerCamera,resolutionScale=1}:{playerCamera?:PlayerCamera;resolutionScale?:number;frame:Frame;feed:MutableRefObject<RenderFeed>;mode:CameraMode;selected:string;audio?:ArenaAudio;onSelect:(id:string)=>void;onCanvas:(canvas:HTMLCanvasElement)=>void;onRender:()=>void;shot?:IntroShot|null}){
+function ControlMarkers({frame,eye}:{frame:Frame;eye:PlayerCamera}) {
+  const labels:Record<string,string>={outpost:'前哨',central:'中央高地',base:'基地',fortress:'堡垒'};
+  return <>{Object.entries(frame.positions||{}).flatMap(([id,position])=>position.zones.map(zoneId=>{
+    const zone=frame.arena.zones.find(z=>z.id===zoneId);
+    if(!zone||Math.hypot(zone.x-eye.origin[0],zone.y-eye.origin[1])>12)return null;
+    const label=(zoneId.startsWith('red_')?'红':'蓝')+'·'+(labels[zoneId.replace(/^(red|blue)_/,'')]||zoneId);
+    return <Html key={id+zoneId} center position={[zone.x-frame.arena.width/2,terrainHeight(frame.arena,zone.x,zone.y)+.45,zone.y-frame.arena.height/2]} zIndexRange={[4,0]} style={{pointerEvents:'none'}}><span className="control-marker">{label} · {position.controller==='red'?'红':'蓝'}{position.control==='full'?'完全':'临时'}控制</span></Html>;
+  }))}</>;
+}
+function AssetsReady({ready}:{ready?:()=>void}){useFrame(({gl})=>{if(!gl.getContext().isContextLost())ready?.();},2);return null;}
+export function ArenaScene({frame,feed,mode,selected,audio,onSelect,onCanvas,onRender,shot,playerCamera,resolutionScale=1,onAssetsReady,onSceneError}:{onAssetsReady?:()=>void;onSceneError?:(message:string)=>void;playerCamera?:PlayerCamera;resolutionScale?:number;frame:Frame;feed:MutableRefObject<RenderFeed>;mode:CameraMode;selected:string;audio?:ArenaAudio;onSelect:(id:string)=>void;onCanvas:(canvas:HTMLCanvasElement)=>void;onRender:()=>void;shot?:IntroShot|null}){
   function retry(){for(const url of new Set([frame.arena.asset,...Object.values(frame.arena.structure_assets||{}),...frame.robots.map(r=>r.model_asset||defaultRobotAsset(r.role)),...frame.robots.filter(r=>r.drones?.length&&r.model_asset).map(r=>r.model_asset!.replace('/robot-','/drone-'))]))useGLTF.clear(url);}
-  return <SceneBoundary onRetry={retry} audio={audio}><Canvas shadows dpr={[1,1.6]} camera={{position:BROADCAST_EYE,fov:42,near:.1,far:220}} gl={{antialias:true}} onCreated={({gl,scene})=>{gl.shadowMap.autoUpdate=false;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.18;scene.background=new THREE.Color('#05070b');scene.fog=new THREE.Fog('#05070b',55,150);}}>
+  return <SceneBoundary onRetry={retry} audio={audio} onError={onSceneError}><Canvas shadows dpr={[1,1.6]} camera={{position:BROADCAST_EYE,fov:42,near:.1,far:220}} gl={{antialias:true}} onCreated={({gl,scene})=>{onCanvas(gl.domElement);console.info('ARENA_CANVAS_READY',JSON.stringify({width:gl.domElement.width,height:gl.domElement.height}));gl.shadowMap.autoUpdate=false;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.18;scene.background=new THREE.Color('#05070b');scene.fog=new THREE.Fog('#05070b',55,150);}}>
     <hemisphereLight args={['#e4eefb','#1c2128',1.9]}/><ambientLight intensity={.22}/><directionalLight position={[4,26,9]} intensity={3.1} color="#f4f6ff" castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-28} shadow-camera-right={28} shadow-camera-top={24} shadow-camera-bottom={-24} shadow-bias={-.0004}/><directionalLight position={[-18,12,-14]} color="#9fb9ff" intensity={1.1}/><directionalLight position={[18,9,14]} color="#c9b8ff" intensity={.45}/>
     <Venue season={frameSeason(frame)}/>
-    <Suspense fallback={<Html center><div className="scene-loading">加载 Blender / glTF 资产…</div></Html>}><ArenaMap frame={frame} feed={feed}/><BaseModel team="red" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/><BaseModel team="blue" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/>{frame.outposts&&<><OutpostModel team="red" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/><OutpostModel team="blue" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/></>}{frame.runes&&<><RuneModel team="red" feed={feed}/><RuneModel team="blue" feed={feed}/></>}{frame.arena.structure_assets?.core&&frame.arena.assembly_frames&&<><TechCore team="red" feed={feed} url={frame.arena.structure_assets.core}/><TechCore team="blue" feed={feed} url={frame.arena.structure_assets.core}/></>}{frame.robots.filter(r=>!playerCamera||r.id!==selected).map(r=><RobotModel key={r.id} id={r.id} role={r.role} team={r.team} url={r.model_asset||defaultRobotAsset(r.role)} feed={feed} selected={selected} onSelect={onSelect}/>)}{frame.robots.filter(r=>r.drones?.length&&r.model_asset).flatMap(r=>r.drones!.map((d,k)=><DroneModel key={d.id} robot={r.id} index={k} team={r.team} url={r.model_asset!.replace('/robot-','/drone-')} feed={feed}/>))}{frame.visible_drones?.map(d=><OpticalDrone key={d.id} id={d.id} team={d.team} url={d.asset} feed={feed}/>)}</Suspense>
+    <Suspense fallback={<Html center><div className="scene-loading">加载 Blender / glTF 资产…</div></Html>}><ArenaMap frame={frame} feed={feed}/><BaseModel team="red" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/><BaseModel team="blue" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/>{frame.outposts&&<><OutpostModel team="red" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/><OutpostModel team="blue" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/></>}{frame.runes&&<><RuneModel team="red" feed={feed}/><RuneModel team="blue" feed={feed}/></>}{frame.arena.structure_assets?.core&&frame.arena.assembly_frames&&<><TechCore team="red" feed={feed} url={frame.arena.structure_assets.core}/><TechCore team="blue" feed={feed} url={frame.arena.structure_assets.core}/></>}{frame.robots.filter(r=>!playerCamera||r.id!==selected).map(r=><RobotModel key={r.id} id={r.id} role={r.role} team={r.team} url={r.model_asset||defaultRobotAsset(r.role)} feed={feed} selected={selected} onSelect={onSelect}/>)}{frame.robots.filter(r=>r.drones?.length&&r.model_asset).flatMap(r=>r.drones!.map((d,k)=><DroneModel key={d.id} robot={r.id} index={k} team={r.team} url={r.model_asset!.replace('/robot-','/drone-')} feed={feed}/>))}{frame.visible_drones?.map(d=><OpticalDrone key={d.id} id={d.id} team={d.team} url={d.asset} feed={feed}/>)}<AssetsReady ready={onAssetsReady}/></Suspense>
     <group visible={!shot&&!playerCamera}>{frame.robots.map(r=><RobotHud key={r.id} id={r.id} team={r.team} feed={feed} focus={selected===r.id} onSelect={onSelect}/>)}
     {(['red','blue'] as const).map(team=><group key={team}><StructureHud team={team} kind="base" feed={feed}/>{frame.outposts&&<StructureHud team={team} kind="outpost" feed={feed}/>}</group>)}</group>
     {!playerCamera&&<><CombatText feed={feed}/>{frame.runes&&<><RuneBoard feed={feed}/><RuneBurst feed={feed}/></>}</>}
     {!playerCamera&&(['red','blue'] as const).map(team=><group key={team}><MechanismHud team={team} kind="outpost" feed={feed}/><FortressWarning defender={team} feed={feed}/></group>)}
+    {playerCamera&&<ControlMarkers frame={frame} eye={playerCamera}/>}
     <Effects feed={feed}/><>{playerCamera?<PlayerDirector camera={playerCamera} scale={resolutionScale} width={frame.arena.width} height={frame.arena.height} onRender={onRender}/>:<Director mode={mode} selected={selected} feed={feed} audio={audio} onCanvas={onCanvas} onRender={onRender} shot={shot}/>}</>
   </Canvas></SceneBoundary>;
 }

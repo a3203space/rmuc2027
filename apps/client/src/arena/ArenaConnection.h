@@ -19,6 +19,7 @@ public:
   ~ArenaConnection() override;
   bool join(const QUrl &url, const QString &nickname, const QString &hostKey = {});
   void request(const QString &action, const QJsonObject &body = {});
+  void fetchCatalog();
   void sendInput(QJsonObject input);
   void operation(const QString &name, const QString &value = {});
   void leave();
@@ -26,7 +27,9 @@ public:
   QUrl serverUrl() const { return m_url; }
   bool isConnected() const { return m_socket.state() == QAbstractSocket::ConnectedState; }
   bool hasSession() const { return m_joining || (!m_token.isEmpty() && !m_leaving); }
+  void setResourceVersion(const QString &value) { m_resourceVersion = value; }
 signals:
+  void catalogReceived(const QJsonObject &catalog);
   void snapshotReceived(const QJsonObject &snapshot);
   void roomChanged(const QJsonObject &room);
   void error(const QString &message);
@@ -42,6 +45,7 @@ private:
   QTimer m_heartbeat, m_reconnect, m_watchdog;
   QUrl m_url;
   QString m_token, m_matchId;
+  QString m_resourceVersion;
   qint64 m_sequence = 0, m_lastSnapshot = 0;
   QElapsedTimer m_clock;
   QMap<qint64, qint64> m_pendingInputs;

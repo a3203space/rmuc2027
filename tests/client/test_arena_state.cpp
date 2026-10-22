@@ -1,35 +1,26 @@
-#include "arena/ArenaStateAdapter.h"
-#include <QQuickWidget>
-#include <QQmlContext>
-#include <QQuickItem>
+#include "arena/ArenaBridge.h"
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 class TestArenaState : public QObject {
  Q_OBJECT
 private slots:
- void initTestCase() { Q_INIT_RESOURCE(qml); }
- void hudLoads() {
-  RM::ArenaStateAdapter adapter; QQuickWidget view;
-  view.rootContext()->setContextProperty("arenaState", &adapter);
-  view.setSource(QUrl("qrc:/qml/ArenaHud.qml"));
-  QTRY_COMPARE(view.status(), QQuickWidget::Ready);
-  QVERIFY(view.rootObject());
+ void forwardsStructuredOperations() {
+  RM::ArenaBridge bridge; QSignalSpy spy(&bridge, &RM::ArenaBridge::commandReceived);
+  bridge.command(QStringLiteral("{\"name\":\"assemble\",\"value\":\"3\"}"));
+  QCOMPARE(spy.size(), 1);
+  const auto command = QJsonDocument::fromJson(spy.at(0).at(0).toString().toUtf8()).object();
+  QCOMPARE(command.value("name").toString(), QStringLiteral("assemble"));
+  QCOMPARE(command.value("value").toString(), QStringLiteral("3"));
  }
- void stateComesOnlyFromHost() {
-  RM::ArenaStateAdapter adapter;
-  adapter.apply({{"player", QJsonObject{{"slot",3},{"team","blue"},{"self",QJsonObject{{"hp",350}}},{"scene",QJsonObject{{"remaining",307.4}}}}}});
-  QVERIFY(adapter.online());
-  QCOMPARE(adapter.player().value("slot").toInt(),3);
-  QTest::qWait(1100);
-  QCOMPARE(adapter.player().value("scene").toMap().value("remaining").toDouble(),307.4);
-  adapter.apply({}); QVERIFY(!adapter.online());
- }
- void penaltyContainsNoFakeTacticalState() {
-  RM::ArenaStateAdapter adapter;
-  adapter.apply({{"player",QJsonObject{{"display",QJsonObject{{"ui_blocked",true}}}}}});
-  QVERIFY(adapter.player().value("display").toMap().value("ui_blocked").toBool());
-  QVERIFY(!adapter.player().contains("tactical"));
+ void viewportHandshakeAndNeutralInput() {
+  RM::ArenaBridge bridge; QSignalSpy ready(&bridge, &RM::ArenaBridge::ready), inputs(&bridge, &RM::ArenaBridge::inputReceived);
+  bridge.viewportReady(); bridge.input(QStringLiteral("{\"active\":false,\"fire\":false}"));
+  QCOMPARE(ready.size(), 1); QCOMPARE(inputs.size(), 1);
+  const auto input = QJsonDocument::fromJson(inputs.at(0).at(0).toString().toUtf8()).object();
+  QVERIFY(!input.value("active").toBool()); QVERIFY(!input.value("fire").toBool());
  }
 };
-QTEST_MAIN(TestArenaState)
+QTEST_GUILESS_MAIN(TestArenaState)
 #include "test_arena_state.moc"

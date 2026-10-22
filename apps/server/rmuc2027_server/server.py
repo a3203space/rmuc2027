@@ -1,4 +1,4 @@
-"""LAN-only FastAPI surface. No strategy upload, training, or referee routes."""
+"""Versioned LAN sessions, seat configuration and host-owned local strategies."""
 import asyncio
 from contextlib import asynccontextmanager
 import json
@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from rmuc2027_core.engine import binary_path
 from rmuc2027_core.paths import ROOT
 from . import PROTOCOL
-from .protocol import Input, Join, Operation, Profile, Ready, Seat
+from .protocol import Input, Join, Operation, Profile, Ready, Seat, SeatConfig, TeamConfig, StageReady, StrategyImport
 from .room import Room
 
 
@@ -60,48 +60,77 @@ def create_app(room=None):
         if origin and origin not in (f"http://{request.headers.get('host')}", f"https://{request.headers.get('host')}"):
             return JSONResponse({"detail": "Invalid origin"}, status_code=403)
         try:
-            if int(request.headers.get("content-length", 0)) > 16384:
+            limit = 6 * 1024 * 1024 if request.url.path.endswith('/strategy-import') else 16384
+            if int(request.headers.get("content-length", 0)) > limit:
                 return JSONResponse({"detail": "Request too large"}, status_code=413)
         except ValueError:
             return JSONResponse({"detail": "Invalid body size"}, status_code=400)
         return await call_next(request)
 
-    @app.get("/api/lan/v1/health")
+    @app.get("/api/lan/v2/health")
     def health():
-        return {"protocol": PROTOCOL, "service": "arena-lan", "season": "2027", "simulation_hz": 20,
+        version_path = ROOT / 'build/web/version.json'
+        version = json.loads(version_path.read_text()) if version_path.is_file() else {}
+        return {"protocol": PROTOCOL, "resource_version": version.get('resource_version', ''), "service": "arena-lan", "season": "2027", "simulation_hz": 20,
                 "input_hz": 50, "max_players": 10, "manual_sentry": True, "radar_decode": "always_success"}
 
-    @app.get("/api/lan/v1/room")
+    @app.get("/api/lan/v2/room")
     def state():
         with room.lock:
             room.expire()
         return room.state()
 
-    @app.post("/api/lan/v1/join")
+    @app.post("/api/lan/v2/join")
     def join(body: Join):
         return room.join(body)
 
-    @app.post("/api/lan/v1/seat")
+    @app.post("/api/lan/v2/seat")
     def seat(body: Seat, authorization: str | None = Header(default=None)):
         return room.select(authorize(authorization), body)
 
-    @app.post("/api/lan/v1/ready")
+    @app.post("/api/lan/v2/ready")
     def ready(body: Ready, authorization: str | None = Header(default=None)):
         return room.ready(authorize(authorization), body.ready)
 
-    @app.post("/api/lan/v1/profile")
+    @app.post("/api/lan/v2/profile")
     def profile(body: Profile, authorization: str | None = Header(default=None)):
         return room.performance(authorize(authorization), body)
 
-    @app.post("/api/lan/v1/start")
+    @app.post("/api/lan/v2/start")
     def start(authorization: str | None = Header(default=None)):
         return room.start(authorize(authorization))
 
-    @app.post("/api/lan/v1/leave")
+    @app.post("/api/lan/v2/leave")
     def leave(authorization: str | None = Header(default=None)):
         return room.leave(authorize(authorization))
 
-    @app.websocket("/api/lan/v1/session")
+    @app.post('/api/lan/v2/catalog')
+    def catalog(authorization: str | None = Header(default=None)):
+        authorize(authorization)
+        with room.lock:
+            return {**room.catalog.public(), 'revision': room.catalog_revision}
+
+    @app.post('/api/lan/v2/seat-config')
+    def seat_config(body: SeatConfig, authorization: str | None = Header(default=None)):
+        return room.configure_seat(authorize(authorization), body)
+
+    @app.post('/api/lan/v2/team-config')
+    def team_config(body: TeamConfig, authorization: str | None = Header(default=None)):
+        return room.configure_team(authorize(authorization), body)
+
+    @app.post('/api/lan/v2/strategy-import')
+    def strategy_import(body: StrategyImport, authorization: str | None = Header(default=None)):
+        return room.import_strategy(authorize(authorization), body.files)
+
+    @app.post('/api/lan/v2/stage-ready')
+    def stage_ready(body: StageReady, authorization: str | None = Header(default=None)):
+        return room.stage_ready(authorize(authorization), body)
+
+    @app.post('/api/lan/v2/skip-intro')
+    def skip_intro(authorization: str | None = Header(default=None)):
+        return room.skip_intro(authorize(authorization))
+
+    @app.websocket("/api/lan/v2/session")
     async def session(websocket: WebSocket):
         origin = websocket.headers.get("origin")
         host = websocket.headers.get("host")
@@ -172,7 +201,7 @@ def create_app(room=None):
             except (RuntimeError, OSError):
                 pass
 
-    @app.get("/api/lan/v1/replay")
+    @app.get("/api/lan/v2/replay")
     def replay(authorization: str | None = Header(default=None)):
         authorize(authorization)
         with room.lock:

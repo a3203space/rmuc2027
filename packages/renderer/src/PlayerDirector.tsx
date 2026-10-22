@@ -8,7 +8,10 @@ export function PlayerDirector({camera:meta,scale,width,height,onRender}:{camera
   const {camera,gl}=useThree();
   const previous=useRef(meta),current=useRef(meta),received=useRef(performance.now());
   const shadowSlot=useRef(-1);
+  const postFailed=useRef(false),targetChecked=useRef(false);
+  const pixelsChecked=useRef(false),sample=useMemo(()=>new Uint8Array(4),[]);
   const origin=useMemo(()=>new THREE.Vector3(),[]),direction=useMemo(()=>new THREE.Vector3(),[]);
+  const outputSize=useMemo(()=>new THREE.Vector2(),[]);
   useEffect(()=>{previous.current=current.current;current.current=meta;received.current=performance.now();},[meta]);
   // Render at 1080p, box downsample according to lambda, then linearly upscale.
   const post=useMemo(()=>{
@@ -35,6 +38,16 @@ export function PlayerDirector({camera:meta,scale,width,height,onRender}:{camera
   },[]);
   useEffect(()=>()=>{post.high.dispose();post.color.dispose();post.low.dispose();post.tone.dispose();post.box.dispose();post.blit.dispose();post.quad.dispose();},[post]);
   useEffect(()=>{
+    const previous=gl.debug.onShaderError;
+    const failed:NonNullable<typeof gl.debug.onShaderError>=(context,program,vertex,fragment)=>{
+      postFailed.current=true;
+      console.error('ARENA_FPV_SHADER',context.getProgramInfoLog(program),context.getShaderInfoLog(fragment));
+      previous?.(context,program,vertex,fragment);
+    };
+    gl.debug.onShaderError=failed;
+    return()=>{if(gl.debug.onShaderError===failed)gl.debug.onShaderError=previous;};
+  },[gl]);
+  useEffect(()=>{
     const perspective=camera as THREE.PerspectiveCamera;
     perspective.near=.025;
     perspective.fov=meta.vertical_fov_deg;
@@ -44,6 +57,7 @@ export function PlayerDirector({camera:meta,scale,width,height,onRender}:{camera
     post.low.setSize(w,h);post.box.uniforms.outputSize.value.set(w,h);
   },[camera,meta.vertical_fov_deg,scale,post]);
   useFrame(({scene})=>{
+    if(gl.getContext().isContextLost())return;
     const a=previous.current,b=current.current,t=Math.min(1,(performance.now()-received.current)/50);
     origin.set(a.origin[0]+(b.origin[0]-a.origin[0])*t-width/2,a.origin[2]+(b.origin[2]-a.origin[2])*t,a.origin[1]+(b.origin[1]-a.origin[1])*t-height/2);
     direction.set(a.direction[0]+(b.direction[0]-a.direction[0])*t,a.direction[2]+(b.direction[2]-a.direction[2])*t,a.direction[1]+(b.direction[1]-a.direction[1])*t);
@@ -55,11 +69,35 @@ export function PlayerDirector({camera:meta,scale,width,height,onRender}:{camera
     // Fit both host FOV limits rather than exposing extra pixels on wide displays.
     (camera as THREE.PerspectiveCamera).fov=Math.min(b.vertical_fov_deg,THREE.MathUtils.radToDeg(2*Math.atan(Math.tan(THREE.MathUtils.degToRad(b.horizontal_fov_deg)/2)/aspect)));
     camera.updateProjectionMatrix();
-    gl.setRenderTarget(post.high);gl.render(scene,camera);
+    // Some Qt/driver combinations expose WebGL 2 without a usable RGBA16F
+    // framebuffer. Keep the host camera and render directly if postprocessing
+    // cannot run, instead of reporting frames from an empty render target.
+    if(!postFailed.current){
+      gl.setRenderTarget(post.high);
+      if(!targetChecked.current){
+        targetChecked.current=true;
+        const context=gl.getContext();
+        if(context.checkFramebufferStatus(context.FRAMEBUFFER)!==context.FRAMEBUFFER_COMPLETE){
+          postFailed.current=true;console.warn('ARENA_FPV_FALLBACK: floating-point framebuffer unavailable');
+        }
+      }
+    }
+    if(postFailed.current){
+      gl.getSize(outputSize);
+      const pixelRatio=Math.min(1920/Math.max(1,outputSize.x),1080/Math.max(1,outputSize.y))*Math.max(.5,Math.min(1,scale));
+      if(Math.abs(gl.getPixelRatio()-pixelRatio)>.001)gl.setPixelRatio(pixelRatio);
+      gl.setRenderTarget(null);gl.render(scene,camera);onRender();return;
+    }
+    gl.render(scene,camera);
     post.tone.uniforms.toneMappingExposure.value=gl.toneMappingExposure;
     post.mesh.material=post.tone;gl.setRenderTarget(post.color);gl.render(post.screen,post.eye);
     post.mesh.material=post.box;gl.setRenderTarget(post.low);gl.render(post.screen,post.eye);
     post.mesh.material=post.blit;gl.setRenderTarget(null);gl.render(post.screen,post.eye);
+    if(!pixelsChecked.current){
+      pixelsChecked.current=true;const context=gl.getContext();let visible=false;
+      for(const x of [.25,.5,.75]){context.readPixels(Math.floor(context.drawingBufferWidth*x),Math.floor(context.drawingBufferHeight*.5),1,1,context.RGBA,context.UNSIGNED_BYTE,sample);visible ||= sample[0]+sample[1]+sample[2]>0;}
+      if(!visible){postFailed.current=true;console.warn('ARENA_FPV_FALLBACK: postprocessing produced an empty image');}
+    }
     onRender();
   },1);
   return null;

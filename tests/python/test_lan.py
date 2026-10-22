@@ -27,7 +27,7 @@ from rmuc2027_server.server import create_app
 class LobbyTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.room = Room(owner_key="host-secret", directory=self.temp.name, duration=1, ai=False)
+        self.room = Room(owner_key="host-secret", directory=self.temp.name, duration=1, ai=False, ceremony=False)
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.room.close)
 
@@ -109,15 +109,15 @@ class LobbyTests(unittest.TestCase):
         # that disallow socketpair.send; Windows uses the standard asyncio loop.
         options = {"use_uvloop": True} if importlib.util.find_spec("uvloop") else {}
         with TestClient(create_app(self.room), backend_options=options) as client:
-            self.assertEqual(client.get("/api/lan/v1/health").json()["protocol"], 1)
+            self.assertEqual(client.get("/api/lan/v2/health").json()["protocol"], 2)
             self.assertEqual(client.post("/api/submissions", json={}).status_code, 404)
-            self.assertEqual(client.post("/api/lan/v1/start").status_code, 401)
-            self.assertEqual(client.post("/api/lan/v1/join", json={"nickname": "x", "protocol": 2}).status_code, 422)
-            self.assertEqual(client.post("/api/lan/v1/join", json={"nickname": "x"}, headers={"Origin": "http://other.test"}).status_code, 403)
-            response = client.post("/api/lan/v1/join", json={"nickname": "网络玩家", "host_key": "host-secret"})
+            self.assertEqual(client.post("/api/lan/v2/start").status_code, 401)
+            self.assertEqual(client.post("/api/lan/v2/join", json={"nickname": "x", "protocol": 1}).status_code, 422)
+            self.assertEqual(client.post("/api/lan/v2/join", json={"nickname": "x"}, headers={"Origin": "http://other.test"}).status_code, 403)
+            response = client.post("/api/lan/v2/join", json={"nickname": "网络玩家", "host_key": "host-secret"})
             token = response.json()["token"]
-            with client.websocket_connect("/api/lan/v1/session") as socket:
-                socket.send_json({"type": "auth", "protocol": 1, "token": token})
+            with client.websocket_connect("/api/lan/v2/session") as socket:
+                socket.send_json({"type": "auth", "protocol": 2, "token": token})
                 value = socket.receive_json()
                 self.assertEqual(value["type"], "snapshot")
                 self.assertTrue(value["room"]["players"][0]["connected"])
@@ -132,17 +132,17 @@ class LobbyTests(unittest.TestCase):
                 body = {"nickname": f"player-{index}"}
                 if index == 0:
                     body["host_key"] = "host-secret"
-                joined = client.post("/api/lan/v1/join", json=body).json()
+                joined = client.post("/api/lan/v2/join", json=body).json()
                 token = joined["token"]
                 host = host or token
-                socket = stack.enter_context(client.websocket_connect("/api/lan/v1/session"))
-                socket.send_json({"type": "auth", "protocol": 1, "token": token})
+                socket = stack.enter_context(client.websocket_connect("/api/lan/v2/session"))
+                socket.send_json({"type": "auth", "protocol": 2, "token": token})
                 socket.receive_json()
                 headers = {"Authorization": "Bearer " + token}
-                self.assertEqual(client.post("/api/lan/v1/seat", json={"team": team, "slot": slot}, headers=headers).status_code, 200)
-                self.assertEqual(client.post("/api/lan/v1/ready", json={"ready": True}, headers=headers).status_code, 200)
+                self.assertEqual(client.post("/api/lan/v2/seat", json={"team": team, "slot": slot}, headers=headers).status_code, 200)
+                self.assertEqual(client.post("/api/lan/v2/ready", json={"ready": True}, headers=headers).status_code, 200)
                 sockets.append((socket, team, slot))
-            started = client.post("/api/lan/v1/start", headers={"Authorization": "Bearer " + host})
+            started = client.post("/api/lan/v2/start", headers={"Authorization": "Bearer " + host})
             self.assertEqual(started.status_code, 200)
             match_id = started.json()["match_id"]
             for socket, team, slot in sockets:
@@ -215,7 +215,7 @@ class RustMatchTests(unittest.TestCase):
             processes.append(process)
             return process
         with tempfile.TemporaryDirectory() as directory, patch("subprocess.Popen", side_effect=spawn):
-            room = Room(owner_key="key", directory=directory, duration=1, ai=True)
+            room = Room(owner_key="key", directory=directory, duration=1, ai=True, ceremony=False)
             self.addCleanup(room.close)
             token = room.join(Join(nickname="房主", host_key="key"))["token"]
             room.attach(token)
@@ -232,7 +232,7 @@ class RustMatchTests(unittest.TestCase):
 
     def test_same_room_can_start_a_fresh_match_without_old_inputs(self):
         with tempfile.TemporaryDirectory() as directory:
-            room = Room(owner_key="key", directory=directory, duration=1, realtime=False, ai=False)
+            room = Room(owner_key="key", directory=directory, duration=1, realtime=False, ai=False, ceremony=False)
             self.addCleanup(room.close)
             token = room.join(Join(nickname="房主", host_key="key"))["token"]
             room.attach(token)
@@ -264,7 +264,7 @@ class RustMatchTests(unittest.TestCase):
 
     def test_real_movement_ai_and_verifiable_replay(self):
         with tempfile.TemporaryDirectory() as directory:
-            room = Room(owner_key="key", directory=directory, duration=2, ai=True)
+            room = Room(owner_key="key", directory=directory, duration=2, ai=True, ceremony=False)
             self.addCleanup(room.close)
             token = room.join(Join(nickname="房主", host_key="key"))["token"]
             room.attach(token)
@@ -297,7 +297,7 @@ class RustMatchTests(unittest.TestCase):
 
     def test_stale_input_stops_firing_and_movement(self):
         with tempfile.TemporaryDirectory() as directory:
-            room = Room(owner_key="key", directory=directory, duration=1, ai=False)
+            room = Room(owner_key="key", directory=directory, duration=1, ai=False, ceremony=False)
             self.addCleanup(room.close)
             token = room.join(Join(nickname="房主", host_key="key"))["token"]
             room.attach(token)

@@ -24,13 +24,13 @@ public:
           if (!data.contains("\r\n\r\n") || socket->property("handled").toBool()) return;
           socket->setProperty("handled", true);
           const QByteArray path = data.split('\n').first().split(' ').value(1);
-          if (path == "/api/lan/v1/health") {
+          if (path == "/api/lan/v2/health") {
             ++healthRequests; healthSocket = socket;
             if (!holdHealth) sendHealth();
-          } else if (path == "/api/lan/v1/join") {
+          } else if (path == "/api/lan/v2/join") {
             ++joins; joinSocket = socket;
             if (!holdJoin) sendJoin();
-          } else if (path == "/api/lan/v1/leave") {
+          } else if (path == "/api/lan/v2/leave") {
             ++leaves; releasedToken = data.contains("Bearer late-token");
             respond(socket, "{}");
           } else respond(socket, "{}", 400);
@@ -39,8 +39,8 @@ public:
     });
   }
   QUrl url() const { return QUrl(QStringLiteral("http://127.0.0.1:%1").arg(serverPort())); }
-  void sendHealth() { respond(healthSocket, R"({"protocol":1,"service":"arena-lan"})"); }
-  void sendJoin() { respond(joinSocket, R"({"token":"late-token","room":{"protocol":1,"status":"lobby","players":[],"match_id":""}})"); }
+  void sendHealth() { respond(healthSocket, R"({"protocol":2,"service":"arena-lan"})"); }
+  void sendJoin() { respond(joinSocket, R"({"token":"late-token","room":{"protocol":2,"status":"lobby","players":[],"match_id":""}})"); }
   static void respond(QTcpSocket *socket, const QByteArray &body, int status = 200) {
     if (!socket) return;
     socket->write("HTTP/1.1 " + QByteArray::number(status) + " OK\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: " + QByteArray::number(body.size()) + "\r\n\r\n" + body);

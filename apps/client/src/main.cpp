@@ -1,15 +1,14 @@
 #include "arena/ArenaWindow.h"
 #include <QApplication>
-#include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QSurfaceFormat>
 int main(int argc, char **argv) {
   QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-  QQuickWindow::setGraphicsApi(qEnvironmentVariable("RM_QT_QUICK_BACKEND") == "opengl" ? QSGRendererInterface::OpenGL : QSGRendererInterface::Software);
+  // WebEngine 6.2 disables its GPU path with the software scene graph, which
+  // prevents the Three.js viewport from creating the required WebGL 2 context.
+  QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
   QSurfaceFormat format; format.setAlphaBufferSize(8); QSurfaceFormat::setDefaultFormat(format);
-  QQuickStyle::setStyle("Fusion");
-  Q_INIT_RESOURCE(qml);
   QApplication app(argc, argv);
   app.setApplicationName("RMUC2027Client");
   app.setOrganizationName("RMUC2027");

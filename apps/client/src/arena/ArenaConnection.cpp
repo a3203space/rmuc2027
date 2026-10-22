@@ -25,7 +25,7 @@ ArenaConnection::ArenaConnection(QObject *parent) : QObject(parent) {
   });
   connect(&m_socket, &QWebSocket::connected, this, [this] {
     m_lastSnapshot = m_clock.elapsed();
-    send({{"type", "auth"}, {"protocol", 1}, {"token", m_token}});
+    send({{"type", "auth"}, {"protocol", 2}, {"token", m_token}});
     m_heartbeat.start(); m_watchdog.start();
     emit connectionChanged(true);
   });
@@ -55,7 +55,7 @@ ArenaConnection::ArenaConnection(QObject *parent) : QObject(parent) {
     if (!room.isEmpty()) {
       m_matchId = room.value("match_id").toString();
       m_running = room.value("status").toString() == "running";
-      if (room.value("protocol").toInt() != 1) {
+      if (room.value("protocol").toInt() != 2) {
         emit error(QStringLiteral("联机协议版本不兼容")); leave(); return;
       }
       emit roomChanged(room);
@@ -106,16 +106,19 @@ bool ArenaConnection::join(const QUrl &url, const QString &nickname, const QStri
   m_joining = true;
   const quint64 epoch = m_epoch;
   m_token.clear(); m_matchId.clear(); m_sequence = 0; m_retryMs = 1000;
-  QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v1/health")));
+  QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v2/health")));
   request.setTransferTimeout(5000);
   auto *reply = m_http.get(request);
   connect(reply, &QNetworkReply::finished, this, [this, reply, nickname, hostKey, epoch] {
     const QJsonObject health = QJsonDocument::fromJson(reply->readAll()).object();
-    const bool ok = reply->error() == QNetworkReply::NoError && health.value("protocol").toInt() == 1 && health.value("service").toString() == "arena-lan";
+    const bool ok = reply->error() == QNetworkReply::NoError && health.value("protocol").toInt() == 2 && health.value("service").toString() == "arena-lan";
     reply->deleteLater();
     if (epoch != m_epoch) return;
     if (!ok) { m_joining = false; emit error(QStringLiteral("无法连接 RMUC 2027 仿真主机，或协议版本不兼容")); return; }
-    QJsonObject body{{"protocol", 1}, {"nickname", nickname}};
+    if (!m_resourceVersion.isEmpty() && health.value("resource_version").toString() != m_resourceVersion) {
+      m_joining = false; emit error(QStringLiteral("客户端和主机界面资源版本不一致，请同步构建或更新运行包后重启主机")); return;
+    }
+    QJsonObject body{{"protocol", 2}, {"nickname", nickname}};
     if (!hostKey.isEmpty()) body.insert("host_key", hostKey);
     post("join", body, [this](const QJsonObject &value) {
       m_token = value.value("token").toString();
@@ -131,7 +134,7 @@ bool ArenaConnection::join(const QUrl &url, const QString &nickname, const QStri
 void ArenaConnection::post(const QString &action, const QJsonObject &body,
                            std::function<void(const QJsonObject &)> callback) {
   const quint64 epoch = m_epoch;
-  QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v1/" + action)));
+  QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v2/" + action)));
   request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
   request.setTransferTimeout(5000);
   if (!m_token.isEmpty()) request.setRawHeader("Authorization", "Bearer " + m_token.toUtf8());
@@ -150,13 +153,14 @@ void ArenaConnection::post(const QString &action, const QJsonObject &body,
       const QString detail = value.value("detail").isString() ? value.value("detail").toString() : reply->errorString();
       emit error(detail);
     } else if (callback) callback(value);
+    else if (action == "strategy-import") emit catalogReceived(value);
     else emit roomChanged(value);
     reply->deleteLater();
   });
 }
 
 void ArenaConnection::releaseSession(const QUrl &url, const QString &token) {
-  QNetworkRequest request(url.resolved(QUrl("/api/lan/v1/leave")));
+  QNetworkRequest request(url.resolved(QUrl("/api/lan/v2/leave")));
   request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
   request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
   request.setTransferTimeout(5000);
@@ -169,9 +173,13 @@ void ArenaConnection::request(const QString &action, const QJsonObject &body) {
   post(action, body);
 }
 
+void ArenaConnection::fetchCatalog() {
+  if (!m_token.isEmpty()) post("catalog", {}, [this](const QJsonObject &value) { emit catalogReceived(value); });
+}
+
 void ArenaConnection::openSocket() {
   if (m_leaving || m_token.isEmpty() || isConnected()) return;
-  QUrl url = m_url.resolved(QUrl("/api/lan/v1/session")); url.setScheme("ws");
+  QUrl url = m_url.resolved(QUrl("/api/lan/v2/session")); url.setScheme("ws");
   m_socket.open(url);
 }
 
@@ -207,7 +215,7 @@ void ArenaConnection::downloadReplay(const QString &path) {
   if (!file->open(QIODevice::WriteOnly)) {
     emit error(QStringLiteral("无法打开回放保存路径")); file->deleteLater(); return;
   }
-  QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v1/replay")));
+  QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v2/replay")));
   request.setRawHeader("Authorization", "Bearer " + m_token.toUtf8());
   auto *reply = m_http.get(request);
   connect(reply, &QNetworkReply::readyRead, this, [reply, file] {

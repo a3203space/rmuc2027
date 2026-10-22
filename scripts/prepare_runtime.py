@@ -56,6 +56,9 @@ def main():
  from licenses import collect
  triple=next(line.removeprefix('host: ') for line in subprocess.check_output(['rustc','-vV'],text=True).splitlines() if line.startswith('host: '))
  collect(ROOT,app/'licenses',manifests=('Cargo.toml',),offline=args.offline,target=triple)
+ for notice in ('client-assets.json','arena-audio.json','README.md'):
+  shutil.copy2(ROOT/'docs/legal'/notice,app/'licenses'/notice)
+ shutil.copy2(ROOT/'apps/client/LICENSE',app/'licenses/CLIENT_LICENSE.txt')
  environment={**os.environ,'RMUC_RESOURCE_ROOT':str(app),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':os.pathsep.join(str(app/name) for name in ('packages/core','apps/server'))}
  subprocess.run([str(python),'-B','-c',"from rmuc2027_core.engine import Match; from rmuc2027_server.control import baseline_helpers; from rmuc2027_server.server import create_app; m=Match(duration=1); m.close(); baseline_helpers(); print('RMUC 2027 runtime preflight OK')"],cwd=app,env=environment,check=True)
  files={str(f.relative_to(stage)).replace(os.sep,'/'):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(app.rglob('*')) if f.is_file()}

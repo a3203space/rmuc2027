@@ -46,6 +46,26 @@ class Profile(Message):
     weapon: Literal["cooling", "burst"]
 
 
+class SeatConfig(Seat):
+    model: int = Field(strict=True)
+    strategy: str = Field(default="baseline", max_length=160)
+
+
+class TeamConfig(Message):
+    team: Literal["red", "blue"]
+    mode: Literal["independent", "team"]
+    strategy: str = Field(default="baseline", max_length=160)
+
+
+class StageReady(Message):
+    match_id: str
+    error: str = Field(default="", max_length=300)
+
+
+class StrategyImport(Message):
+    files: dict[str, str]
+
+
 class Input(Message):
     type: Literal["input"] = "input"
     match_id: str
@@ -59,6 +79,7 @@ class Input(Message):
     jump: bool = False
     crouch: bool = False
     active: bool = True
+    transform: bool | None = None
 
 
 class Operation(Message):

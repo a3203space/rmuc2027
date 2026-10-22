@@ -1,0 +1,42 @@
+[
+  {
+    "path": "assets/web/assets/audio/home.mp3",
+    "sha256": "bbf6c6da54fef26ad7be22835e8ed334bc68c0b1b9cc4ba48c23c7d80d6eefa2",
+    "source": "Arena-1/frontend/public/assets/audio/home.mp3"
+  },
+  {
+    "path": "assets/web/assets/audio/lobby.m4a",
+    "sha256": "32cc7aef2acd16ce8e97000c29fcf00243e22858f2f834704c2e86e00327481f",
+    "source": "Arena-1/frontend/public/assets/audio/lobby.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/hangar.m4a",
+    "sha256": "8b141cec48d739fd6e7d94d2e894c4946e9cef8df677b598d29ff8570236e4f3",
+    "source": "Arena-1/frontend/public/assets/audio/hangar.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/self-check.m4a",
+    "sha256": "c6c179d56e566592133ee39440c83077f8f5aaebe706680fad90fc886c51846b",
+    "source": "Arena-1/frontend/public/assets/audio/self-check.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/countdown.m4a",
+    "sha256": "e103538a750816d74ea1ba779d006d273c5231fba64725064d201f5af7cc178e",
+    "source": "Arena-1/frontend/public/assets/audio/countdown.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/victory.m4a",
+    "sha256": "08380d1753054e50e6fbe457de8277b9608b484f92dc58cd31162511a5408a1c",
+    "source": "Arena-1/frontend/public/assets/audio/victory.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/results.m4a",
+    "sha256": "8ecc1b7357ce8ca1baf06614fee6daa850251c8508949747a5a5131eebedb882",
+    "source": "Arena-1/frontend/public/assets/audio/results.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/mvp.m4a",
+    "sha256": "d6fdf816bd912dba56d0534b9356f7476230ae7919892e4cebc4ff28aea6096b",
+    "source": "Arena-1/frontend/public/assets/audio/mvp.m4a"
+  }
+]
