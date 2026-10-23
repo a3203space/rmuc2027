@@ -38,5 +38,35 @@
     "path": "assets/web/assets/audio/mvp.m4a",
     "sha256": "d6fdf816bd912dba56d0534b9356f7476230ae7919892e4cebc4ff28aea6096b",
     "source": "Arena-1/frontend/public/assets/audio/mvp.m4a"
+  },
+  {
+    "path": "assets/web/assets/audio/announcer/aced.mp3",
+    "sha256": "e92893b630784ccb1f7d99d8f26adb851fe35a92ff33c7ed0a79412af8de08f4",
+    "source": "Arena-1/frontend/public/assets/audio/announcer/aced.mp3"
+  },
+  {
+    "path": "assets/web/assets/audio/announcer/double-kill.mp3",
+    "sha256": "1c57be32b3c49783e94eeecb08e414d8076da9471bce526866a9ef1da42c354c",
+    "source": "Arena-1/frontend/public/assets/audio/announcer/double-kill.mp3"
+  },
+  {
+    "path": "assets/web/assets/audio/announcer/first-blood.mp3",
+    "sha256": "b5b0a3172d5e3ec626bfa84d593601d6e4dd4072c74ee56789f0ff05fd038387",
+    "source": "Arena-1/frontend/public/assets/audio/announcer/first-blood.mp3"
+  },
+  {
+    "path": "assets/web/assets/audio/announcer/penta-kill.mp3",
+    "sha256": "d94e5185c48a1db8daf1e1f8164d0d82589f6c7b5c31d61972453a2752085640",
+    "source": "Arena-1/frontend/public/assets/audio/announcer/penta-kill.mp3"
+  },
+  {
+    "path": "assets/web/assets/audio/announcer/quadra-kill.mp3",
+    "sha256": "86235889f771121f59aded9f111d10524f0711688b278b30682043a2dda98467",
+    "source": "Arena-1/frontend/public/assets/audio/announcer/quadra-kill.mp3"
+  },
+  {
+    "path": "assets/web/assets/audio/announcer/triple-kill.mp3",
+    "sha256": "6d9786b356f75c96844d627a10fd8a4f68f269369462bdafd4983650d567522c",
+    "source": "Arena-1/frontend/public/assets/audio/announcer/triple-kill.mp3"
   }
 ]

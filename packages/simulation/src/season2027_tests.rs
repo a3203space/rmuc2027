@@ -59,6 +59,64 @@ fn operator_camera_mount_follows_gimbal_and_body_pose() {
 }
 
 #[test]
+fn wreck_camera_is_live_optical_and_does_not_extend_policy_vision() {
+    let mut m = match_();
+    let i = robot(&m, "red-3");
+    assert_eq!(m.operator_observation_without_arena("red", 3), m.observation_without_arena("red", Some(&[3])));
+    m.robots[i].alive = false;
+    m.robots[i].hp = 0.0;
+    let policy = m.observation_without_arena("red", Some(&[3]));
+    assert!(policy["vision"]["3"].is_null());
+    let view = m.operator_observation_without_arena("red", 3);
+    assert_eq!(view["vision"].as_object().unwrap().len(), 1);
+    assert_eq!(view["vision"]["3"]["camera"], m.camera_metadata(&m.robots[i]));
+    for r in m.robots.iter().filter(|r| r.id != "red-3") {
+        let field = if r.team == "red" { "allies" } else { "enemies" };
+        assert_eq!(view["vision"]["3"][field].as_array().unwrap().contains(&json!(r.id)), m.visible(&m.robots[i], r));
+    }
+    // Camera metadata is recalculated from the current physical wreck, not cached at death.
+    m.robots[i].z += 0.25;
+    let next = m.operator_observation_without_arena("red", 3);
+    assert_ne!(view["vision"]["3"]["camera"]["origin"], next["vision"]["3"]["camera"]["origin"]);
+    m.robots[i].alive = true;
+    assert_eq!(m.operator_observation_without_arena("red", 3), m.observation_without_arena("red", Some(&[3])));
+}
+
+#[test]
+fn operator_wreck_camera_does_not_bypass_cards_or_create_a_hangar_camera() {
+    let mut m = match_();
+    let i = robot(&m, "red-3");
+    m.robots[i].alive = false;
+    m.robots[i].fpv_blocked_until = 10.0;
+    assert!(m.operator_observation_without_arena("red", 3)["vision"]["3"].is_null());
+    m.robots[i].fpv_blocked_until = 0.0;
+    m.robots[i].red_card = true;
+    assert!(m.operator_observation_without_arena("red", 3)["vision"]["3"].is_null());
+    assert!(m.operator_observation_without_arena("red", 6)["vision"]["6"].is_null());
+}
+
+#[test]
+fn wreck_gimbal_ignores_controls_and_keeps_its_body_mount_until_revived() {
+    let mut m = match_();
+    let i = robot(&m, "red-3");
+    m.robots[i].alive = false;
+    m.robots[i].hp = 0.0;
+    m.robots[i].respawn_required = 1000.0;
+    m.robots[i].pitch = 0.25;
+    m.robots[i].aim = m.robots[i].heading + 0.4;
+    m.advance(&json!({"red":{"3":{"aim":2.0,"pitch":-0.2,"move":[1.0,1.0],"fire":true}}}));
+    let r = &m.robots[i];
+    assert!((r.pitch - 0.25).abs() < 1e-10);
+    assert!((r.aim - r.heading - 0.4).abs() < 1e-10);
+    assert!(!r.powered);
+    assert!(!m.events.iter().any(|e| e["type"]=="shot" && e["robot"]=="red-3"));
+    m.robots[i].alive = true;
+    m.robots[i].hp = m.robots[i].max_hp;
+    m.advance(&json!({"red":{"3":{"aim":2.0,"pitch":-0.2}}}));
+    assert!((m.robots[i].pitch - 0.25).abs() > 0.01);
+}
+
+#[test]
 fn folded_operator_camera_keeps_its_mount_above_the_lowered_gun() {
     let m = match_();
     let mut r = m.robots[robot(&m, "red-4")].clone();

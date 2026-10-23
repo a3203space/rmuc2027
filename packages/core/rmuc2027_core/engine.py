@@ -124,6 +124,11 @@ class Match:
         value = self._request({"op": "observation", "team": team, "slots": slots, "static": False})
         return {"arena": self._static["arena"], **value}
 
+    def operator_observation(self, team, slot):
+        """Own optical view including a wreck; never pass this observation to policies."""
+        value = self._request({"op": "operator_observation", "team": team, "slot": slot})
+        return {"arena": self._static["arena"], **value}
+
     def observations(self, viewers):
         """Encoded observations for (team, slots) viewers in a single engine round trip.
 

@@ -3,21 +3,20 @@ import {useFrame,useThree} from '@react-three/fiber';
 import * as THREE from 'three';
 import type {PlayerCamera} from './lanTypes';
 import type {RenderFeed} from './types';
-import {feedAlpha} from './world';
+import {ROBOT_HDR_ALPHA} from './teamMaterials';
 
 /** FPV uses the host camera, including body roll and pitch. No spectator controls. */
 export function PlayerDirector({camera:meta,feed,scale,width,height,onRender}:{camera:PlayerCamera;feed:MutableRefObject<RenderFeed>;scale:number;width:number;height:number;onRender:()=>void}){
   const {camera,gl}=useThree();
-  const previous=useRef(meta),current=useRef(meta);
   const shadowSlot=useRef(-1);
   const postFailed=useRef(false),targetChecked=useRef(false);
   const pixelsChecked=useRef(false),sample=useMemo(()=>new Uint8Array(4),[]);
   const origin=useMemo(()=>new THREE.Vector3(),[]),direction=useMemo(()=>new THREE.Vector3(),[]);
   const outputSize=useMemo(()=>new THREE.Vector2(),[]);
-  useEffect(()=>{previous.current=current.current;current.current=meta;},[meta]);
   // Render at 1080p, box downsample according to lambda, then linearly upscale.
   const post=useMemo(()=>{
     const high=new THREE.WebGLRenderTarget(1920,1080,{type:THREE.HalfFloatType,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
+    high.texture.userData.playerHdr=true;
     const color=new THREE.WebGLRenderTarget(1920,1080,{depthBuffer:false,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
     const low=new THREE.WebGLRenderTarget(1920,1080,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
     const quad=new THREE.PlaneGeometry(2,2),screen=new THREE.Scene(),eye=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
@@ -25,7 +24,9 @@ export function PlayerDirector({camera:meta,feed,scale,width,height,onRender}:{c
     const tone=new THREE.ShaderMaterial({uniforms:{source:{value:high.texture},toneMappingExposure:{value:1.18}},vertexShader:vertex,
       fragmentShader:`uniform sampler2D source;varying vec2 uv0;
       #include <tonemapping_pars_fragment>
-      void main(){vec3 c=ACESFilmicToneMapping(texture2D(source,uv0).rgb);
+      void main(){vec4 pixel=texture2D(source,uv0);vec3 c;
+      if(abs(pixel.a-${ROBOT_HDR_ALPHA})<.001)c=pixel.rgb/max(1.,max(pixel.r,max(pixel.g,pixel.b)));
+      else c=ACESFilmicToneMapping(pixel.rgb);
       c=mix(12.92*c,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c));gl_FragColor=vec4(c,1.);}`});
     const box=new THREE.ShaderMaterial({uniforms:{source:{value:color.texture},size:{value:new THREE.Vector2(1920,1080)},outputSize:{value:new THREE.Vector2(1920,1080)}},
       vertexShader:'varying vec2 uv0;void main(){uv0=uv;gl_Position=vec4(position.xy,0.,1.);}',
@@ -58,19 +59,22 @@ export function PlayerDirector({camera:meta,feed,scale,width,height,onRender}:{c
     const w=Math.max(1,Math.round(1920*lambda)),h=Math.max(1,Math.round(1080*lambda));
     post.low.setSize(w,h);post.box.uniforms.outputSize.value.set(w,h);
   },[camera,meta.vertical_fov_deg,scale,post]);
-  useFrame(({scene})=>{
+  useFrame(()=>{
     if(gl.getContext().isContextLost())return;
-    const a=previous.current,b=current.current,t=feedAlpha(feed.current);
-    origin.set(a.origin[0]+(b.origin[0]-a.origin[0])*t-width/2,a.origin[2]+(b.origin[2]-a.origin[2])*t,a.origin[1]+(b.origin[1]-a.origin[1])*t-height/2);
-    direction.set(a.direction[0]+(b.direction[0]-a.direction[0])*t,a.direction[2]+(b.direction[2]-a.direction[2])*t,a.direction[1]+(b.direction[1]-a.direction[1])*t);
-    if(b.up){const up=a.up||b.up;camera.up.set(up[0]+(b.up[0]-up[0])*t,up[2]+(b.up[2]-up[2])*t,up[1]+(b.up[1]-up[1])*t).normalize();}
+    const b=feed.current.playerSample?.camera||meta;
+    origin.set(b.origin[0]-width/2,b.origin[2],b.origin[1]-height/2);
+    direction.set(b.direction[0],b.direction[2],b.direction[1]);
+    if(b.up)camera.up.set(b.up[0],b.up[2],b.up[1]).normalize();
     camera.position.copy(origin);camera.lookAt(origin.add(direction));
-    const slot=Math.floor(performance.now()/1000*30);
-    if(shadowSlot.current!==slot){shadowSlot.current=slot;gl.shadowMap.needsUpdate=true;}
     const aspect=(camera as THREE.PerspectiveCamera).aspect;
     // Fit both host FOV limits rather than exposing extra pixels on wide displays.
     (camera as THREE.PerspectiveCamera).fov=Math.min(b.vertical_fov_deg,THREE.MathUtils.radToDeg(2*Math.atan(Math.tan(THREE.MathUtils.degToRad(b.horizontal_fov_deg)/2)/aspect)));
     camera.updateProjectionMatrix();
+  },-50);
+  useFrame(({scene})=>{
+    if(gl.getContext().isContextLost())return;
+    const slot=Math.floor(performance.now()/1000*30);
+    if(shadowSlot.current!==slot){shadowSlot.current=slot;gl.shadowMap.needsUpdate=true;}
     // Some Qt/driver combinations expose WebGL 2 without a usable RGBA16F
     // framebuffer. Keep the host camera and render directly if postprocessing
     // cannot run, instead of reporting frames from an empty render target.

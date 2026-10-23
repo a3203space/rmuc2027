@@ -860,29 +860,32 @@ impl PhysicsWorld {
             let velocity = *self.bodies[h].linvel();
             let angular = *self.bodies[h].angvel();
             let a = &actions[i];
-            let world_yaw = a.aim.unwrap_or(r.aim);
-            let desired = vector![
-                world_yaw.cos() * a.pitch.cos(),
-                world_yaw.sin() * a.pitch.cos(),
-                a.pitch.sin()
-            ];
-            let local = pose.rotation.inverse() * desired;
-            let local_yaw = local.y.atan2(local.x);
-            let local_pitch = local
-                .z
-                .atan2(local.x.hypot(local.y))
-                .clamp(-0.261799, 0.785398);
-            r.aim = r.heading
-                + turn(
-                    r.aim - r.heading,
-                    local_yaw,
-                    n(d, "turret_yaw_rate_rad_s") * PHYSICS_DT,
+            // A wreck keeps its gimbal mount fixed relative to its physical body.
+            if r.alive {
+                let world_yaw = a.aim.unwrap_or(r.aim);
+                let desired = vector![
+                    world_yaw.cos() * a.pitch.cos(),
+                    world_yaw.sin() * a.pitch.cos(),
+                    a.pitch.sin()
+                ];
+                let local = pose.rotation.inverse() * desired;
+                let local_yaw = local.y.atan2(local.x);
+                let local_pitch = local
+                    .z
+                    .atan2(local.x.hypot(local.y))
+                    .clamp(-0.261799, 0.785398);
+                r.aim = r.heading
+                    + turn(
+                        r.aim - r.heading,
+                        local_yaw,
+                        n(d, "turret_yaw_rate_rad_s") * PHYSICS_DT,
+                    );
+                r.pitch = approach(
+                    r.pitch,
+                    local_pitch,
+                    n(d, "turret_pitch_rate_rad_s") * PHYSICS_DT,
                 );
-            r.pitch = approach(
-                r.pitch,
-                local_pitch,
-                n(d, "turret_pitch_rate_rad_s") * PHYSICS_DT,
-            );
+            }
             r.cooldown = (r.cooldown - PHYSICS_DT).max(0.0);
             if r.arm_count > 0 && d["arm"].is_object() {
                 let arm = &d["arm"];
@@ -1959,6 +1962,9 @@ impl PhysicsWorld {
             r.vx = v.x;
             r.vy = v.y;
             r.vz = v.z;
+            if !r.alive {
+                r.aim += heading - r.heading;
+            }
             r.heading = heading;
             r.quaternion = [rot.i, rot.j, rot.k, rot.w];
             r.angular_velocity = [body.angvel().x, body.angvel().y, body.angvel().z];

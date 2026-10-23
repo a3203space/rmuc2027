@@ -1640,12 +1640,21 @@ impl Engine {
     }
     /// `observation` minus the static arena map, which a transport can encode once per match.
     pub fn observation_without_arena(&self, team: &str, slots: Option<&[u32]>) -> Value {
+        self.camera_observation(team, slots, false)
+    }
+    /// Human operators retain their own wreck's camera, never an allied/spectator camera.
+    /// Policy observations deliberately continue to require a living observer.
+    pub fn operator_observation_without_arena(&self, team: &str, slot: u32) -> Value {
+        self.camera_observation(team, Some(&[slot]), true)
+    }
+    fn camera_observation(&self, team: &str, slots: Option<&[u32]>, operator: bool) -> Value {
         let friends: Vec<&Robot> = self.robots.iter().filter(|r| r.team == team).collect();
         let observers: Vec<&Robot> = friends
             .iter()
             .copied()
             .filter(|r| {
-                r.alive
+                (r.alive || operator)
+                    && (!operator || !r.red_card)
                     && !r.deployed
                     && self.time() >= r.fpv_blocked_until
                     && slots.map(|s| s.contains(&r.slot)).unwrap_or(true)

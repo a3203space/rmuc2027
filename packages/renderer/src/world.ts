@@ -5,6 +5,7 @@ export const toWorld=(arena:{width:number;height:number},x:number,y:number,z=0,o
 
 export function feedAlpha(feed:RenderFeed){
   const f=feed.frame;if(!f)return 1;
+  if(feed.playerSample)return feed.playerSample.alpha;
   return feed.paused?1:feed.replay?(feed.alpha??1):Math.min(1,(performance.now()-feed.received)/(f.dt*1000/Math.max(.5,feed.speed)));
 }
 

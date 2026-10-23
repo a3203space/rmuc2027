@@ -1,0 +1,164 @@
+[
+  {
+    "source": "Arena-1/frontend/src/style.css",
+    "source_sha256": "4087b02c462ada82b7ad95bf2a956a1a52e072966dfb984384a59368a22c4316",
+    "path": "apps/client/web/arena/style.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/interaction.css",
+    "source_sha256": "dd59c604080c86bac16be86cbbf677586d6d05c544038473e251da89ea2a81a5",
+    "path": "apps/client/web/arena/interaction.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/teamLineup.css",
+    "source_sha256": "f31065bcabd68e2b6d9bddb669433b5b92605948c90f69af22f8fab75893767e",
+    "path": "apps/client/web/arena/teamLineup.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/gallery.css",
+    "source_sha256": "05cf690e2dd9645bb93ca6f5787dd7c4057ee95f6e566533b1e60d4e3674a748",
+    "path": "apps/client/web/arena/gallery.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/home.css",
+    "source_sha256": "cddc98358dda4bdb0f1220e4c526698c50b60340bbf179848dccd9f0b2229933",
+    "path": "apps/client/web/arena/home.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/agentLogos.tsx",
+    "source_sha256": "6abf4f8a497a005708b76868287b3d5afbfb7546ad8c517bb913a7dbbc3b2c94",
+    "path": "apps/client/web/arena/agentLogos.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/AudioControls.tsx",
+    "source_sha256": "3bf0d1cdd2391bca7e915240792f6ed3bd3363b5a160a957bd6926fd53c4bf81",
+    "path": "apps/client/web/arena/AudioControls.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/agents.ts",
+    "source_sha256": "7b21eb44c7dae7cf1d56f009406f5986d166823d4c3103dfc811f8245319f4f1",
+    "path": "apps/client/web/arena/agents.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/strategyIdentity.ts",
+    "source_sha256": "f21339cdc2592387d42d5147fa3f5cf03085054b37eb7f0504ad72dc71d91c64",
+    "path": "apps/client/web/arena/strategyIdentity.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/LineupIntro.tsx",
+    "source_sha256": "5f7708520a7cd3d2c5b59df27ba0acad5a6f849cde08c11a55fc489130aea472",
+    "path": "apps/client/web/arena/LineupIntro.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/ceremony.tsx",
+    "source_sha256": "482b813b7f114539692447678ba1e8463825bb54a81a1bf30bec2bf76860a6c0",
+    "path": "apps/client/web/arena/ceremony.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/thumbnails.ts",
+    "source_sha256": "94863a50a6bd5ad2d352294cfe50d71c1ff2f4b8f9111b81295f7d0ce5aa537a",
+    "path": "apps/client/web/arena/thumbnails.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/broadcast.tsx",
+    "source_sha256": "25d959128d84d46c269f48721c0dec037910c798c9d8a9d0bb3da04c75f27de6",
+    "path": "apps/client/web/arena/broadcast.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/TelemetryPanel.tsx",
+    "source_sha256": "a095aaab585d3330516c27a94dc0c0052ba82a1813bb124687693a6fd2ac445c",
+    "path": "apps/client/web/arena/TelemetryPanel.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/mechanismProgress.ts",
+    "source_sha256": "ec0fbbd66534aaa046e319f1695771c620e26c7c87840c0be96dd3d17510ceb1",
+    "path": "apps/client/web/arena/mechanismProgress.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/Home.tsx",
+    "source_sha256": "2f66b84494f82686b147e03c9a1f8604ae3a8a6492cbdb3fc00626f992f7cd57",
+    "path": "apps/client/web/arena/Home.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/App.tsx",
+    "source_sha256": "2477b97ad24799ad6bb0c5b06abbc718a73c841f00af0ca009035805abe151cc",
+    "path": "apps/client/web/ArenaShell.tsx",
+    "mode": "extracted"
+  },
+  {
+    "source": "Arena-1/frontend/src/TeamLineup.tsx",
+    "source_sha256": "04709b083f80d19213323f3c6446db920d7b011893cf2ffc26dcbb39708f5ac9",
+    "path": "apps/client/web/arena/Hangar.tsx",
+    "mode": "extracted"
+  },
+  {
+    "source": "Arena-1/frontend/src/StrategyGallery.tsx",
+    "source_sha256": "47023ca84eb530864c71d8427173bd83c2287603d8dbaee3b52fde471dd93157",
+    "path": "apps/client/web/arena/StrategyGallery.tsx",
+    "mode": "extracted"
+  },
+  {
+    "source": "Arena-1/frontend/public/brand/arena-1.png",
+    "source_sha256": "f9035dd4407f2436d412878bbb074b43120fc4dee2834b9eef7984088a7e5ba3",
+    "path": "assets/web/brand/arena-1.png",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/broadcast.css",
+    "source_sha256": "0e2697199028a38fa1b465ff9077174ea1655e15e5717162890163b434b97be6",
+    "path": "apps/client/web/arena-broadcast.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/intro.css",
+    "source_sha256": "600333102c01354f8fe45ecb961508bd1b8d604cbdd85242a3facfae47645c1d",
+    "path": "apps/client/web/arena-intro.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/killAnnouncements.ts",
+    "source_sha256": "40363f3ddf9f6cb39d7283f19ed7b57331141076d66edaffc784a340b98f3eca",
+    "path": "apps/client/web/arena/killAnnouncements.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/KillAnnouncement.tsx",
+    "source_sha256": "e6e43898bb41bd65780e950457e5358bc9a78c0fac9a26ffc9f634d6ecc80168",
+    "path": "apps/client/web/arena/KillAnnouncement.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/killAnnouncement.css",
+    "source_sha256": "aaab6fb46797ac27ee463a37c3f9301d5df0f0e4da268162a84e5125defb5f55",
+    "path": "apps/client/web/arena/killAnnouncement.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/media.ts",
+    "source_sha256": "3292db446a9d8a8dacaaf0205eec568c3471266c1c4c0e5fd9504d0516c92348",
+    "path": "apps/client/web/arena/announcerAudio.ts",
+    "mode": "extracted"
+  },
+  {
+    "source": "Arena-1/scripts/kill_announcements.test.cjs",
+    "source_sha256": "f17e84026b0182f04d555c823db7f02a837479f0ec475fb331c92bc2e93ea6fb",
+    "path": "tests/web/kill_announcements.test.ts",
+    "mode": "adapted"
+  }
+]

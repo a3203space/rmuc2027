@@ -2,6 +2,7 @@
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
 import sys
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,13 +43,15 @@ def generate(output):
             p['control'] = {'needs_resume':name=='resume','status':'AI 接管中' if name=='resume' else '手动控制','ack_seq':0,'manual':name!='resume'}
             fixture = {'player':p,'static':{k:f[k] for k in ('arena','robot_models','simulation_assumptions')},'player_id':'operator','room':{'status':f['status'],'match_id':'operator-fixture','players':[{'id':'operator','nickname':'操作手','team':team,'slot':slot,'host':True,'ready':False,'connected':True}]},'operations':[]}
             fixture['room'].update(seat_configs=configs,team_configs=team_configs)
-            if name=='finished':fixture['room']['result']={'winner':'red','teams':f['teams'],'robots':[{k:r.get(k) for k in ('id','team','slot','model_slot','design_name','role','kills','damage','hp','max_hp')} for r in f['robots']]}
+            if name=='finished':fixture['room']['result']={'winner':'red','reason':'control','time':f['time'],'bases':f['bases'],'outposts':f['outposts'],'positions':f['positions'],'arena':f['arena'],'teams':f['teams'],'robots':[{k:r.get(k) for k in ('id','team','slot','model_slot','design_name','role','kills','damage','hp','max_hp','ammo','level','model_asset')} for r in f['robots']]}
             fixtures[name] = fixture
         fixtures['_catalog'] = catalog.public()
         fixtures['lobby'] = {'player':None,'player_id':'operator','room':{**fixtures['infantry']['room'],'status':'lobby'},'operations':[]}
         for phase in ('loading','intro','countdown'):
             fixtures[phase] = {'player':None,'player_id':'operator','room':{**fixtures['lobby']['room'],'status':phase,'stage_elapsed':0,'stage_duration':60 if phase=='loading' else 38.3 if phase=='intro' else 5},'static':fixtures['infantry']['static'],'presentation':{k:v for k,v in source.items() if k not in ('arena','robot_models','simulation_assumptions')},'operations':[]}
-        (output/'fixtures.json').write_text(json.dumps(fixtures,ensure_ascii=False),encoding='utf-8')
+        temporary = output / f'fixtures-{os.getpid()}.tmp'
+        temporary.write_text(json.dumps(fixtures,ensure_ascii=False),encoding='utf-8')
+        temporary.replace(output / 'fixtures.json')
         print(output/'fixtures.json')
     finally:match.close()
 

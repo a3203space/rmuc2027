@@ -56,7 +56,7 @@ def main():
  from licenses import collect
  triple=next(line.removeprefix('host: ') for line in subprocess.check_output(['rustc','-vV'],text=True).splitlines() if line.startswith('host: '))
  collect(ROOT,app/'licenses',manifests=('Cargo.toml',),offline=args.offline,target=triple)
- for notice in ('client-assets.json','arena-audio.json','README.md'):
+ for notice in ('client-assets.json','arena-audio.json','arena-ui-port.json','agent-logos-LICENSE.txt','README.md'):
   shutil.copy2(ROOT/'docs/legal'/notice,app/'licenses'/notice)
  shutil.copy2(ROOT/'apps/client/LICENSE',app/'licenses/CLIENT_LICENSE.txt')
  environment={**os.environ,'RMUC_RESOURCE_ROOT':str(app),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':os.pathsep.join(str(app/name) for name in ('packages/core','apps/server'))}

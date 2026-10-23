@@ -14,14 +14,36 @@ PUBLIC_FRAME = ("api_version", "dt", "duration", "remaining", "season", "status"
                 "winner", "reason", "bases", "outposts", "positions")
 
 
-def project(frame, observation, team, slot, match_id, *, include_static=False):
+class PublicEventLog:
+    """Repeat safe kill/revival events across network snapshots without losing a tick."""
+    def __init__(self):
+        self.events = []
+
+    def update(self, frame):
+        self.events = [e for e in self.events if e['time'] >= frame['time'] - 15]
+        seen = {e['id'] for e in self.events}
+        for event in frame.get('events', []):
+            if event.get('type') not in ('destroy', 'respawn'):
+                continue
+            key = event.get('id') or f"{frame['tick']}:{event['type']}:{event.get('robot')}:{event.get('killer')}"
+            if key in seen:
+                continue
+            safe = {k: event[k] for k in ('type', 'tick', 'time', 'team', 'robot', 'killer') if k in event}
+            safe.update(id=key, tick=event.get('tick', frame['tick']), time=event.get('time', frame['time']))
+            self.events.append(safe)
+            seen.add(key)
+        self.events.sort(key=lambda e: (e['tick'], e['time']))
+        return list(self.events)
+
+
+def project(frame, observation, team, slot, match_id, *, include_static=False, public_events=()):
     own = next(r for r in frame["robots"] if r["team"] == team and r["slot"] == slot)
     now = frame["time"]
     blocked = frame["status"] != "finished" and own.get("fpv_blocked_until", 0) > now
     no_camera = own["role"] == "aerial"
     red_card = own.get("red_card", False)
     heat_cut = own.get("overheated", False) and own["heat"] > 1e-8
-    camera_off = blocked or no_camera or red_card or not own["alive"] or heat_cut
+    camera_off = blocked or no_camera or red_card or heat_cut
     camera = observation.get("vision", {}).get(str(slot), {}).get("camera")
     visible = observation.get("vision", {}).get(str(slot), {})
     seen = set(visible.get("enemies", [])) | set(visible.get("allies", []))
@@ -31,7 +53,8 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
               "team": team, "slot": slot, "self": own,
               "display": {"ui_blocked": blocked, "blocked_until": own.get("fpv_blocked_until", 0),
                           "camera_off": camera_off, "reason": "penalty" if blocked else "red_card" if red_card else
-                          "hangar" if no_camera else "destroyed" if not own["alive"] else "overheat" if heat_cut else "",
+                          "hangar" if no_camera else "overheat" if heat_cut else "destroyed" if not own["alive"] else "",
+                          "grayscale": not own['alive'] and not camera_off,
                           "logistics": logistics, "resolution_scale": logistics,
                           "camera": camera}}
     # No tactical payload can continue feeding hidden HUDs during a yellow card.
@@ -41,12 +64,13 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
     radar = []
     for robot in frame["robots"]:
         radar.append({**{k: robot[k] for k in ("id", "team", "slot", "role", "x", "y", "hp", "max_hp", "alive", "ammo")},
+                      "kills": robot.get('kills', 0),
                       "buffs": {k: robot[k] for k in BUFFS if k in robot},
                       "armor_hit_times": robot.get("armor_hit_times", []),
                       **({"heading": robot["heading"]} if robot["id"] in seen or robot["id"] == own["id"] else {})})
     result["tactical"] = {
         "robots": radar,
-        "teams": {side: {k: values.get(k, 0) for k in ("resources", "total_resources", "control", "score")}
+        "teams": {side: {k: values.get(k, 0) for k in ("resources", "total_resources", "control", "score", "attack_damage")}
                   for side, values in frame["teams"].items()},
         "zones": {key: {"active": bool(value.get("occupants")), "owner": value.get("owner"),
                          "progress": value.get("progress", 0), "contested": value.get("contested", False),
@@ -85,6 +109,7 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
     result["weapon"] = weapon_status(frame, own)
     result["economy"] = {k: frame["teams"][team].get(k) for k in ("completed_difficulties", "energy_units_left", "launcher_unlock_s", "level_cap")}
     result["events"] = [e for e in frame.get("events", []) if e.get("robot") == own["id"] and e.get("type") in ("ammo_purchase", "ammo_delivered", "remote_heal", "respawn", "rpc_error")]
+    result['public_events'] = list(public_events)
     result["assembly"] = observation.get("assemblies", {}).get(team, {})
     result["air"] = own.get("drones", []) if no_camera else []
     if include_static:

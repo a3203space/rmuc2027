@@ -103,6 +103,12 @@ fn main() {
                     Ok(json!({"controlled_ids": controlled}))
                 }
                 "digest" => Ok(json!({"digest":e.digest()})),
+                "operator_observation" => {
+                    let (team, _) = viewer(&request)?;
+                    let slot = request["slot"].as_u64().filter(|s| [1, 3, 4, 6, 7].contains(s))
+                        .ok_or("invalid operator slot")? as u32;
+                    Ok(e.operator_observation_without_arena(team, slot))
+                }
                 "observation" => {
                     let (team, slots) = viewer(&request)?;
                     Ok(if request["static"].as_bool() == Some(false) {

@@ -3,14 +3,14 @@ import {Canvas,useFrame,useThree} from '@react-three/fiber';
 import {Html,OrbitControls,useGLTF} from '@react-three/drei';
 import type {OrbitControls as Controls} from 'three-stdlib';
 import * as THREE from 'three';
-const RotateCw=(_props:any)=><span>↻</span>,ScanLine=(_props:any)=><span>◇</span>,Wrench=(_props:any)=><span>⚙</span>;
+import {RotateCw,ScanLine,Wrench} from 'lucide-react';
 import {cloneForTeam,LED_COLORS} from '../../../packages/renderer/src/teamMaterials';
 import {useRobotScene} from '../../../packages/renderer/src/customModels';
 import {applyArmorNumber,legRig,poseLegs} from '../../../packages/renderer/src/robotRig';
 import type {ArmHardware,RobotHardware,TeamId} from '../../../packages/renderer/src/types';
 
 function useReducedMotion(){
-  const [reduced,setReduced]=useState(()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [reduced,setReduced]=useState(()=>typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReduced(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
   return reduced;
 }
@@ -23,7 +23,7 @@ class PreviewBoundary extends Component<{children:ReactNode;onRetry:()=>void},{f
 
 function PreviewModel({model,slot,team,demo}:{model:RobotHardware;slot:number;team:TeamId;demo:boolean}){
   const scene=useRobotScene(model.asset),body=useRef<THREE.Group>(null);
-  const asset=useMemo(()=>cloneForTeam(scene,team),[scene,team]);
+  const asset=useMemo(()=>cloneForTeam(scene,team,true),[scene,team]);
   const baseBounds=useMemo(()=>{const box=new THREE.Box3().setFromObject(asset);return {center:box.getCenter(new THREE.Vector3()),size:box.getSize(new THREE.Vector3()),floor:box.min.y};},[asset]);
   const sizing=useMemo(()=>{
     const {center,size,floor}=baseBounds;

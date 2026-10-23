@@ -17,7 +17,7 @@ from rmuc2027_core.policy import FrameLog, Policy
 from rmuc2027_core.submissions import load_submission
 from . import LINEUP, PROTOCOL, SLOTS
 from .control import HumanController, baseline_helpers
-from .projection import project
+from .projection import project, PublicEventLog
 from .hud import actions as operator_actions, rules as hud_rules
 from .protocol import Input
 from .catalog import Catalog
@@ -370,6 +370,7 @@ class LanMatchRunner:
         self.tick = 0
         self.controllers = {}
         self.observations = {}
+        self.public_events = PublicEventLog()
         self.metrics = {"steps": 0, "step_ms": [], "late_ai": 0}
 
     def run(self):
@@ -553,13 +554,17 @@ class LanMatchRunner:
                 self.tick = frame["tick"]
                 actions.append(commands)
                 log.append(frame, match.raw_frame)
+                public_events = self.public_events.update(frame)
                 with room.lock:
                     for p in room.players.values():
                         if p.slot is None:
                             continue
                         observation = match.compact_observation(p.team, [p.slot])
                         self.observations[(p.team, p.slot)] = observation
-                        view = project(frame, observation, p.team, p.slot, room.match_id)
+                        robot = next(r for r in frame['robots'] if r['team'] == p.team and r['slot'] == p.slot)
+                        if not robot['alive'] and robot['role'] != 'aerial':
+                            observation = match.operator_observation(p.team, p.slot)
+                        view = project(frame, observation, p.team, p.slot, room.match_id, public_events=public_events)
                         controller = self.controllers.get(p.id)
                         if controller:
                             controller.observe(frame, view["self"])
@@ -591,8 +596,9 @@ class LanMatchRunner:
                     room.status = "settling"
                     room.changed("settling")
             result = {"winner": final["winner"], "reason": final["reason"], "time": final["time"],
+                      "bases": final["bases"], "outposts": final["outposts"], "positions": final.get("positions", {}),
                       "teams": final["teams"], "digest": match.digest(), "policy_errors": len(diagnostics),
-                      "robots": [{k:r.get(k) for k in ("id","team","slot","model_slot","design_name","role","kills","damage","hp","max_hp")} for r in final["robots"]]}
+                      "robots": [{k:r.get(k) for k in ("id","team","slot","model_slot","design_name","role","kills","damage","hp","max_hp","level","ammo","model_asset")} for r in final["robots"]]}
             samples = sorted(self.metrics.pop("step_ms"))
             self.metrics["step_p95_ms"] = samples[min(len(samples) - 1, int(len(samples) * .95))] if samples else 0
             self.metrics["step_max_ms"] = samples[-1] if samples else 0

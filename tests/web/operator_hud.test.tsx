@@ -4,12 +4,25 @@ import {spawnSync} from 'node:child_process';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {OperatorHud} from '../../apps/client/web/OperatorHud';
 import {positionDisplay} from '../../apps/client/web/hudModel';
+import {cameraLayerClass,operatorControlAllowed} from '../../apps/client/web/operatorDisplay';
 import type {LanSnapshot} from '../../packages/renderer/src/lanTypes';
 let fixtures:Record<string,LanSnapshot>;
 beforeAll(()=>{const r=spawnSync('.venv/bin/python',['scripts/operator_fixtures.py'],{encoding:'utf8'});if(r.status!==0)throw Error(r.stderr);fixtures=JSON.parse(readFileSync('build/operator-ui/fixtures.json','utf8'));});
-function render(name:string,extras={}){const s=fixtures[name];return renderToStaticMarkup(<OperatorHud player={s.player!} arena={s.static!.arena} room={s.room!} stale={false} expanded={false} menu={false} onMenu={()=>{}} command={()=>{}} notice="" isHost={true} {...extras}/>);}
+function render(name:string,extras={}){const s=fixtures[name];return renderToStaticMarkup(<OperatorHud player={s.player!} arena={s.static!.arena} room={s.room!} catalog={(fixtures as any)._catalog} stale={false} expanded={false} menu={false} onMenu={()=>{}} command={()=>{}} notice="" isHost={true} {...extras}/>);}
 describe('operator HUD',()=>{
- test('displays both bases with authoritative maxima and rebuild state',()=>{const html=render('damaged');expect(html).toContain('data-testid="red-base"');expect(html).toContain('/ 1500');expect(html).toContain('875');expect(html).toContain('重建 40%');});
+ test('death keeps its camera while only the camera layer is gray and manual combat is locked',()=>{
+  const p=fixtures.dead.player!;
+  expect(p.display.camera_off).toBe(false);expect(p.display.grayscale).toBe(true);expect(p.display.camera).not.toBeNull();
+  expect(p.scene!.robots!.length).toBeGreaterThan(0);expect(operatorControlAllowed('running',p)).toBe(false);
+  expect(cameraLayerClass(p.display,false)).toContain('camera-grayscale');expect(cameraLayerClass(p.display,true)).not.toContain('camera-grayscale');
+  expect(render('dead')).not.toContain('camera-grayscale');expect(render('dead')).toContain('全场击杀公屏');
+ });
+ test('revival restores color but still respects resume and phase locks',()=>{
+  const p=fixtures.infantry.player!;expect(cameraLayerClass(p.display,false)).not.toContain('camera-grayscale');
+  expect(operatorControlAllowed('running',p)).toBe(true);expect(operatorControlAllowed('countdown',p)).toBe(false);
+  expect(operatorControlAllowed('running',fixtures.resume.player!)).toBe(false);expect(operatorControlAllowed('running',fixtures.overheat.player!)).toBe(false);
+ });
+ test('original base bar preserves authoritative maximum and rebuild state',()=>{const html=render('damaged');expect(html).toContain('data-testid="red-base"');expect(html).toContain('最大血量 1500');expect(html).toContain('875');expect(html).toContain('重建 40%');expect(html).toContain('bc-basebar-hex');});
  test('all four positions and map polygons are present',()=>{const html=render('contested');for(const id of ['red_base','red_outpost','blue_base','blue_outpost'])expect(html).toContain(`data-testid="${id}"`);expect(html).toContain('双方激活');expect(html).toContain('<polygon');expect(html).toContain('红·堡垒');expect(html).toContain('蓝·中央高地');});
  test('seconds are normalized and contested progress is preserved',()=>{const p=fixtures.contested.player!.tactical!.positions.red_outpost;const d=positionDisplay(p,{capture_s:5,release_s:5});expect(d.fraction).toBe(.5);expect(d.text).toContain('暂停');});
  test('temporary release and rollback labels differ',()=>{const p={...fixtures.contested.player!.tactical!.positions.red_outpost,control:'temporary' as const,active:[]};expect(positionDisplay(p,{capture_s:5,release_s:5}).text).toBe('释放计时');p.active=[p.controller];expect(positionDisplay(p,{capture_s:5,release_s:5}).text).toContain('回退');});
@@ -18,8 +31,8 @@ describe('operator HUD',()=>{
  test('dead and heat-cut cameras retain team HUD',()=>{expect(render('dead')).toContain('复活进度');expect(render('overheat')).toContain('data-testid="red-base"');expect(render('overheat')).not.toContain('class="reticle');});
  test('operator layout exposes thin sight, compact vitals and horizontal robot identities',()=>{
   const html=render('infantry',{scale:2/3});
-  for(const name of ['sight-frame','sight-center','own-identity','drive-meters','heat-strip','card-identity'])expect(html).toMatch(new RegExp(`class="${name}(?: |")`));
-  expect(html.match(/class="robot-card/g)).toHaveLength(10);
+  for(const name of ['sight-frame','sight-center','own-identity','drive-meters','heat-strip','bc-card-id','bc-basebar-hex'])expect(html).toMatch(new RegExp(`class="${name}(?: |")`));
+  expect(html.match(/class="bc-card /g)).toHaveLength(10);
   expect(html).toContain('scale(0.6666666666666666)');
   expect(html).not.toContain('outer-ring');expect(html).not.toContain('<video');
   expect(render('infantry',{expanded:true})).toContain('own-details');
