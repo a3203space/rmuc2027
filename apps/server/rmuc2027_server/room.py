@@ -47,6 +47,8 @@ class Player:
     operations: list = field(default_factory=list)
     receipts: list = field(default_factory=list)
     stage_loaded: bool = False
+    fire_press_seq: int = 0
+    fire_presses: list = field(default_factory=list)
 
 
 class Room:
@@ -202,6 +204,7 @@ class Room:
                 raise ValueError("该席位已被占用或预留")
             p.team, p.slot, p.ready = seat.team, seat.slot, False
             p.intent, p.input_at = None, 0
+            p.fire_presses.clear()
             self.changed("seat", p)
             return self.state()
 
@@ -233,6 +236,7 @@ class Room:
             p.connected, p.seen, p.disconnected = True, time.monotonic(), None
             p.generation += 1
             p.intent, p.input_at = None, 0
+            p.fire_presses.clear()
             p.needs_resume = reconnect and self.status == "running"
             self.changed("reconnect" if reconnect else "connect", p)
             return p.generation
@@ -243,6 +247,7 @@ class Room:
             if p and p.generation == generation:
                 p.connected, p.disconnected = False, time.monotonic()
                 p.intent, p.input_at = None, 0
+                p.fire_presses.clear()
                 p.operations.clear()
                 if self.status in PREMATCH: self.stage_error = p.nickname + ' 在开赛前断开连接'
                 self.changed("disconnect", p)
@@ -300,6 +305,8 @@ class Room:
             self.policy_status = {}
             for p in humans:
                 p.seq, p.processed_seq, p.intent, p.input_at = -1, -1, None, 0
+                p.fire_press_seq = 0
+                p.fire_presses.clear()
                 p.operations.clear()
                 p.receipts.clear()
                 p.needs_resume = False
@@ -318,6 +325,14 @@ class Room:
                 return {"type": "ack", "seq": message.seq, "status": "duplicate"}
             p.seq, p.seen = message.seq, time.monotonic()
             if isinstance(message, Input):
+                if not message.active or p.needs_resume:
+                    p.fire_presses.clear()
+                elif message.fire_press_seq > p.fire_press_seq:
+                    # Preserve presses even when a following mouse-up replaces
+                    # the latest intent before the physics thread samples it.
+                    count = min(message.fire_press_seq - p.fire_press_seq, 8 - len(p.fire_presses))
+                    p.fire_presses.extend(range(p.fire_press_seq + 1, p.fire_press_seq + count + 1))
+                p.fire_press_seq = max(p.fire_press_seq, message.fire_press_seq)
                 if not message.active and p.intent and p.intent.active and self.runner:
                     controller = self.runner.controllers.get(p.id)
                     if controller:
@@ -380,7 +395,9 @@ class LanMatchRunner:
                     r = next(r for r in room.presentation['robots'] if (r['team'], r['slot']) == (p.team, p.slot))
                     chassis = profiles['infantry_chassis'][p.profile['chassis']][0]
                     weapon = profiles['infantry_weapon'][p.profile['weapon']][0]
-                    r.update(hp=chassis['hp'], max_hp=chassis['hp'], power_limit=chassis['power_w'], max_heat=weapon['max_heat'])
+                    r.update(hp=chassis['hp'], max_hp=chassis['hp'], power_limit=chassis['power_w'],
+                             max_heat=weapon['max_heat'], cooling_rate=weapon['cooling'],
+                             chassis_profile=p.profile['chassis'], weapon_profile=p.profile['weapon'])
                 room.stage('loading', 60)
             if room.ai:
                 specs = []
@@ -473,6 +490,8 @@ class LanMatchRunner:
                                 if operation.name == "resume":
                                     p.needs_resume = False
                                     p.intent, p.input_at = None, 0
+                                    p.fire_presses.clear()
+                                    controller.stop_combat()
                                     controller.folded = robot.get('transform_progress', 0) >= .5 if robot.get('transform_allowed') else None
                                 else:
                                     if p.needs_resume:
@@ -492,20 +511,36 @@ class LanMatchRunner:
                         intent = p.intent
                         fresh_transport = intent is not None and started - p.input_at <= .25 and p.connected
                         fresh = fresh_transport and intent.active and not p.needs_resume
+                        blind = (not robot['alive'] or robot.get('red_card')
+                                 or robot.get('fpv_blocked_until', 0) > frame['time']
+                                 or robot.get('overheated', False))
+                        if not fresh or blind:
+                            p.fire_presses.clear()
+                            controller.stop_combat()
                         if manual:
                             if not fresh:
                                 controller.last_jump = False
                                 intent = Input(match_id=room.match_id, seq=max(0, p.seq), yaw=robot["aim"], pitch=robot["pitch"], active=False)
                                 if not fresh_transport or p.needs_resume:
                                     controller.mode = ""
-                            if robot.get("red_card"):
+                            if robot.get('red_card') or robot.get('fpv_blocked_until', 0) > frame['time']:
+                                controller.pending.clear()
+                                controller.mode = ''
                                 command = {"move": [0, 0], "brake": True, "fire": False}
+                            elif blind and robot['role'] != 'aerial':
+                                # Camera loss stops combat, but the dead operator
+                                # must still be able to purchase revival/ammo.
+                                controller.mode = ''
+                                stopped = Input(match_id=room.match_id, seq=max(0, p.seq),
+                                                yaw=robot['aim'], pitch=robot['pitch'], active=False)
+                                command = controller.action(obs, robot, stopped) if controller.pending else {"move": [0, 0], "brake": True, "fire": False}
                             elif p.needs_resume:
                                 command = {"move": [0, 0], "brake": True, "fire": False}
                             elif not fresh and not controller.pending and not (fresh_transport and (controller.mode or robot["role"] == "aerial" or intent.transform is not None)):
                                 command = {"move": [0, 0], "brake": True, "fire": False}
                             else:
-                                command = controller.action(obs, robot, intent)
+                                press = p.fire_presses.pop(0) if fresh and p.fire_presses else None
+                                command = controller.action(obs, robot, intent, press)
                             if robot.get('transform_allowed') and controller.folded is not None and not robot.get('red_card') and not p.needs_resume:
                                 command['transform'] = controller.folded
                             commands[p.team][str(p.slot)] = command
@@ -532,6 +567,10 @@ class LanMatchRunner:
                         view["control"] = {"needs_resume": p.needs_resume,
                                            "status": "判罚遮挡中" if view["display"]["ui_blocked"] else controller.status if controller and p.connected and not p.needs_resume else "AI 接管中",
                                            "ack_seq": p.processed_seq, "manual": p.connected and not p.needs_resume}
+                        if controller and not view['display']['ui_blocked']:
+                            view['control']['aim_assist'] = controller.aim.snapshot()
+                            view['control']['last_press_seq'] = controller.last_press_seq
+                            view['control']['last_press_result'] = controller.last_press_result
                         room.latest[p.id] = view
                     room.revision += 1
                 elapsed = (time.monotonic() - started) * 1000

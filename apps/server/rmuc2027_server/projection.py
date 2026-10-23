@@ -5,7 +5,7 @@ Enemy pose fields are an exterior-only allowlist; radar adds its eight specified
 information categories without exposing opponents' weapon heat or controllers.
 """
 
-from .hud import actions, rules
+from .hud import actions, rules, weapon_status
 
 EXTERIOR = frozenset("id slot team role x y z vx vy vz quaternion angular_velocity heading aim pitch radius alive hp max_hp powered model_slot model_asset chassis_size_m chassis_type design_name muzzle_height_m muzzle_reach_m armor_center_z_m armor_side_center_z_m armor_hit_face_offset_m armor_inset_m armor_mount_offset_m armor_hit_times steering_angles wheel_angular_velocity suspension legs hip_angle self_righting grounded tipped upright crouched deployed transform_allowed transform_progress arm_count arm_joints arm2_joints arm_tip arm2_tip arm_mode arm2_mode arm_extension carried_units launcher".split())
 BUFFS = ("attack_multiplier", "defense_buff", "vulnerability", "cooling_multiplier",
@@ -69,7 +69,12 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
         {**{k: d[k] for k in ("id", "x", "y", "z", "vx", "vy", "vz", "quaternion", "state")},
          "team": r["team"], "asset": r["model_asset"].replace("/robot-", "/drone-")}
         for r in frame["robots"] for d in r.get("drones", []) if d["id"] in optical_drones]
-    scene["events"] = []
+    # Only the owner's confirmed shots drive first-person recoil/muzzle effects.
+    # Do not forward global shot positions or combat events from unseen robots.
+    scene["events"] = [] if camera_off else [
+        {k: v for k, v in e.items() if k in (
+            "type", "id", "tick", "time", "robot", "team", "role", "x", "y", "z", "angle", "pitch", "muzzle_origin")}
+        for e in frame.get("events", []) if e.get("type") == "shot" and e.get("robot") == own["id"]]
     scene["runes"] = observation.get("runes", {})
     scene["assemblies"] = {team: observation.get("assemblies", {}).get(team, {})}
     scene["zones"] = result["tactical"]["zones"]
@@ -77,8 +82,9 @@ def project(frame, observation, team, slot, match_id, *, include_static=False):
     scene["teams"] = result["tactical"]["teams"]
     result["scene"] = scene
     result["actions"] = actions(frame, own)
+    result["weapon"] = weapon_status(frame, own)
     result["economy"] = {k: frame["teams"][team].get(k) for k in ("completed_difficulties", "energy_units_left", "launcher_unlock_s", "level_cap")}
-    result["events"] = [e for e in frame.get("events", []) if e.get("robot") == own["id"] and e.get("type") in ("ammo_purchase", "remote_heal", "respawn", "rpc_error")]
+    result["events"] = [e for e in frame.get("events", []) if e.get("robot") == own["id"] and e.get("type") in ("ammo_purchase", "ammo_delivered", "remote_heal", "respawn", "rpc_error")]
     result["assembly"] = observation.get("assemblies", {}).get(team, {})
     result["air"] = own.get("drones", []) if no_camera else []
     if include_static:

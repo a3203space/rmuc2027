@@ -1406,6 +1406,14 @@ impl Engine {
         {
             frame["season"] = json!("2027");
             frame["positions"] = self.position_snapshots();
+            for (i, robot) in frame["robots"].as_array_mut().unwrap().iter_mut().enumerate() {
+                robot["fire_block_reason"] = json!(self.fire_block_reason_2027(i).unwrap_or(""));
+                if self.robots[i].role != "aerial" {
+                    let (speed, interval) = self.launch_parameters_2027(&self.robots[i]);
+                    robot["muzzle_speed_mps"] = json!(speed);
+                    robot["trigger_interval_s"] = json!(interval);
+                }
+            }
         }
         frame
     }
@@ -1577,9 +1585,15 @@ impl Engine {
             .collect()
     }
     fn eye(r: &Robot) -> [f64; 3] {
-        // FPV camera on the 2027 gimbal.
-        let height = r.muzzle_height_m + 0.08;
-        let offset = Self::camera_rotation(r) * rapier3d::na::Vector3::new(0.0, 0.0, height);
+        // Camera sits 80 mm above the gun axis on the pitch joint, not on the
+        // chassis. Use this same mount for optical visibility and the client.
+        let yaw = r.aim - r.heading;
+        let mount = rapier3d::na::Vector3::new(
+            -yaw.cos() * r.pitch.sin() * 0.08,
+            -yaw.sin() * r.pitch.sin() * 0.08,
+            r.muzzle_height_m + r.pitch.cos() * 0.08,
+        );
+        let offset = Self::camera_rotation(r) * mount;
         [r.x + offset.x, r.y + offset.y, r.z + offset.z]
     }
     pub(crate) fn effective_vision(&self, r: &Robot) -> f64 {

@@ -1534,56 +1534,60 @@ impl Engine {
                             < n(&self.rules["damage"], "heavy_dead_42_mask_s") - 1e-9)
             })
     }
+    fn fire_reserve_2027(&self, i: usize) -> (bool, u32) {
+        let r = &self.robots[i];
+        let per_shot = if is_42(&r.role) {
+            n(&self.rules["buffs"]["fortress"], "heavy_reserve_per_42mm") as u32
+        } else { 1 };
+        let reserve = self.fortress_active(&r.team)
+            && self.zones.get(&format!("{}_fortress", r.team))
+                .map(|z| z.occupants.contains(&r.id)).unwrap_or(false)
+            && self.teams[&r.team].fortress_ammo >= per_shot;
+        (reserve, per_shot)
+    }
+
+    /// Shared by actual firing and the operator's authoritative weapon status.
+    pub(super) fn fire_block_reason_2027(&self, i: usize) -> Option<&'static str> {
+        let r = &self.robots[i];
+        let now = self.time();
+        if !r.alive { return Some("destroyed"); }
+        if r.red_card { return Some("red_card"); }
+        if r.role == "aerial" { return Some("hangar"); }
+        if r.weak { return Some("weak"); }
+        if r.role == "heavy" && !["fitted", "installed"].contains(&r.launcher.as_str()) {
+            return Some("launcher");
+        }
+        if r.role == "heavy" && self.assembly_active_for(&r.team)
+            && self.raw_zone(i, "assembly", Some(&r.team)) { return Some("assembly"); }
+        if r.overspeed_permanent_lock || active_until(r.overspeed_lock_until, now) {
+            return Some("overspeed");
+        }
+        if r.overheated || r.heat_permanent_lock { return Some("overheat"); }
+        if r.transform_allowed && r.transform_progress > 1e-8
+            && r.transform_progress < 1.0 - 1e-8 { return Some("transform"); }
+        if r.ammo == 0 && !self.fire_reserve_2027(i).0 { return Some("no_ammo"); }
+        if r.cooldown > 1e-8 { return Some("cooldown"); }
+        None
+    }
+
+    pub(super) fn launch_parameters_2027(&self, r: &Robot) -> (f64, f64) {
+        let design = &self.robot_models[&r.design_slot().to_string()];
+        let spec = &self.specs[&r.role];
+        (
+            design["muzzle_speed_mps"].as_f64().unwrap_or(spec.projectile_speed),
+            design["trigger_interval_s"].as_f64().filter(|v| *v > 0.0).unwrap_or(spec.cooldown),
+        )
+    }
+
     pub(super) fn fire_2027(&mut self, actions: &[Action]) {
         let now = self.time();
         for i in 0..self.robots.len() {
+            if !actions[i].fire || self.fire_block_reason_2027(i).is_some() { continue; }
             let r = self.robots[i].clone();
-            let a = &actions[i];
-            let launcher_ready =
-                r.role != "heavy" || ["fitted", "installed"].contains(&r.launcher.as_str());
-            let in_assembly = r.role == "heavy"
-                && self.assembly_active_for(&r.team)
-                && self.raw_zone(i, "assembly", Some(&r.team));
-            if !a.fire
-                || !r.alive
-                || r.red_card
-                || r.role == "aerial"
-                || r.weak
-                || !launcher_ready
-                || in_assembly
-                || r.overspeed_permanent_lock
-                || active_until(r.overspeed_lock_until, now)
-                || r.overheated
-                || r.heat_permanent_lock
-                || r.cooldown > 1e-8
-                || (r.transform_allowed
-                    && r.transform_progress > 1e-8
-                    && r.transform_progress < 1.0 - 1e-8)
-            {
-                continue;
-            }
             let heavy = is_42(&r.role);
-            let fortress = format!("{}_fortress", r.team);
-            let per_shot = if heavy {
-                n(&self.rules["buffs"]["fortress"], "heavy_reserve_per_42mm") as u32
-            } else {
-                1
-            };
-            let reserve = self.fortress_active(&r.team)
-                && self
-                    .zones
-                    .get(&fortress)
-                    .map(|z| z.occupants.contains(&r.id))
-                    .unwrap_or(false)
-                && self.teams[&r.team].fortress_ammo >= per_shot;
-            if r.ammo == 0 && !reserve {
-                continue;
-            }
-            let design = self.robot_models[&r.design_slot().to_string()].clone();
+            let (reserve, per_shot) = self.fire_reserve_2027(i);
             let spec = self.specs[&r.role].clone();
-            let speed = design["muzzle_speed_mps"]
-                .as_f64()
-                .unwrap_or(spec.projectile_speed);
+            let (speed, interval) = self.launch_parameters_2027(&r);
             let caliber = if heavy { "42mm" } else { "17mm" };
             let limit = n(&self.rules["projectiles"][caliber], "muzzle_limit_mps");
             let install_shot = r.launcher == "fitted";
@@ -1597,10 +1601,7 @@ impl Engine {
             } else {
                 self.robots[i].ammo -= 1;
             }
-            self.robots[i].cooldown = design["trigger_interval_s"]
-                .as_f64()
-                .filter(|v| *v > 0.0)
-                .unwrap_or(spec.cooldown);
+            self.robots[i].cooldown = interval;
             self.robots[i].last_shot_time = now;
             let no_heat = self
                 .posture_effect(&r)

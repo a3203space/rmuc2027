@@ -75,6 +75,8 @@ class Input(Message):
     yaw: float = Field(ge=-1e6, le=1e6)
     pitch: float = Field(ge=-1.57, le=1.57)
     fire: bool = False
+    fire_press_seq: int = Field(default=0, ge=0, le=9007199254740991, strict=True)
+    aim_assist: bool = False
     boost: bool = False
     jump: bool = False
     crouch: bool = False

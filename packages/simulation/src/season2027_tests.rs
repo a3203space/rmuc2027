@@ -25,6 +25,55 @@ fn zone_center(m: &Engine, id: &str) -> [f64; 2] {
         z.polygon.iter().map(|p| p[1]).sum::<f64>() / n,
     ]
 }
+
+#[test]
+fn operator_camera_mount_follows_gimbal_and_body_pose() {
+    use rapier3d::na::{UnitQuaternion, Vector3};
+    let m = match_();
+    for source in m.robots.iter().filter(|r| r.role != "aerial") {
+        for yaw in [0.0, 1.8, -2.7] {
+            for pitch in [-0.26, 0.0, 0.78] {
+                let mut r = source.clone();
+                r.heading = 0.4;
+                r.aim = r.heading + yaw;
+                r.pitch = pitch;
+                let body = UnitQuaternion::from_euler_angles(0.12, -0.08, r.heading);
+                let q = body.quaternion();
+                r.quaternion = [q.i, q.j, q.k, q.w];
+                let eye = Vector3::from(Engine::eye(&r));
+                let pivot = Vector3::new(r.x, r.y, r.z)
+                    + body * Vector3::new(0.0, 0.0, r.muzzle_height_m);
+                let direction = Vector3::from(physics::muzzle(&r).1);
+                let offset = eye - pivot;
+                assert!((offset.norm() - 0.08).abs() < 1e-10);
+                assert!(offset.dot(&direction).abs() < 1e-10);
+                let camera = m.camera_metadata(&r);
+                assert_eq!(camera["origin"], json!(Engine::eye(&r)));
+                assert_eq!(camera["direction"], json!(physics::muzzle(&r).1));
+                let center = eye + direction * 5.0;
+                assert!(m.point_in_camera(&r, center.into()));
+                assert!(!m.point_in_camera(&r, (eye - direction).into()));
+            }
+        }
+    }
+}
+
+#[test]
+fn folded_operator_camera_keeps_its_mount_above_the_lowered_gun() {
+    let m = match_();
+    let mut r = m.robots[robot(&m, "red-4")].clone();
+    r.pitch = 0.0;
+    r.quaternion = [0.0, 0.0, 0.0, 1.0];
+    let raised = Engine::eye(&r);
+    let delta = r.muzzle_height_m - 0.145;
+    r.muzzle_height_m = 0.145;
+    r.transform_progress = 1.0;
+    let folded = Engine::eye(&r);
+    assert!((raised[2] - folded[2] - delta).abs() < 1e-10);
+    assert!((folded[2] - r.z - 0.225).abs() < 1e-10);
+    assert_eq!(m.camera_metadata(&r)["horizontal_fov_deg"], json!(100.0));
+    assert_eq!(m.camera_metadata(&r)["vertical_fov_deg"], json!(70.0));
+}
 fn lineup(models: &[(u32, u32)]) -> Option<BTreeMap<String, Vec<Deployment>>> {
     let list: Vec<Deployment> = models
         .iter()
@@ -688,4 +737,72 @@ fn drones_pushed_into_a_spinning_outpost_stay_outside_its_armor_and_tower() {
         contacts > 20,
         "the drone should rest against the outpost, contacts {contacts}"
     );
+}
+
+#[test]
+fn operator_weapon_status_uses_the_actual_firing_gate() {
+    let mut m = match_();
+    let i = robot(&m, "red-7");
+    let mut commands = vec![Action::default(); m.robots.len()];
+    commands[i].fire = true;
+    for reason in ["destroyed", "red_card", "weak", "overspeed", "overheat", "cooldown", "no_ammo"] {
+        let saved = m.robots[i].clone();
+        match reason {
+            "destroyed" => m.robots[i].alive = false,
+            "red_card" => m.robots[i].red_card = true,
+            "weak" => m.robots[i].weak = true,
+            "overspeed" => m.robots[i].overspeed_permanent_lock = true,
+            "overheat" => m.robots[i].overheated = true,
+            "cooldown" => m.robots[i].cooldown = 1.0,
+            "no_ammo" => m.robots[i].ammo = 0,
+            _ => unreachable!(),
+        }
+        assert_eq!(m.snapshot()["robots"][i]["fire_block_reason"], reason);
+        let ammo = m.robots[i].ammo;
+        m.fire_2027(&commands);
+        assert_eq!(m.robots[i].ammo, ammo);
+        assert!(m.projectiles.is_empty());
+        m.robots[i] = saved;
+    }
+    assert_eq!(m.snapshot()["robots"][i]["fire_block_reason"], "");
+    let advertised = m.snapshot()["robots"][i].clone();
+    m.fire_2027(&commands);
+    assert_eq!(m.robots[i].ammo, 299);
+    assert_eq!(m.projectiles.len(), 1);
+    assert!((m.robots[i].cooldown - advertised["trigger_interval_s"].as_f64().unwrap()).abs() < 1e-10);
+    let shot = &m.projectiles[0];
+    let velocity = (shot.vx.powi(2) + shot.vy.powi(2) + shot.vz.powi(2)).sqrt();
+    assert!((velocity - advertised["muzzle_speed_mps"].as_f64().unwrap()).abs() < 1e-10);
+    assert_eq!(m.snapshot()["robots"][i]["fire_block_reason"], "cooldown");
+}
+
+#[test]
+fn operator_ammo_purchase_deducts_money_and_remote_delivery_arrives_once() {
+    let mut m = match_();
+    let i = robot(&m, "red-3");
+    let point = zone_center(&m, "red_supply");
+    place(&mut m, i, point[0], point[1]);
+    m.teams.get_mut("red").unwrap().resources = 500.0;
+    // Refresh the RFID contact used by the same purchase RPC as the client.
+    m.step(&json!({}));
+    m.step(&json!({}));
+    let before = m.teams["red"].resources;
+    let frame = m.step(&json!({"red":{"3":{"buy_ammo":{"remote":false,"amount":10}}}}));
+    assert_eq!(m.robots[i].ammo, 10);
+    assert_eq!(m.teams["red"].resources, before - 10.0);
+    assert!(frame["events"].as_array().unwrap().iter().any(|e| e["type"]=="ammo_purchase"));
+    // RPCs execute on even source ticks.
+    m.step(&json!({}));
+    let before = m.teams["red"].resources;
+    m.step(&json!({"red":{"3":{"buy_ammo":{"remote":true,"amount":100}}}}));
+    assert_eq!(m.robots[i].ammo, 10);
+    assert_eq!(m.robots[i].pending_ammo.len(), 1);
+    assert_eq!(m.teams["red"].resources, before - 150.0);
+    for _ in 0..119 { m.step(&json!({})); }
+    assert_eq!(m.robots[i].ammo, 10);
+    for _ in 0..2 { m.step(&json!({})); }
+    assert_eq!(m.robots[i].ammo, 110);
+    assert!(m.robots[i].pending_ammo.is_empty());
+    for _ in 0..4 { m.step(&json!({})); }
+    assert_eq!(m.robots[i].ammo, 110);
 }

@@ -1,18 +1,20 @@
-import {useEffect,useMemo,useRef} from 'react';
+import {useEffect,useMemo,useRef,type MutableRefObject} from 'react';
 import {useFrame,useThree} from '@react-three/fiber';
 import * as THREE from 'three';
 import type {PlayerCamera} from './lanTypes';
+import type {RenderFeed} from './types';
+import {feedAlpha} from './world';
 
 /** FPV uses the host camera, including body roll and pitch. No spectator controls. */
-export function PlayerDirector({camera:meta,scale,width,height,onRender}:{camera:PlayerCamera;scale:number;width:number;height:number;onRender:()=>void}){
+export function PlayerDirector({camera:meta,feed,scale,width,height,onRender}:{camera:PlayerCamera;feed:MutableRefObject<RenderFeed>;scale:number;width:number;height:number;onRender:()=>void}){
   const {camera,gl}=useThree();
-  const previous=useRef(meta),current=useRef(meta),received=useRef(performance.now());
+  const previous=useRef(meta),current=useRef(meta);
   const shadowSlot=useRef(-1);
   const postFailed=useRef(false),targetChecked=useRef(false);
   const pixelsChecked=useRef(false),sample=useMemo(()=>new Uint8Array(4),[]);
   const origin=useMemo(()=>new THREE.Vector3(),[]),direction=useMemo(()=>new THREE.Vector3(),[]);
   const outputSize=useMemo(()=>new THREE.Vector2(),[]);
-  useEffect(()=>{previous.current=current.current;current.current=meta;received.current=performance.now();},[meta]);
+  useEffect(()=>{previous.current=current.current;current.current=meta;},[meta]);
   // Render at 1080p, box downsample according to lambda, then linearly upscale.
   const post=useMemo(()=>{
     const high=new THREE.WebGLRenderTarget(1920,1080,{type:THREE.HalfFloatType,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
@@ -58,10 +60,10 @@ export function PlayerDirector({camera:meta,scale,width,height,onRender}:{camera
   },[camera,meta.vertical_fov_deg,scale,post]);
   useFrame(({scene})=>{
     if(gl.getContext().isContextLost())return;
-    const a=previous.current,b=current.current,t=Math.min(1,(performance.now()-received.current)/50);
+    const a=previous.current,b=current.current,t=feedAlpha(feed.current);
     origin.set(a.origin[0]+(b.origin[0]-a.origin[0])*t-width/2,a.origin[2]+(b.origin[2]-a.origin[2])*t,a.origin[1]+(b.origin[1]-a.origin[1])*t-height/2);
     direction.set(a.direction[0]+(b.direction[0]-a.direction[0])*t,a.direction[2]+(b.direction[2]-a.direction[2])*t,a.direction[1]+(b.direction[1]-a.direction[1])*t);
-    if(b.up)camera.up.set(b.up[0],b.up[2],b.up[1]);
+    if(b.up){const up=a.up||b.up;camera.up.set(up[0]+(b.up[0]-up[0])*t,up[2]+(b.up[2]-up[2])*t,up[1]+(b.up[1]-up[1])*t).normalize();}
     camera.position.copy(origin);camera.lookAt(origin.add(direction));
     const slot=Math.floor(performance.now()/1000*30);
     if(shadowSlot.current!==slot){shadowSlot.current=slot;gl.shadowMap.needsUpdate=true;}

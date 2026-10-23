@@ -20,12 +20,13 @@ def generate(output):
         catalog = Catalog()
         configs = {t: {str(slot): {"model": model, "strategy": "baseline"} for slot,model in ((1,2711),(3,2731),(4,2732),(6,2761),(7,2771))} for t in ("red","blue")}
         team_configs = {t: {"mode":"independent","strategy":"baseline"} for t in ("red","blue")}
-        for name, slot in [('heavy',1), ('infantry',3), ('infantry4',4), ('hangar',6), ('sentry',7), ('damaged',3), ('contested',3), ('dead',3), ('overheat',3), ('penalty',3), ('resume',3), ('finished',3)]:
+        for name, slot in [('heavy',1), ('infantry',3), ('infantry4',4), ('blue-infantry',3), ('blue-infantry4',4), ('hangar',6), ('sentry',7), ('damaged',3), ('contested',3), ('dead',3), ('overheat',3), ('penalty',3), ('resume',3), ('finished',3)]:
+            team = 'blue' if name.startswith('blue-') else 'red'
             f = copy.deepcopy(source); f.update(status='running', time=65, remaining=355, tick=1300)
             f['teams']['red']['resources'] = 620
             f['teams']['blue']['resources'] = 450
             f['teams']['red']['control'] = 42.5
-            r = next(r for r in f['robots'] if r['team']=='red' and r['slot']==slot)
+            r = next(r for r in f['robots'] if r['team']==team and r['slot']==slot)
             r.update(last_damage_time=0, last_shot_time=0)
             if name=='damaged':
                 f['bases']['red'].update(hp=875,max_hp=1500,shield_hp=80)
@@ -37,9 +38,9 @@ def generate(output):
             if name=='overheat':r.update(overheated=True,heat=300)
             if name=='penalty':r['fpv_blocked_until']=80
             if name=='finished':f.update(status='finished',remaining=0,winner='red')
-            p = project(f,match.compact_observation('red',[slot]),'red',slot,'operator-fixture')
+            p = project(f,match.compact_observation(team,[slot]),team,slot,'operator-fixture')
             p['control'] = {'needs_resume':name=='resume','status':'AI 接管中' if name=='resume' else '手动控制','ack_seq':0,'manual':name!='resume'}
-            fixture = {'player':p,'static':{k:f[k] for k in ('arena','robot_models','simulation_assumptions')},'player_id':'operator','room':{'status':f['status'],'match_id':'operator-fixture','players':[{'id':'operator','nickname':'操作手','team':'red','slot':slot,'host':True,'ready':False,'connected':True}]},'operations':[]}
+            fixture = {'player':p,'static':{k:f[k] for k in ('arena','robot_models','simulation_assumptions')},'player_id':'operator','room':{'status':f['status'],'match_id':'operator-fixture','players':[{'id':'operator','nickname':'操作手','team':team,'slot':slot,'host':True,'ready':False,'connected':True}]},'operations':[]}
             fixture['room'].update(seat_configs=configs,team_configs=team_configs)
             if name=='finished':fixture['room']['result']={'winner':'red','teams':f['teams'],'robots':[{k:r.get(k) for k in ('id','team','slot','model_slot','design_name','role','kills','damage','hp','max_hp')} for r in f['robots']]}
             fixtures[name] = fixture

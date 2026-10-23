@@ -15,7 +15,7 @@ const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png
  const report={screens:[],errors:[],rendered:false,visibleFpv:false};
  try{
   browser=await chromium.launch({headless:true,...(process.env.RMUC_CHROME?{executablePath:process.env.RMUC_CHROME}:{channel:'chrome'})});
-  for(const [width,height,scale] of [[1280,720,1],[1920,1080,1],[1536,864,1.25],[1280,720,1.5]]){
+  for(const [width,height,scale] of [[1280,720,1],[1920,1080,1],[1536,864,1.25],[1280,720,1.5],[2560,1080,1],[1280,1024,1]]){
    const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:scale});
    await context.route('http://operator.local/**',route=>{const pathname=new URL(route.request().url()).pathname;
     const file=resolve(root,'build/web',pathname==='/play'?'apps/client/web/index.html':'.'+pathname);
@@ -29,7 +29,20 @@ const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png
     window.QWebChannel=class{constructor(transport,callback){const handlers={};const signal=name=>({connect:fn=>{handlers[name]=fn}});
      window.__deliver=s=>{window.__last=s;handlers.snapshot?.(JSON.stringify(s));};
      setInterval(()=>{if(window.__last&&!window.__disconnect)handlers.snapshot?.(JSON.stringify(window.__last));},200);
-     callback({objects:{arena:{response:signal('response'),snapshot:signal('snapshot'),notice:signal('notice'),room:signal('room'),input:payload=>{window.__input=JSON.parse(payload)},command:payload=>window.__commands.push(JSON.parse(payload)),viewportReady(){handlers.response?.('catalog',JSON.stringify(window.__catalog));},pause(){},renderStats(payload){window.__frames++;const stats=JSON.parse(payload);if(stats.phase==='running'&&stats.visible_samples>0)window.__visibleFpv=true;}}}});
+     callback({objects:{arena:{response:signal('response'),snapshot:signal('snapshot'),notice:signal('notice'),room:signal('room'),input:payload=>{window.__input=JSON.parse(payload)},command:payload=>{
+      const command=JSON.parse(payload);window.__commands.push(command);
+      if(command.name==='profile'){
+       const result={request_id:command.body.request_id,ok:!window.__rejectProfile,message:'模拟保存失败'};
+       window.__profileReply=()=>{
+        if(result.ok){const s=structuredClone(window.__last),me=s.room.players.find(p=>p.id===s.player_id);me.profile={chassis:command.body.chassis,weapon:command.body.weapon};me.ready=false;s.room.revision=(s.room.revision||0)+1;window.__last=s;handlers.room?.(JSON.stringify(s.room));result.room=s.room;}
+        handlers.response?.('profile-result',JSON.stringify(result));
+       };
+       if(!window.__holdProfileReply)window.__profileReply();
+      }
+      if(command.name==='seat-config'){
+       const s=structuredClone(window.__last);Object.assign(s.room.seat_configs[command.body.team][command.body.slot],{model:command.body.model,strategy:command.body.strategy});s.room.revision=(s.room.revision||0)+1;window.__last=s;handlers.room?.(JSON.stringify(s.room));
+      }
+     },viewportReady(){handlers.response?.('catalog',JSON.stringify(window.__catalog));},pause(){},renderStats(payload){window.__frames++;const stats=JSON.parse(payload);if(stats.phase==='running'&&stats.visible_samples>0)window.__visibleFpv=true;}}}});
     }};
    },fixtures._catalog);
    const page=await context.newPage();
@@ -43,8 +56,35 @@ const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png
    await page.getByRole('button',{name:/I-T 变形隧道步兵/}).click();
    assert(await page.evaluate(()=>window.__commands.some(c=>c.name==='seat-config'&&c.body.model===301)));
    await page.screenshot({path:resolve(output,`hangar-${width}-${scale}.png`)});
+   await page.getByRole('radio',{name:/血量优先/}).waitFor();
+   await page.evaluate(()=>{window.__holdProfileReply=true;});
+   await page.getByRole('radio',{name:/功率优先/}).click();
+   await page.locator('.performance-picker[aria-busy="true"]').waitFor();
+   await page.getByRole('button',{name:'对战大厅',exact:true}).click();
+   assert(await page.getByRole('button',{name:'准备出战',exact:true}).isDisabled(),'ready must wait for profile acknowledgement');
+   await page.evaluate(()=>{window.__profileReply();window.__holdProfileReply=false;});
+   await page.getByRole('button',{name:'机器人机库',exact:true}).click();
+   await page.locator('.performance-feedback.saved').waitFor();
+   assert.equal(await page.getByRole('radio',{name:/功率优先/}).getAttribute('aria-checked'),'true');
+   for(const name of ['爆发优先','血量优先','冷却优先']){
+    await page.getByRole('radio',{name:new RegExp(name)}).click();await page.locator('.performance-feedback.saved').waitFor();
+   }
+   await page.evaluate(()=>{window.__rejectProfile=true;});
+   await page.getByRole('radio',{name:/功率优先/}).click();await page.locator('.performance-feedback.error').waitFor();
+   assert.equal(await page.getByRole('radio',{name:/血量优先/}).getAttribute('aria-checked'),'true');
+   assert.equal(await page.getByRole('radio',{name:/冷却优先/}).getAttribute('aria-checked'),'true');
+   await page.evaluate(()=>{window.__rejectProfile=false;});
+   await page.getByRole('radio',{name:/功率优先/}).click();await page.locator('.performance-feedback.saved').waitFor();
+   await page.getByRole('button',{name:/I-T 变形隧道步兵/}).click();
+   assert.equal(await page.getByRole('radio',{name:/功率优先/}).getAttribute('aria-checked'),'true','hardware changes must preserve performance');
+   for(const button of await page.getByRole('radio').all()){
+    await button.scrollIntoViewIfNeeded();
+    assert(await button.evaluate(el=>{const b=el.getBoundingClientRect();return el.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));}),'performance button is covered');
+   }
+   await page.screenshot({path:resolve(output,`performance-${width}-${scale}.png`)});
+
    for(const phase of ['loading','intro','countdown']){await page.evaluate(s=>window.__deliver(s),fixtures[phase]);await page.locator('.ceremony-root').waitFor();await page.screenshot({path:resolve(output,`${phase}-${width}-${scale}.png`)});}
-   for(const name of ['infantry','heavy','infantry4','sentry','hangar','contested','damaged','overheat','dead','resume','finished','penalty']){
+   for(const name of ['infantry','heavy','infantry4','blue-infantry','blue-infantry4','sentry','hangar','contested','damaged','overheat','dead','resume','finished','penalty']){
     await page.evaluate(s=>window.__deliver(s),fixtures[name]);
     if(name==='finished'){await page.locator('.lan-results').waitFor();assert.equal(await page.locator('.results-actions button').count(),7);}else if(name==='penalty'){await page.locator('.penalty-cover').waitFor();assert.equal(await page.locator('.scoreboard').count(),0);}else{
      await page.locator('[data-testid="red-base"]').waitFor();
@@ -52,12 +92,32 @@ const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png
      assert.equal(await page.locator('.robot-card').count(),10);
      const header=await page.locator('.scoreboard').boundingBox(),points=await page.locator('.control-strip').boundingBox();
      assert(header&&points&&header.y+header.height<=points.y+1,'scoreboard overlaps control strip');
+     const surface=await page.locator('.operator-surface').boundingBox(),own=await page.locator('.own-state').boundingBox(),map=await page.locator('.tactical-map').boundingBox();
+     assert(surface&&own&&map);
+     assert(Math.abs(surface.width/surface.height-16/9)<.002,'camera surface must stay 16:9');
+     assert(own.x+own.width<width/2&&map.x>width/2,'health belongs on the left and map on the right');
+     if(await page.locator('.sight-center').count()){
+      const aim=await page.locator('.sight-center').boundingBox();
+      assert(Math.abs(aim.x+aim.width/2-width/2)<1&&Math.abs(aim.y+aim.height/2-height/2)<1,'reticle must match camera center');
+     }
+     for(const roster of await page.locator('.roster').all()){
+      const cards=await roster.locator('.robot-card').all();
+      const boxes=await Promise.all(cards.map(card=>card.boundingBox()));
+      assert(boxes.every(box=>Math.abs(box.y-boxes[0].y)<1),'robot cards must form horizontal rows');
+      for(const card of cards){
+       assert(await card.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'robot card text overflows');
+      }
+     }
      for(const selector of ['.scoreboard','.control-strip','.own-state','.tactical-map']){const b=await page.locator(selector).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=width+1&&b.y+b.height<=height+1,`${selector} clipped`);}
     }
     const filename=`${name}-${width}x${height}-${scale}.png`;await page.screenshot({path:resolve(output,filename)});report.screens.push(filename);
    }
    await page.evaluate(s=>window.__deliver(s),fixtures.infantry);
-   await page.keyboard.down('Tab');await page.locator('.tactical-expanded').waitFor();await page.screenshot({path:resolve(output,`tactical-${width}-${scale}.png`)});await page.keyboard.up('Tab');
+   await page.keyboard.down('Tab');await page.locator('.tactical-expanded').waitFor();
+   const tacticalCards=await page.locator('.control-strip').boundingBox(),tacticalMap=await page.locator('.tactical-map').boundingBox();
+   assert(tacticalCards.y+tacticalCards.height<tacticalMap.y,'expanded controls overlap tactical map');
+   await page.locator('.own-state .own-details').waitFor();
+   await page.screenshot({path:resolve(output,`tactical-${width}-${scale}.png`)});await page.keyboard.up('Tab');
    await page.keyboard.press('Escape');await page.locator('.operator-menu').waitFor();
    await page.getByRole('button',{name:/远程补弹/}).click();
    assert(await page.evaluate(()=>window.__commands.some(c=>c.name==='ammo'&&c.value==='remote')));

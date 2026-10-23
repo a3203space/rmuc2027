@@ -4,6 +4,26 @@ import math
 from functools import lru_cache
 from rmuc2027_core.paths import ROOT
 
+FIRE_REASONS = {
+    'destroyed': '机器人战亡', 'red_card': '机器人已被罚下', 'hangar': '机库使用无人机攻击',
+    'weak': '虚弱期间不能射击', 'launcher': '重装发射机构尚未解锁或安装',
+    'assembly': '装配区域作业中不能射击', 'overspeed': '发射机构超速锁定',
+    'overheat': '发射机构过热或热量锁定', 'cooldown': '射击冷却中',
+    'transform': '变形过程中不能射击', 'no_ammo': '无弹丸，请按 B 购弹',
+    'penalty': '判罚遮挡中', 'finished': '比赛已结束',
+}
+
+
+def weapon_status(frame, robot):
+    # This code is exported by the same Rust function that gates actual shots.
+    reason = ('finished' if frame['status'] == 'finished' else
+              'penalty' if robot.get('fpv_blocked_until', 0) > frame['time'] else
+              robot.get('fire_block_reason', ''))
+    interval = robot.get('trigger_interval_s', 0)
+    return {'ready': not reason, 'reason': reason, 'detail': FIRE_REASONS.get(reason, reason),
+            'muzzle_speed_mps': robot.get('muzzle_speed_mps'),
+            'fire_rate_hz': 1 / interval if interval and interval > 0 else None}
+
 
 @lru_cache(maxsize=1)
 def rules():

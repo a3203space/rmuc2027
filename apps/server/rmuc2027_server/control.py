@@ -4,6 +4,8 @@ from types import ModuleType
 
 from rmuc2027_core.paths import ROOT
 from rmuc2027_core import sdk
+from .aim import AimAssist
+from .hud import FIRE_REASONS
 
 STAGES = {"positioning": "定位", "inserting": "插入", "lifting": "抬升", "flipping": "翻转",
           "rotating": "旋转", "verifying": "确认", "complete": "完成", "failed": "失败", "idle": "空闲"}
@@ -33,6 +35,15 @@ class HumanController:
         self.air_target = "outpost"
         self.last_jump = False
         self.folded = None
+        self.aim = AimAssist()
+        self.last_press_seq = 0
+        self.last_press_result = ''
+        self._attempted_press = False
+
+    def stop_combat(self):
+        self.last_jump = False
+        self.aim.reset()
+        self._attempted_press = False
 
     def operation(self, name, value, robot):
         if name in ("pick", "assemble", "install"):
@@ -67,31 +78,41 @@ class HumanController:
             self.status = "自动飞行：" + (("前哨站" if self.air_target == "outpost" else "基地") if self.air_enabled else "返航")
 
     def observe(self, frame, robot):
+        if self._attempted_press:
+            shot = any(e.get('type') == 'shot' and e.get('robot') == robot['id'] for e in frame.get('events', []))
+            code = robot.get('fire_block_reason', '')
+            self.last_press_result = '已发射' if shot else FIRE_REASONS.get(code, '射击条件未满足')
+            self._attempted_press = False
         for event in frame.get("events", []):
             if event.get("type") == "assembly_failed" and event.get("team") == robot["team"] and robot["role"] == "heavy":
                 self.mode = ""
                 self.status = "装配失败：" + REASONS.get(event.get("reason"), "请检查机构状态")
 
-    def action(self, observation, robot, intent):
+    def action(self, observation, robot, intent, fire_press_seq=None):
         h = self.helpers
         ctx = h.Context(observation, self.state)
         if robot["role"] == "aerial":
             return self._air(robot, ctx)
         forward, strafe = intent.forward, intent.strafe
         moving = math.hypot(forward, strafe) > .01
-        if moving and self.mode:
+        firing = intent.active and (intent.fire or fire_press_seq is not None)
+        if (moving or firing) and self.mode:
             self.mode = ""
-            self.status = "手动移动已取消辅助"
+            self.status = "手动操作已取消辅助"
         if not robot["alive"]:
             self.mode = ""
             self.status = "等待复活"
-        yaw = intent.yaw
+        yaw, pitch = self.aim.angles(observation, robot, intent)
+        if fire_press_seq is not None:
+            self.last_press_seq = fire_press_seq
+            self._attempted_press = True
         view_yaw = robot["aim"]
         size = max(1, math.hypot(forward, strafe))
         action = {"move": [(math.cos(view_yaw) * forward - math.sin(view_yaw) * strafe) / size,
                            (math.sin(view_yaw) * forward + math.cos(view_yaw) * strafe) / size],
-                  "aim": yaw, "pitch": intent.pitch, "heading": yaw,
-                  "fire": intent.fire, "skill": intent.boost, "crouch": intent.crouch,
+                  "aim": yaw, "pitch": pitch,
+                  "heading": robot['heading'] if self.aim.tracking else yaw,
+                  "fire": firing, "skill": intent.boost, "crouch": intent.crouch,
                   "brake": not moving, "jump": 1.0 if intent.jump and not self.last_jump else 0.0}
         if robot.get("transform_allowed"):
             if intent.transform is not None: self.folded = intent.transform

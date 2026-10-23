@@ -1,4 +1,5 @@
 #include "arena/ArenaBridge.h"
+#include "arena/ArenaConnection.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalSpy>
@@ -6,6 +7,16 @@
 class TestArenaState : public QObject {
  Q_OBJECT
 private slots:
+ void profileWithoutSessionReportsFailure() {
+  RM::ArenaConnection connection;
+  QSignalSpy finished(&connection, &RM::ArenaConnection::profileFinished);
+  connection.request(QStringLiteral("profile"), {{"chassis","hp"},{"weapon","cooling"}}, QStringLiteral("profile-1"));
+  QCOMPARE(finished.size(), 1);
+  const auto result=finished.at(0).at(0).toJsonObject();
+  QCOMPARE(result.value("request_id").toString(), QStringLiteral("profile-1"));
+  QVERIFY(!result.value("ok").toBool());
+  QVERIFY(!result.value("message").toString().isEmpty());
+ }
  void forwardsStructuredOperations() {
   RM::ArenaBridge bridge; QSignalSpy spy(&bridge, &RM::ArenaBridge::commandReceived);
   bridge.command(QStringLiteral("{\"name\":\"assemble\",\"value\":\"3\"}"));

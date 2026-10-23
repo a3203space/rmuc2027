@@ -18,7 +18,7 @@ public:
   explicit ArenaConnection(QObject *parent = nullptr);
   ~ArenaConnection() override;
   bool join(const QUrl &url, const QString &nickname, const QString &hostKey = {});
-  void request(const QString &action, const QJsonObject &body = {});
+  void request(const QString &action, const QJsonObject &body = {}, const QString &requestId = {});
   void fetchCatalog();
   void sendInput(QJsonObject input);
   void operation(const QString &name, const QString &value = {});
@@ -34,9 +34,10 @@ signals:
   void roomChanged(const QJsonObject &room);
   void error(const QString &message);
   void connectionChanged(bool connected);
+  void profileFinished(const QJsonObject &result);
 private:
   void post(const QString &action, const QJsonObject &body,
-            std::function<void(const QJsonObject &)> callback = {});
+            std::function<void(const QJsonObject &)> callback = {}, const QString &requestId = {});
   void openSocket();
   void releaseSession(const QUrl &url, const QString &token);
   void send(QJsonObject message);

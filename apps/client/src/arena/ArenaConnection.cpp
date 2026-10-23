@@ -132,14 +132,14 @@ bool ArenaConnection::join(const QUrl &url, const QString &nickname, const QStri
 }
 
 void ArenaConnection::post(const QString &action, const QJsonObject &body,
-                           std::function<void(const QJsonObject &)> callback) {
+                           std::function<void(const QJsonObject &)> callback, const QString &requestId) {
   const quint64 epoch = m_epoch;
   QNetworkRequest request(m_url.resolved(QUrl("/api/lan/v2/" + action)));
   request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
   request.setTransferTimeout(5000);
   if (!m_token.isEmpty()) request.setRawHeader("Authorization", "Bearer " + m_token.toUtf8());
   auto *reply = m_http.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
-  connect(reply, &QNetworkReply::finished, this, [this, reply, callback, action, epoch] {
+  connect(reply, &QNetworkReply::finished, this, [this, reply, callback, action, epoch, requestId] {
     const QJsonObject value = QJsonDocument::fromJson(reply->readAll()).object();
     if (epoch != m_epoch) {
       // A cancelled join may already have allocated a server-side seat. Release
@@ -152,9 +152,12 @@ void ArenaConnection::post(const QString &action, const QJsonObject &body,
     if (reply->error() != QNetworkReply::NoError) {
       const QString detail = value.value("detail").isString() ? value.value("detail").toString() : reply->errorString();
       emit error(detail);
+      if (action == "profile") emit profileFinished({{"request_id",requestId},{"ok",false},{"message",detail}});
     } else if (callback) callback(value);
     else if (action == "strategy-import") emit catalogReceived(value);
     else emit roomChanged(value);
+    if (action == "profile" && reply->error() == QNetworkReply::NoError)
+      emit profileFinished({{"request_id",requestId},{"ok",true},{"room",value}});
     reply->deleteLater();
   });
 }
@@ -168,9 +171,13 @@ void ArenaConnection::releaseSession(const QUrl &url, const QString &token) {
   connect(reply, &QNetworkReply::finished, reply, &QObject::deleteLater);
 }
 
-void ArenaConnection::request(const QString &action, const QJsonObject &body) {
-  if (m_token.isEmpty()) { emit error(QStringLiteral("请先加入房间")); return; }
-  post(action, body);
+void ArenaConnection::request(const QString &action, const QJsonObject &body, const QString &requestId) {
+  if (m_token.isEmpty()) {
+    emit error(QStringLiteral("请先加入房间"));
+    if (action == "profile") emit profileFinished({{"request_id",requestId},{"ok",false},{"message",QStringLiteral("请先加入房间")}});
+    return;
+  }
+  post(action, body, {}, requestId);
 }
 
 void ArenaConnection::fetchCatalog() {

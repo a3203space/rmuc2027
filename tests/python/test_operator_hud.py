@@ -89,6 +89,32 @@ class OperatorHudTests(unittest.TestCase):
         self.assertEqual(p['scene']['robots'], [])
         self.assertEqual(self.view(slot=6)['display']['reason'], 'hangar')
 
+    def test_weapon_readout_uses_engine_parameters_without_exposing_enemy_hardware(self):
+        for slot in (1, 3, 4, 7):
+            p = self.view(slot=slot)
+            own = next(r for r in self.frame['robots'] if r['id'] == p['self']['id'])
+            self.assertEqual(p['weapon']['muzzle_speed_mps'], own['muzzle_speed_mps'])
+            self.assertAlmostEqual(p['weapon']['fire_rate_hz'], 1 / own['trigger_interval_s'])
+            self.assertGreater(p['weapon']['muzzle_speed_mps'], 0)
+            for robot in p['scene']['robots']:
+                self.assertNotIn('muzzle_speed_mps', robot)
+                self.assertNotIn('trigger_interval_s', robot)
+
+    def test_first_person_effects_only_include_confirmed_owner_shots(self):
+        f = copy.deepcopy(self.frame)
+        f['events'] = [
+            {'type': 'shot', 'tick': 4, 'robot': 'red-3', 'x': 3, 'y': 6, 'z': .5, 'muzzle_origin': True, 'private': 123},
+            {'type': 'shot', 'tick': 4, 'robot': 'blue-3', 'x': 24, 'y': 8},
+            {'type': 'hit', 'tick': 4, 'robot': 'blue-3', 'damage': 20},
+        ]
+        events = self.view(f)['scene']['events']
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['robot'], 'red-3')
+        self.assertTrue(events[0]['muzzle_origin'])
+        self.assertNotIn('private', events[0])
+        next(r for r in f['robots'] if r['id'] == 'red-3').update(overheated=True, heat=100)
+        self.assertEqual(self.view(f)['scene']['events'], [])
+
 class OperatorRoomTests(unittest.TestCase):
     def test_two_seats_receive_hud_and_controller_receipts(self):
         import tempfile

@@ -19,6 +19,7 @@ import type {PlayerCamera} from './lanTypes';
 import {legRig,poseLegs,applyArmorNumber} from './robotRig';
 import {runeActive,runeArmLight} from './runeLights';
 import {useRobotScene} from './customModels';
+import {firstPersonRig,interpolateAngle} from './firstPersonRig';
 
 const defaultRobotAsset=(role:string)=>`/assets/robot-${({heavy:2711,infantry:2731,aerial:2761,sentry:2771} as Record<string,number>)[role]}-spec2027.glb`;
 type Controls=React.ElementRef<typeof OrbitControls>;
@@ -36,10 +37,11 @@ function useAsset(url:string,team?:TeamId){
   return asset;
 }
 
-function RobotModel({id,role,team,url,feed,selected,onSelect}:{id:string;role:string;team:TeamId;url:string;feed:MutableRefObject<RenderFeed>;selected:string;onSelect:(id:string)=>void}){
+function RobotModel({id,role,team,url,feed,selected,onSelect,firstPerson=false}:{id:string;role:string;team:TeamId;url:string;feed:MutableRefObject<RenderFeed>;selected:string;onSelect:(id:string)=>void;firstPerson?:boolean}){
   const asset=useAsset(url,team),group=useRef<THREE.Group>(null),body=asset.getObjectByName('Chassis'),turret=asset.getObjectByName('Turret'),pitch=asset.getObjectByName('GunPitch');
   const poseNow=useMemo(()=>new THREE.Quaternion(),[]),poseOld=useMemo(()=>new THREE.Quaternion(),[]);
   useEffect(()=>applyArmorNumber(asset,id.slice(id.lastIndexOf('-')+1)),[asset,id]);
+  useEffect(()=>firstPerson?firstPersonRig(asset,role):undefined,[asset,firstPerson,role]);
   const lift=asset.getObjectByName('GunElevator'),shoulder=asset.getObjectByName('ArmShoulder'),forearm=asset.getObjectByName('ArmForearm');
   const arms=useMemo(()=>['','Aux_'].map(prefix=>{const get=(n:string)=>asset.getObjectByName(prefix+n);const slew=get('ArmSlew');return slew?{slew,lift:get('ArmLift')!,stage:get('ArmMastStage')!,reach:get('ArmReach')!,yaw:get('ArmWristYaw')!,pitch:get('ArmWristPitch')!,roll:get('ArmWristRoll')!,jaws:[get('GripperJaw_0'),get('GripperJaw_1')],liftRest:get('ArmLift')!.position.y}:null;}),[asset]);
   const steering=useMemo(()=>[0,1,2,3].map(k=>asset.getObjectByName('SteerModule_'+k)),[asset]);
@@ -61,8 +63,8 @@ function RobotModel({id,role,team,url,feed,selected,onSelect}:{id:string;role:st
     const alpha=feedAlpha(feed.current);
     const pos=point(r,0,f.arena.width,f.arena.height);pos.lerp(point(old,0,f.arena.width,f.arena.height),1-alpha);group.current.position.copy(pos);
     if(r.quaternion){const a=r.quaternion,b=old.quaternion||a;poseNow.set(-a[0],-a[2],-a[1],a[3]);poseOld.set(-b[0],-b[2],-b[1],b[3]);group.current.quaternion.copy(poseOld.slerp(poseNow,alpha));}else group.current.rotation.y=-r.heading;
-    if(turret)turret.rotation.y=-(r.aim-r.heading);
-    if(pitch)pitch.rotation.z=r.pitch||0;
+    if(turret)turret.rotation.y=-interpolateAngle(old.aim-old.heading,r.aim-r.heading,alpha);
+    if(pitch)pitch.rotation.z=(old.pitch||0)+((r.pitch||0)-(old.pitch||0))*alpha;
     if(pitch&&gunRest)pitch.position.x=gunRest.x-pulse('shot:'+id,is42(r.role)?.22:.08)*(is42(r.role)?.06:.015);
     if(launcherModule)launcherModule.visible=r.launcher==='fitted'||r.launcher==='installed';
     // Mirrored model: engine wheel index k sits at model index k^1 (four wheels) or 1-k (two).
@@ -82,7 +84,11 @@ function RobotModel({id,role,team,url,feed,selected,onSelect}:{id:string;role:st
       arm.jaws.forEach((jaw,k)=>{if(jaw)jaw.position.z=-(k?1:-1)*(.018+q[6]*.032);});});
     for(const node of rotorNodes)node.rotation.y+=dt*((r.motor_power_w??(r.z>.5?1000:0))>100?90:0);
     if(body&&!r.quaternion){body.rotation.z=physicalAlive?Math.sin(clock.elapsedTime*8+r.slot)*.006:-.08;body.position.y=physicalAlive?Math.min(.025,r.vx*r.vx*.001):-.08;}
-    if(lift)lift.position.y=r.transform_allowed?-(hardware?.muzzle_z_m??.4)+r.muzzle_height_m!:r.crouched?-.265:0;
+    if(lift){
+      const height=r.muzzle_height_m??hardware?.muzzle_z_m??gunRest?.y??.4;
+      const before=old.muzzle_height_m??height;
+      lift.position.y=before+(height-before)*alpha-(hardware?.muzzle_z_m??gunRest?.y??height);
+    }
     for(const node of foldMasts){const rest=node.userData.rest_height_m??.30,height=rest+((node.userData.folded_height_m??.08)-rest)*(r.transform_progress??0);node.scale.y=height/rest;node.position.y=(node.userData.base_z_m??.10)+height/2;}
     if(shoulder)shoulder.rotation.z=(r.arm_extension||0)*.72;
     if(forearm)forearm.rotation.z=(r.arm_extension||0)*2.47;
@@ -95,13 +101,13 @@ function RobotModel({id,role,team,url,feed,selected,onSelect}:{id:string;role:st
     // Wrecks stay on the field as physical obstacles: dimmed, lamps off.
     for(const m of materials){m.transparent=!physicalAlive;m.opacity=physicalAlive?1:.62;}
     const hit=pulse(id,.18);for(const g of glows){g.m.emissive.copy(g.emissive).lerp(WHITE,hit*.7);g.m.emissiveIntensity=r.alive||r.role==='aerial'?g.intensity*(1+hit*3):g.intensity*.08;}
-    if(ring.current){ring.current.visible=selected===id;ring.current.rotation.z=clock.elapsedTime*.2;}
-    if(shield.current){shield.current.visible=r.alive&&r.shield>0;const material=shield.current.material as THREE.MeshBasicMaterial;material.opacity=.08+Math.sin(clock.elapsedTime*8)*.025;}
+    if(ring.current){ring.current.visible=!firstPerson&&selected===id;ring.current.rotation.z=clock.elapsedTime*.2;}
+    if(shield.current){shield.current.visible=!firstPerson&&r.alive&&r.shield>0;const material=shield.current.material as THREE.MeshBasicMaterial;material.opacity=.08+Math.sin(clock.elapsedTime*8)*.025;}
     if(light.current){const flash=feed.current.events.some(e=>e.type==='shot'&&e.robot===id);light.current.position.set(Math.cos(r.aim-r.heading)*Math.cos(r.pitch)*(r.muzzle_reach_m||.3),(r.muzzle_height_m||.55)+Math.sin(r.pitch)*(r.muzzle_reach_m||.3),Math.sin(r.aim-r.heading)*Math.cos(r.pitch)*(r.muzzle_reach_m||.3));light.current.intensity=flash?.15:Math.max(0,light.current.intensity-dt*30);}
   });
   return <group ref={group} onClick={e=>{e.stopPropagation();onSelect(id);}}>
     <primitive object={asset}/>
-    {role==='heavy'&&<><group ref={heldUnit} visible={false}>
+    {role==='heavy'&&!firstPerson&&<><group ref={heldUnit} visible={false}>
       <primitive object={unitAsset} rotation={[0,0,-Math.PI/2]}/>
     </group><PickupHud id={id} feed={feed}/></>}
     <mesh ref={ring} rotation={[-Math.PI/2,0,0]} position={[0,.024,0]} visible={selected===id}><ringGeometry args={[.75,.79,48]}/><meshBasicMaterial color="#edc27a" transparent opacity={.9} side={THREE.DoubleSide}/></mesh>
@@ -351,13 +357,13 @@ export function ArenaScene({frame,feed,mode,selected,audio,onSelect,onCanvas,onR
   return <SceneBoundary onRetry={retry} audio={audio} onError={onSceneError}><Canvas shadows dpr={[1,1.6]} camera={{position:BROADCAST_EYE,fov:42,near:.1,far:220}} gl={{antialias:true}} onCreated={({gl,scene})=>{onCanvas(gl.domElement);console.info('ARENA_CANVAS_READY',JSON.stringify({width:gl.domElement.width,height:gl.domElement.height}));gl.shadowMap.autoUpdate=false;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.18;scene.background=new THREE.Color('#05070b');scene.fog=new THREE.Fog('#05070b',55,150);}}>
     <hemisphereLight args={['#e4eefb','#1c2128',1.9]}/><ambientLight intensity={.22}/><directionalLight position={[4,26,9]} intensity={3.1} color="#f4f6ff" castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-28} shadow-camera-right={28} shadow-camera-top={24} shadow-camera-bottom={-24} shadow-bias={-.0004}/><directionalLight position={[-18,12,-14]} color="#9fb9ff" intensity={1.1}/><directionalLight position={[18,9,14]} color="#c9b8ff" intensity={.45}/>
     <Venue season={frameSeason(frame)}/>
-    <Suspense fallback={<Html center><div className="scene-loading">加载 Blender / glTF 资产…</div></Html>}><ArenaMap frame={frame} feed={feed}/><BaseModel team="red" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/><BaseModel team="blue" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/>{frame.outposts&&<><OutpostModel team="red" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/><OutpostModel team="blue" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/></>}{frame.runes&&<><RuneModel team="red" feed={feed}/><RuneModel team="blue" feed={feed}/></>}{frame.arena.structure_assets?.core&&frame.arena.assembly_frames&&<><TechCore team="red" feed={feed} url={frame.arena.structure_assets.core}/><TechCore team="blue" feed={feed} url={frame.arena.structure_assets.core}/></>}{frame.robots.filter(r=>!playerCamera||r.id!==selected).map(r=><RobotModel key={r.id} id={r.id} role={r.role} team={r.team} url={r.model_asset||defaultRobotAsset(r.role)} feed={feed} selected={selected} onSelect={onSelect}/>)}{frame.robots.filter(r=>r.drones?.length&&r.model_asset).flatMap(r=>r.drones!.map((d,k)=><DroneModel key={d.id} robot={r.id} index={k} team={r.team} url={r.model_asset!.replace('/robot-','/drone-')} feed={feed}/>))}{frame.visible_drones?.map(d=><OpticalDrone key={d.id} id={d.id} team={d.team} url={d.asset} feed={feed}/>)}<AssetsReady ready={onAssetsReady}/></Suspense>
+    <Suspense fallback={<Html center><div className="scene-loading">加载 Blender / glTF 资产…</div></Html>}><ArenaMap frame={frame} feed={feed}/><BaseModel team="red" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/><BaseModel team="blue" feed={feed} url={frame.arena.structure_assets?.base||'/assets/base-ch4.glb'}/>{frame.outposts&&<><OutpostModel team="red" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/><OutpostModel team="blue" feed={feed} url={frame.arena.structure_assets?.outpost||'/assets/outpost-ch4.glb'}/></>}{frame.runes&&<><RuneModel team="red" feed={feed}/><RuneModel team="blue" feed={feed}/></>}{frame.arena.structure_assets?.core&&frame.arena.assembly_frames&&<><TechCore team="red" feed={feed} url={frame.arena.structure_assets.core}/><TechCore team="blue" feed={feed} url={frame.arena.structure_assets.core}/></>}{frame.robots.map(r=><RobotModel key={r.id} id={r.id} role={r.role} team={r.team} url={r.model_asset||defaultRobotAsset(r.role)} feed={feed} selected={selected} onSelect={onSelect} firstPerson={!!playerCamera&&r.id===selected}/>)}{frame.robots.filter(r=>r.drones?.length&&r.model_asset).flatMap(r=>r.drones!.map((d,k)=><DroneModel key={d.id} robot={r.id} index={k} team={r.team} url={r.model_asset!.replace('/robot-','/drone-')} feed={feed}/>))}{frame.visible_drones?.map(d=><OpticalDrone key={d.id} id={d.id} team={d.team} url={d.asset} feed={feed}/>)}<AssetsReady ready={onAssetsReady}/></Suspense>
     <group visible={!shot&&!playerCamera}>{frame.robots.map(r=><RobotHud key={r.id} id={r.id} team={r.team} feed={feed} focus={selected===r.id} onSelect={onSelect}/>)}
     {(['red','blue'] as const).map(team=><group key={team}><StructureHud team={team} kind="base" feed={feed}/>{frame.outposts&&<StructureHud team={team} kind="outpost" feed={feed}/>}</group>)}</group>
     {!playerCamera&&<><CombatText feed={feed}/>{frame.runes&&<><RuneBoard feed={feed}/><RuneBurst feed={feed}/></>}</>}
     {!playerCamera&&(['red','blue'] as const).map(team=><group key={team}><MechanismHud team={team} kind="outpost" feed={feed}/><FortressWarning defender={team} feed={feed}/></group>)}
     {playerCamera&&<ControlMarkers frame={frame} eye={playerCamera}/>}
-    <Effects feed={feed}/><>{playerCamera?<PlayerDirector camera={playerCamera} scale={resolutionScale} width={frame.arena.width} height={frame.arena.height} onRender={onRender}/>:<Director mode={mode} selected={selected} feed={feed} audio={audio} onCanvas={onCanvas} onRender={onRender} shot={shot}/>}</>
+    <Effects feed={feed}/><>{playerCamera?<PlayerDirector camera={playerCamera} feed={feed} scale={resolutionScale} width={frame.arena.width} height={frame.arena.height} onRender={onRender}/>:<Director mode={mode} selected={selected} feed={feed} audio={audio} onCanvas={onCanvas} onRender={onRender} shot={shot}/>}</>
   </Canvas></SceneBoundary>;
 }
 

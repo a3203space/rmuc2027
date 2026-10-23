@@ -48,6 +48,7 @@ ArenaWindow::ArenaWindow(QWidget *parent) : QMainWindow(parent) {
   connect(m_connection,&ArenaConnection::roomChanged,this,[this](const QJsonObject &room){emit m_bridge->room(QString::fromUtf8(QJsonDocument(room).toJson(QJsonDocument::Compact)));});
   connect(m_connection,&ArenaConnection::catalogReceived,this,[this](const QJsonObject &catalog){emit m_bridge->response("catalog",QString::fromUtf8(QJsonDocument(catalog).toJson(QJsonDocument::Compact)));});
   connect(m_connection,&ArenaConnection::error,m_bridge,&ArenaBridge::notice);
+  connect(m_connection,&ArenaConnection::profileFinished,this,[this](const QJsonObject &result){emit m_bridge->response("profile-result",QString::fromUtf8(QJsonDocument(result).toJson(QJsonDocument::Compact)));});
   connect(m_connection,&ArenaConnection::connectionChanged,this,[this](bool connected){if(!connected){neutral();emit m_bridge->snapshot("{\"transport\":false}");}else m_connection->fetchCatalog();});
   connect(m_bridge,&ArenaBridge::ready,this,[this]{emit m_bridge->response("settings",QString::fromUtf8(QJsonDocument(m_options).toJson(QJsonDocument::Compact)));emit m_bridge->snapshot(QString::fromUtf8(QJsonDocument(m_lastSnapshot).toJson(QJsonDocument::Compact)));});
   connect(m_bridge,&ArenaBridge::inputReceived,this,[this](const QString &payload){m_lastInput=QJsonDocument::fromJson(payload.toUtf8()).object();if(!m_lastInput.isEmpty())m_connection->sendInput(m_lastInput);});
@@ -58,7 +59,8 @@ ArenaWindow::ArenaWindow(QWidget *parent) : QMainWindow(parent) {
     const auto message=QJsonDocument::fromJson(payload.toUtf8()).object(); const QString name=message.value("name").toString(); const auto body=message.value("body").toObject();
     if(name=="host"||name=="join"){if(body.value("port").toInt()<1024||body.value("port").toInt()>65535||body.value("nickname").toString().trimmed().isEmpty()){emit m_bridge->notice(QStringLiteral("请填写昵称和 1024–65535 的端口"));return;}configure(body);if(name=="host")host();else join(body.value("owner_key").toString());}
     else if(name=="catalog")m_connection->fetchCatalog();
-    else if(name=="seat"||name=="ready"||name=="start"||name=="profile"||name=="seat-config"||name=="team-config"||name=="stage-ready"||name=="skip-intro")m_connection->request(name,body);
+    else if(name=="profile"){auto profile=body;const QString requestId=profile.take("request_id").toString();m_connection->request(name,profile,requestId);}
+    else if(name=="seat"||name=="ready"||name=="start"||name=="seat-config"||name=="team-config"||name=="stage-ready"||name=="skip-intro")m_connection->request(name,body);
     else if(name=="room")emit m_bridge->response("room","{}");
     else if(name=="settings"){configure(body);emit m_bridge->response("settings",QString::fromUtf8(QJsonDocument(m_options).toJson(QJsonDocument::Compact)));}
     else if(name=="leave"){neutral();m_connection->leave();stopHost();m_lastSnapshot={};emit m_bridge->snapshot("{\"player\":null,\"room\":null}");}
