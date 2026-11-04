@@ -1,0 +1,938 @@
+[
+  {
+    "source": "Arena-1/frontend/src/StrategyUpdates.tsx",
+    "source_sha256": "ef29054bf6caa84d9a8087fb4aa3a8f2e273cf7a68de4eeba1dabde1f62d1ac2",
+    "path": "apps/arena-web/src/StrategyUpdates.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/interaction.css",
+    "source_sha256": "dd59c604080c86bac16be86cbbf677586d6d05c544038473e251da89ea2a81a5",
+    "path": "apps/arena-web/src/interaction.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/matchStats.ts",
+    "source_sha256": "73db778e2d4c8144bf71fa140ee04db62f2fd4be58e85a1ba3b6d8b9ffdc1263",
+    "path": "apps/arena-web/src/matchStats.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/StrategyGallery.tsx",
+    "source_sha256": "47023ca84eb530864c71d8427173bd83c2287603d8dbaee3b52fde471dd93157",
+    "path": "apps/arena-web/src/StrategyGallery.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/agents.ts",
+    "source_sha256": "7b21eb44c7dae7cf1d56f009406f5986d166823d4c3103dfc811f8245319f4f1",
+    "path": "apps/arena-web/src/agents.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/TeamLineup.tsx",
+    "source_sha256": "04709b083f80d19213323f3c6446db920d7b011893cf2ffc26dcbb39708f5ac9",
+    "path": "apps/arena-web/src/TeamLineup.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/freeBattle.ts",
+    "source_sha256": "97a59dc07bab23b9a28a1a9d9beeb5ebccca0d177afdb8a30f2db0acac9688d3",
+    "path": "apps/arena-web/src/freeBattle.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/ceremony.tsx",
+    "source_sha256": "482b813b7f114539692447678ba1e8463825bb54a81a1bf30bec2bf76860a6c0",
+    "path": "apps/arena-web/src/ceremony.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/teamLineup.css",
+    "source_sha256": "f31065bcabd68e2b6d9bddb669433b5b92605948c90f69af22f8fab75893767e",
+    "path": "apps/arena-web/src/teamLineup.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/deckBuilder.css",
+    "source_sha256": "132bd12f977b06fa9b8f27274065db6444173a101345cbd7c130911a8ec35837",
+    "path": "apps/arena-web/src/deckBuilder.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/intro.css",
+    "source_sha256": "600333102c01354f8fe45ecb961508bd1b8d604cbdd85242a3facfae47645c1d",
+    "path": "apps/arena-web/src/intro.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/DeleteMatchDialog.tsx",
+    "source_sha256": "bbc3e6fd8c16780eb4c9821d523b630ee327b41cd8ddd514564f2d6128d4c880",
+    "path": "apps/arena-web/src/DeleteMatchDialog.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/broadcast.css",
+    "source_sha256": "0e2697199028a38fa1b465ff9077174ea1655e15e5717162890163b434b97be6",
+    "path": "apps/arena-web/src/broadcast.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/StrategyMatchmaker.tsx",
+    "source_sha256": "39faa42172b4a06bd5b4bf7ed49eeefe4caa2121939149c8bd4e0bf143a714d1",
+    "path": "apps/arena-web/src/StrategyMatchmaker.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/style.css",
+    "source_sha256": "4087b02c462ada82b7ad95bf2a956a1a52e072966dfb984384a59368a22c4316",
+    "path": "apps/arena-web/src/style.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/audioPlaylist.ts",
+    "source_sha256": "d67783171c2cab1618dcc7e742326d62ec9ca0638174927086a5d0e80ea5f7b9",
+    "path": "apps/arena-web/src/audioPlaylist.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/BattleSettings.tsx",
+    "source_sha256": "7eb470806c4610e41bb382d5b08e225b61d56077be8f17af2ddabf4988cdf3e6",
+    "path": "apps/arena-web/src/BattleSettings.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/home.css",
+    "source_sha256": "cddc98358dda4bdb0f1220e4c526698c50b60340bbf179848dccd9f0b2229933",
+    "path": "apps/arena-web/src/home.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/teamMaterials.ts",
+    "source_sha256": "b15ac4ec0b93e1f1675475ed3be2667cf3b4abf9e3edb7f5db23c8f4bcb6ab79",
+    "path": "apps/arena-web/src/teamMaterials.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/Training.tsx",
+    "source_sha256": "127987c56dbc11dd69c089d911b9c7844f61777be9b080384ba957080553bbc3",
+    "path": "apps/arena-web/src/Training.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/media.ts",
+    "source_sha256": "3292db446a9d8a8dacaaf0205eec568c3471266c1c4c0e5fd9504d0516c92348",
+    "path": "apps/arena-web/src/media.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/MatchHistory.tsx",
+    "source_sha256": "3c532117301313d39f89a1172c782dce1d85ca8ccbecd0b5fa2ecacf09498550",
+    "path": "apps/arena-web/src/MatchHistory.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/mechanismProgress.ts",
+    "source_sha256": "ec0fbbd66534aaa046e319f1695771c620e26c7c87840c0be96dd3d17510ceb1",
+    "path": "apps/arena-web/src/mechanismProgress.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/KillAnnouncement.tsx",
+    "source_sha256": "e6e43898bb41bd65780e950457e5358bc9a78c0fac9a26ffc9f634d6ecc80168",
+    "path": "apps/arena-web/src/KillAnnouncement.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/showcaseViz.tsx",
+    "source_sha256": "335bb5e8489dd276a5a8dc477364e2ec8116d5277d714876ada2b5903713e99f",
+    "path": "apps/arena-web/src/showcaseViz.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/customModels.ts",
+    "source_sha256": "d7efa796bf531c4e67c3f3e8e4d68d8eb7b61d09ebe568e9249bd04478506203",
+    "path": "apps/arena-web/src/customModels.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/interfaceFeedback.ts",
+    "source_sha256": "9f378ad79663b9a78277c560bc26b987b8c1af80cb4e9ee9d1e7dc85392b4ba8",
+    "path": "apps/arena-web/src/interfaceFeedback.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/TelemetryPanel.tsx",
+    "source_sha256": "a095aaab585d3330516c27a94dc0c0052ba82a1813bb124687693a6fd2ac445c",
+    "path": "apps/arena-web/src/TelemetryPanel.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/types.ts",
+    "source_sha256": "7a226f62b7a5efa4196a14c6499e3026b35ca4989c1914c946993e1723ef9893",
+    "path": "apps/arena-web/src/types.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/ArenaScene.tsx",
+    "source_sha256": "2f1bd372eaf8f33b66407efe9b57bc54fbd2badaedf10f8370c63983d93dc45b",
+    "path": "apps/arena-web/src/ArenaScene.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/thumbnails.ts",
+    "source_sha256": "94863a50a6bd5ad2d352294cfe50d71c1ff2f4b8f9111b81295f7d0ce5aa537a",
+    "path": "apps/arena-web/src/thumbnails.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/intro.ts",
+    "source_sha256": "d25ae57070edfa70934e7792022f8eeaf808b9d5cd986762230a0406dab28c62",
+    "path": "apps/arena-web/src/intro.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/modelWorkshop.css",
+    "source_sha256": "95602fd7b9d103b52f32727ce08729465766dc2d310ea79414a064713c34114d",
+    "path": "apps/arena-web/src/modelWorkshop.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/matchSelection.ts",
+    "source_sha256": "cd0328d7a6ec62e773ec2df0e729ddeefcbd2a550c9bb6ff70f70dfb59a16615",
+    "path": "apps/arena-web/src/matchSelection.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/AudioControls.tsx",
+    "source_sha256": "3bf0d1cdd2391bca7e915240792f6ed3bd3363b5a160a957bd6926fd53c4bf81",
+    "path": "apps/arena-web/src/AudioControls.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/matchDiagnostics.ts",
+    "source_sha256": "4b3d803b1a2dbf72d62760c172ef3360001993eaec9cb61e82a0c79f3e1738d2",
+    "path": "apps/arena-web/src/matchDiagnostics.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/deckCatalog.ts",
+    "source_sha256": "d11f5457d892c713ffded30f10e1ec4399718491bb22cc80ba4d0478aa90a012",
+    "path": "apps/arena-web/src/deckCatalog.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/matchTools.css",
+    "source_sha256": "381dc6e8d23052694dff6311715688554b13036c81f817731bd37373b9379310",
+    "path": "apps/arena-web/src/matchTools.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/DeckBuilder.tsx",
+    "source_sha256": "fdd3eb44575fbf3e6f5c29521ed68a4c77a56b93f61c840972070dce2aca2da1",
+    "path": "apps/arena-web/src/DeckBuilder.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/Home.tsx",
+    "source_sha256": "2f66b84494f82686b147e03c9a1f8604ae3a8a6492cbdb3fc00626f992f7cd57",
+    "path": "apps/arena-web/src/Home.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/uploadWizard.css",
+    "source_sha256": "6e0970fd98b25daaaca6b3e64c3bf92902efd7175e02b3c515204a9bd7b81714",
+    "path": "apps/arena-web/src/uploadWizard.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/broadcast.tsx",
+    "source_sha256": "25d959128d84d46c269f48721c0dec037910c798c9d8a9d0bb3da04c75f27de6",
+    "path": "apps/arena-web/src/broadcast.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/agentLogos.tsx",
+    "source_sha256": "6abf4f8a497a005708b76868287b3d5afbfb7546ad8c517bb913a7dbbc3b2c94",
+    "path": "apps/arena-web/src/agentLogos.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/killAnnouncements.ts",
+    "source_sha256": "40363f3ddf9f6cb39d7283f19ed7b57331141076d66edaffc784a340b98f3eca",
+    "path": "apps/arena-web/src/killAnnouncements.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/archive.css",
+    "source_sha256": "fb3f811248f9fbde2496a397c8c3f736cf0d17593bc8204ed17c43efba48098d",
+    "path": "apps/arena-web/src/archive.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/rigidMeshes.ts",
+    "source_sha256": "94e05badf363e765e7204e94aaaf389f18240e529bdd6540669fb6ada1d63a0b",
+    "path": "apps/arena-web/src/rigidMeshes.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/ModelWorkshop.tsx",
+    "source_sha256": "eacbb331842ca716adbeec13e20f3f8cab1a7a622faf5cf0f90d987b9e8ca24f",
+    "path": "apps/arena-web/src/ModelWorkshop.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/CameraControls.tsx",
+    "source_sha256": "483f837b7680c00e447079288ea2a337dd9e615de1ce4f6e8a52b52169a037eb",
+    "path": "apps/arena-web/src/CameraControls.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/main.tsx",
+    "source_sha256": "0e5e955222571c20b28e73c09d0bc7ee9ee9bfc0c44ff509191cbe4f5512dd37",
+    "path": "apps/arena-web/src/main.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/videoExport.ts",
+    "source_sha256": "9eeb788791f99c1d68546fcd4f7c419b415895d311485133649a47534abc8130",
+    "path": "apps/arena-web/src/videoExport.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/LineupIntro.tsx",
+    "source_sha256": "5f7708520a7cd3d2c5b59df27ba0acad5a6f849cde08c11a55fc489130aea472",
+    "path": "apps/arena-web/src/LineupIntro.tsx",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/killAnnouncement.css",
+    "source_sha256": "aaab6fb46797ac27ee463a37c3f9301d5df0f0e4da268162a84e5125defb5f55",
+    "path": "apps/arena-web/src/killAnnouncement.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/robotRig.ts",
+    "source_sha256": "721181e81baed04a72d8d349bfc97f994729a364df6921050e419b0518c9658d",
+    "path": "apps/arena-web/src/robotRig.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/gallery.css",
+    "source_sha256": "05cf690e2dd9645bb93ca6f5787dd7c4057ee95f6e566533b1e60d4e3674a748",
+    "path": "apps/arena-web/src/gallery.css",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/App.tsx",
+    "source_sha256": "2477b97ad24799ad6bb0c5b06abbc718a73c841f00af0ca009035805abe151cc",
+    "path": "apps/arena-web/src/App.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/RobotPreview.tsx",
+    "source_sha256": "022cbe604bec6de353d01bbaab22e7ed366cdb7fb86ee5eb0b5437e221a5595d",
+    "path": "apps/arena-web/src/RobotPreview.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/strategyMatchup.ts",
+    "source_sha256": "3ec8976396b499922edb53f75580d6bd6d86c5d5fd25ad499d1b6cbd2ad98fde",
+    "path": "apps/arena-web/src/strategyMatchup.ts",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/UploadWizard.tsx",
+    "source_sha256": "cfb1970dd63cd4e6e6a5d36d9170aa6a5834478d837c0a83fb5d8426a092d9cb",
+    "path": "apps/arena-web/src/UploadWizard.tsx",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/src/strategyIdentity.ts",
+    "source_sha256": "f21339cdc2592387d42d5147fa3f5cf03085054b37eb7f0504ad72dc71d91c64",
+    "path": "apps/arena-web/src/strategyIdentity.ts",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/index.html",
+    "source_sha256": "d9da2c866631ebbe9ff581656e843de40b85e9b1740e3b367027e327e3c87a17",
+    "path": "apps/arena-web/index.html",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/frontend/public/favicon.svg",
+    "source_sha256": "62027bfdeb2114761ab96ee9416eb60474ecf8b9124bb69c159de4c2349235a9",
+    "path": "assets/web/favicon.svg",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/public/assets/audio/summoning-glory.m4a",
+    "source_sha256": "f5449fd77066cb8a93067ee39a729e403beed8656f5c208722d0330c484b9d6c",
+    "path": "assets/web/assets/audio/summoning-glory.m4a",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/public/assets/audio/broadcast-themes.json",
+    "source_sha256": "be8bc9db5c440ca0fd764df01d266dea3c689184aea9ad973b6bf662bc50364b",
+    "path": "assets/web/assets/audio/broadcast-themes.json",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/public/assets/audio/intro-free.m4a",
+    "source_sha256": "a8958bd21652b239210c59281e835f47523fd22015ff91e41346bff069c7fd90",
+    "path": "assets/web/assets/audio/intro-free.m4a",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/server.py",
+    "source_sha256": "3b76aa811fe5b823759346c8bc1be7a0899a591fdde1558a83ba2991fb872e58",
+    "path": "research/rmuc2027_research/web/server.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/store.py",
+    "source_sha256": "edca5369bf18accbb1b8aad93df8eb0c5bfbd86f075e97cb6b5aee9b1a271b70",
+    "path": "research/rmuc2027_research/web/store.py",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/strategy_names.py",
+    "source_sha256": "4a58528d1c223d7a550565e7b4abeaf87def649e98ac4deef85b25ec0568c70b",
+    "path": "research/rmuc2027_research/web/strategy_names.py",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/showcase.py",
+    "source_sha256": "152a91cf3546da908752d43d240235d5ac1bbad72d08ad125f44727cfb908264",
+    "path": "research/rmuc2027_research/web/showcase.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/custom_models.py",
+    "source_sha256": "75005ebe94c34e21b23639b5171fb0559db7627ee19b78da62313e1564af4d05",
+    "path": "research/rmuc2027_research/web/custom_models.py",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/training.py",
+    "source_sha256": "df05ce4c3e13562bc3b6aadaede80c1f46d143c2311a02b70750c8bf2922e414",
+    "path": "research/rmuc2027_research/web/training.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/author_client.py",
+    "source_sha256": "a15c46bb85c1240770f0a06facf4b41f6e81a27eaa0ce7e4345e9e9b37c46041",
+    "path": "research/rmuc2027_research/web/author_client.py",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/robot_presets.py",
+    "source_sha256": "a999ddaa7fdccf524742687332f8b2345cfa148933f70ec85f4e1944e17d2c6e",
+    "path": "research/rmuc2027_research/web/robot_presets.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/strategy_library.py",
+    "source_sha256": "b619d788de5c6993add3a5d7e66915c12959a2e186cbe5bd1148feef8dcb31a4",
+    "path": "research/rmuc2027_research/web/strategy_library.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/video_export.py",
+    "source_sha256": "92bddc452850905c0dd560848590a056b84025278bc7c049579b243657f638d2",
+    "path": "research/rmuc2027_research/web/video_export.py",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/rmuc_arena/submissions.py",
+    "source_sha256": "666b256460d80bc799ef8cb73e146f359a6daeed1bb028a8bb2dd23bafbc507b",
+    "path": "research/rmuc2027_research/web/submissions.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/scripts/build_agent_guides.py",
+    "source_sha256": "e423fcb7f0fab994b30268a04ebc52b63f6c555678376c531fc3774bd44081e4",
+    "path": "research/rmuc2027_research/web/guides.py",
+    "mode": "adapted"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-303.md",
+    "source_sha256": "683829fae406804a2879fec7d52f1cc4a2f6ee06f32d3ad9d7fbda431cf9d07d",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-303.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-4.md",
+    "source_sha256": "2687eef430c4ef8e1496bbea076e1b09fa6c2b9f33936209d43e131e785b6c99",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-4.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2732.md",
+    "source_sha256": "5e45fdb190e8e653b91fa25053353285297d9a4b7725d0fb1a3a962dc5e44c39",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2732.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-301.md",
+    "source_sha256": "246181edb5bcefd7d1bba8012c4e1b52a9ad130d80e609ae85ba0784746081a1",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-301.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-7.md",
+    "source_sha256": "e21fd304602ed4da055b953bf43d3366c1d2f5ce0c137a18bd1ea8580bc58935",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-7.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/distributed.md",
+    "source_sha256": "ba9c5d563b169e7ccf6976ecc7ed9ed470f0bd7f4a0f135d80cb0f5a439a2dd3",
+    "path": "docs/agent_guides/zh/2027/distributed.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-304.md",
+    "source_sha256": "305d7278020cb39b41750e694335b8de218578ce8c5a2f63dd501cca63967b65",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-304.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/robot-7.md",
+    "source_sha256": "dc8e1134c4fef22a279482104d8af4291e11f1565c35474050d72799cdeb0dc0",
+    "path": "docs/agent_guides/zh/2027/robot-7.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-302.md",
+    "source_sha256": "ea2c6ac10d6e61d2c6e6950abe655515d530336c11ecd69383e12ba0da4283ce",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-302.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/robot-4.md",
+    "source_sha256": "65b8a46c92304c30daff37e68391f1b65eb019a4890383dd75df3a9f4414d2c7",
+    "path": "docs/agent_guides/zh/2027/robot-4.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2713.md",
+    "source_sha256": "d2a0f4a32ffeffffbb06f7aa9915e735c7cce347c06dc4846fb10080feff33a3",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2713.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2772.md",
+    "source_sha256": "e26282d33ec7c5db7250884fedd7d92ef8f02e3b9ab2a90729f82306f4872cb4",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2772.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/robot-1.md",
+    "source_sha256": "85b815a15de7b2e7e8112e53b3ea633ae9c1a8e054bab75f383a443153d09df5",
+    "path": "docs/agent_guides/zh/2027/robot-1.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-3.md",
+    "source_sha256": "d2bdae9dff2e7b76ffa790d1a2c407c7fbb95e32e1c957b7830802ee2012377d",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-3.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2712.md",
+    "source_sha256": "39fe66e2ade676d3a77e47f5378d21d74079621616094a6e070569c60a30b719",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2712.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-305.md",
+    "source_sha256": "f56cfc572efb946b44da2992fec19200777279fa981ad1d0d86e1f6574de950a",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-305.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/team.md",
+    "source_sha256": "b03b6255ab63f4f88742ef683335af46cdeded88a386ac9bbf12acaa43da8236",
+    "path": "docs/agent_guides/zh/2027/team.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/robot-6.md",
+    "source_sha256": "cbe4bf3011161196addc3f34ef8d2a29c47b149c92789053adfb035ad26c3aa3",
+    "path": "docs/agent_guides/zh/2027/robot-6.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2761.md",
+    "source_sha256": "b55ae812c4f9873e0bd53bde84851d070291b82f5fb9e9cb477d952bfdd13dad",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2761.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2763.md",
+    "source_sha256": "061b30bb3c5b3d90350678771fbb58ebd394447bcc644b35ed5b895f4f47b770",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2763.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2731.md",
+    "source_sha256": "4d492e28939d8efa50362615288bb57425c011ac248d460c68cdc02c26f719cd",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2731.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2771.md",
+    "source_sha256": "2e33f086a424e43ad6b9fe35413c9e151d1647c93fbd32a6b8de5171582356ef",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2771.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/robot-3.md",
+    "source_sha256": "6a122a0374231b73040a42eff9cac386a6e14955b5b1b5a735935c5a875398ca",
+    "path": "docs/agent_guides/zh/2027/robot-3.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2762.md",
+    "source_sha256": "10c69744248d71c5efd86bc06025686546f317e32bc9352d2cc5dbd71adbbd53",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2762.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/zh/2027/adaptive-robot-2711.md",
+    "source_sha256": "b177b37f7703cca392acbcaa965324ae8aa439e3ff3777e848e9e45cebb5d3bf",
+    "path": "docs/agent_guides/zh/2027/adaptive-robot-2711.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/common/practice.md",
+    "source_sha256": "bddc175cd4a618b4a2211d565d0b1374ebe8281ac9cc44176db1b83301274188",
+    "path": "docs/agent_guides/source/zh/common/practice.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/common/communication.md",
+    "source_sha256": "7f9d87ae37cc656e718e962af729c4491d9eb4394a27fa2c4a73847576d91977",
+    "path": "docs/agent_guides/source/zh/common/communication.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/common/task.md",
+    "source_sha256": "1f6f877d53117180bac3801eb06f3b82eda579cc3fa5ae0722b5b95da1a2e5ab",
+    "path": "docs/agent_guides/source/zh/common/task.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/rules.md",
+    "source_sha256": "872fa0a940dcadd933a1f1a30921451df6c427a746b3768fba730faee9c3a0c2",
+    "path": "docs/agent_guides/source/zh/2027/rules.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/distributed.md",
+    "source_sha256": "93f83849c99d175d538c60d24d01cdff5fff5a157724730ea5e15dd0492b56b2",
+    "path": "docs/agent_guides/source/zh/2027/distributed.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/overview.md",
+    "source_sha256": "e5c1b749dc22470a4586a88e00af424c960255785e02baf9e2ddc507050232b2",
+    "path": "docs/agent_guides/source/zh/2027/overview.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/starter.md",
+    "source_sha256": "5f9a8a20a800522902ffc0cd767817d8e60c2df8439cb965e825a57250237d30",
+    "path": "docs/agent_guides/source/zh/2027/starter.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/team.md",
+    "source_sha256": "fa39039473896ae51178fae87707856504b4cd83b329d15185e66c0a6536b645",
+    "path": "docs/agent_guides/source/zh/2027/team.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/adaptive.md",
+    "source_sha256": "5dbe4952746dedc39f3b5d0229c0a9d91e34be1c32907b8958f5497cee1132dc",
+    "path": "docs/agent_guides/source/zh/2027/adaptive.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/robot.md",
+    "source_sha256": "012358e3b5b22b48ae35f1b1dfe4e14329908195e5400c2ccd5488bcee666ae5",
+    "path": "docs/agent_guides/source/zh/2027/robot.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/quickstart.md",
+    "source_sha256": "a7a052ddc2bfb4ead17bb001d5d7206b8101371fe0cf2b221ff71b9b4e250fcb",
+    "path": "docs/agent_guides/source/zh/2027/quickstart.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/interface.md",
+    "source_sha256": "5da095af2cb8c898840cd5e5e789b503805c2d0fc0dd9e86e5eb9afc4c333183",
+    "path": "docs/agent_guides/source/zh/2027/interface.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/information.md",
+    "source_sha256": "80aa0c7812686c0f372eccb5c3793a0bfa5bce3731c14dda6ee5ddde75708337",
+    "path": "docs/agent_guides/source/zh/2027/information.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/zh/2027/robots.md",
+    "source_sha256": "345a4178cc0fee803f9d43a74fb24dd1825dad0e7ff36af8a1a089d7e0705c53",
+    "path": "docs/agent_guides/source/zh/2027/robots.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-303.md",
+    "source_sha256": "ffcd89f5a292db8ce4863301db28c2e1e20791e34dfcb565d2894fa6ed95cf4e",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-303.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-4.md",
+    "source_sha256": "1fb4a0c7e1c6685ef5a675011e9ba97fc478a8925155dd650de621129dcf7ee3",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-4.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2732.md",
+    "source_sha256": "a5d82468f37d7065af2400e54d0a47efb172daf2d51d71ddb45cea49f029aa7c",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2732.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-301.md",
+    "source_sha256": "a63b4d689445a9d4e453f361485981b2dfbad8bb9d3372e7a0312d0da606dc13",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-301.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-7.md",
+    "source_sha256": "f0eea36054ed3c754f90b1e13b9c2a522c66282be3f4ae899e9cea0104173156",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-7.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/distributed.md",
+    "source_sha256": "cea26bf7b5360961016203e6085d18ca3bf733879940c93335afe23b52444287",
+    "path": "docs/agent_guides/en/2027/distributed.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-304.md",
+    "source_sha256": "37c11be091ad97ac49e88599c2c12ed38d88a1a8a8341d7b4066188e8e0d1623",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-304.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/robot-7.md",
+    "source_sha256": "aee40f21b309fd9a792d851d4cb0dd20c79e6f13d1312e8f102421e494cd9c54",
+    "path": "docs/agent_guides/en/2027/robot-7.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-302.md",
+    "source_sha256": "c8e77341f1c68371f0094e7d2cc1fb8051a620bef3fae43f26b119a7975c4b87",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-302.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/robot-4.md",
+    "source_sha256": "8598a668ed129ce8572eac4927f67692d02b45fc2c5c1c124f61159ff2cf26c1",
+    "path": "docs/agent_guides/en/2027/robot-4.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2713.md",
+    "source_sha256": "7fe2e911d47eea6a0d858ca245d3db422e679cd2d6d7e96530ebdf9b6cec45b7",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2713.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2772.md",
+    "source_sha256": "96e4547d5e7c7bd110888db38d144444717d421efb3bb726daeabf5f1d488cf8",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2772.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/robot-1.md",
+    "source_sha256": "71229c0b9d890c542afefb1f64b3fb21d0001737bee0cb3c478912df1e61ee34",
+    "path": "docs/agent_guides/en/2027/robot-1.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-3.md",
+    "source_sha256": "4388636acea632013738bf0a291e29571eed7d25de64a4a0b128d04550a00570",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-3.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2712.md",
+    "source_sha256": "ffbebe7394c341cae7fb14ede12f4838d190fa7acc0af0d25041838b5c0388c7",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2712.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-305.md",
+    "source_sha256": "ed8424ae1e4814794c0b0216c5afac8d6c3aebeb6afdf02e508e5f1776d92f2d",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-305.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/team.md",
+    "source_sha256": "d7b9d29bb151fa2c3d182e7fe8612fcec7a8e2c409aad0f87ca86877408ffc5b",
+    "path": "docs/agent_guides/en/2027/team.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/robot-6.md",
+    "source_sha256": "16aef2d3723dc468432eacfa3b6e5f61e404b069d6e6d0bc92abd982c93b95b7",
+    "path": "docs/agent_guides/en/2027/robot-6.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2761.md",
+    "source_sha256": "d287caca805c8bfc56c25f821d7eb548ac23652a02bd0744e29130c7acc79448",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2761.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2763.md",
+    "source_sha256": "5e79756a9bc6ac7e39c3ba892fbfacff8fd14b353f73c52c3ddc95ed541017cb",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2763.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2731.md",
+    "source_sha256": "1f623ee9eace1153bccc742111f16fad9264dc20282562cb0197926923a4dc8b",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2731.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2771.md",
+    "source_sha256": "1cd05e80b3de4a4f7621a24b0318572bd90154a1e272b3992438da1f5016ab01",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2771.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/robot-3.md",
+    "source_sha256": "e74f4744ba347fc5723b05875267eca5a4de1441b3f129d9d8042fddb348a234",
+    "path": "docs/agent_guides/en/2027/robot-3.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2762.md",
+    "source_sha256": "a6ee6f5ab16ec359dad479d9c2c8cea9ceb72db37ee16be15f2e4a789e4bad87",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2762.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/en/2027/adaptive-robot-2711.md",
+    "source_sha256": "b591f65ba1a6a5032f48d34933dff225e3b1ff8a215ab769d12355f7a13e919f",
+    "path": "docs/agent_guides/en/2027/adaptive-robot-2711.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/common/practice.md",
+    "source_sha256": "9fae09c340bd2ee5ef11a0d14dafab36d3c22608d351f4f3528d6fc750ec416f",
+    "path": "docs/agent_guides/source/en/common/practice.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/common/communication.md",
+    "source_sha256": "68ad2c56c6f7ba5e243b899a85801f6488322d19a0190deae123a0120f3f3ddb",
+    "path": "docs/agent_guides/source/en/common/communication.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/common/task.md",
+    "source_sha256": "226b98b9563660ab108e60cf8f74a179b7d4c6733e607c67c58d0cd722946338",
+    "path": "docs/agent_guides/source/en/common/task.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/rules.md",
+    "source_sha256": "f2f4c06d0e6c6691e8bb70bae4149c6aacff9ada565a55962fe15b31c0fb4301",
+    "path": "docs/agent_guides/source/en/2027/rules.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/distributed.md",
+    "source_sha256": "5d4233210bc8041cc7588c5e674c7947ca1c592341a9c0348c539aebc801e327",
+    "path": "docs/agent_guides/source/en/2027/distributed.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/overview.md",
+    "source_sha256": "c5a6a92ecec406fbe96cf6544efab87d08f2c7e48217b3bdcfbf0db4074666f3",
+    "path": "docs/agent_guides/source/en/2027/overview.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/starter.md",
+    "source_sha256": "d71b94ce4ed7ea0a174be5532f9eaccde52f6a91f66fa0b263a3cbbade6cfe57",
+    "path": "docs/agent_guides/source/en/2027/starter.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/team.md",
+    "source_sha256": "387f6ab1b38cdc6fb2e2f1e4e83f6d55396cada9ad77012047078baf12354829",
+    "path": "docs/agent_guides/source/en/2027/team.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/adaptive.md",
+    "source_sha256": "915f7de53439e091371688e598236072b13507919391b2438458be583d7f6179",
+    "path": "docs/agent_guides/source/en/2027/adaptive.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/robot.md",
+    "source_sha256": "d701bf18f0118b308a23addcddc9e72451bd850ed5401b964969436a93129220",
+    "path": "docs/agent_guides/source/en/2027/robot.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/quickstart.md",
+    "source_sha256": "0c168c9e558f026adea97e728cf971ae17eb7f9d3f7ec6706f90a016388ba79b",
+    "path": "docs/agent_guides/source/en/2027/quickstart.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/interface.md",
+    "source_sha256": "1dd29aca87b462f82456906aa8fd782f472f3e84af53194171c8908f9723cc87",
+    "path": "docs/agent_guides/source/en/2027/interface.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/information.md",
+    "source_sha256": "d3d0b2f880948e85831554dd0fb49bf13da0bcebe5775fdb25658855606a7090",
+    "path": "docs/agent_guides/source/en/2027/information.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/agent_guides/source/en/2027/robots.md",
+    "source_sha256": "52966fdefff1f74ed778848af9aa0238cda930bea5ac9b66a304af27253fb18c",
+    "path": "docs/agent_guides/source/en/2027/robots.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/docs/STRATEGY_SHOWCASE.md",
+    "source_sha256": "063c9cf5573b85376e7f380086c2d2db086fd437bd359de74d72e941aaae7f95",
+    "path": "docs/STRATEGY_SHOWCASE.md",
+    "mode": "copied"
+  },
+  {
+    "source": "Arena-1/frontend/src/customModels.ts",
+    "source_sha256": "d7efa796bf531c4e67c3f3e8e4d68d8eb7b61d09ebe568e9249bd04478506203",
+    "path": "packages/renderer/src/customModels.ts",
+    "mode": "adapted"
+  }
+]

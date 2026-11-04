@@ -7,6 +7,7 @@ import {EMPTY_PROFILE_SAVE} from './performance';
 import {clock,number,roles,side} from './hudModel';
 import {Hangar} from './arena/Hangar';
 import {Home} from './arena/Home';
+import type {CatalogStatus} from './useCatalog';
 import {AudioControls} from './arena/AudioControls';
 import {TelemetryPanel} from './arena/TelemetryPanel';
 import {StrategyGallery} from './arena/StrategyGallery';
@@ -20,7 +21,7 @@ export {compatible} from './arena/configuration';
 export type Invoke=(name:string,body?:Record<string,unknown>)=>void;
 export const DEFAULT_SETTINGS:AppSettings={nickname:'玩家',address:'127.0.0.1',port:8766,runtime:'',sensitivity:20,volume:35};
 const slots=[1,3,4,6,7],teams:TeamId[]=['red','blue'];
-export function ArenaShell({room,catalog,playerId,settings,onSettings,invoke,notice,visible,onClose,onSurface,profileSave=EMPTY_PROFILE_SAVE,offline=false,viewport,player=null,arena,presentation,inspected='',onInspect=()=>{}}:{room:RoomState|null;catalog:RuntimeCatalog;playerId:string;settings:AppSettings;onSettings:(s:AppSettings)=>void;invoke:Invoke;notice:string;visible:boolean;onClose:()=>void;onSurface?:(page:string)=>void;profileSave?:ProfileSaveState;offline?:boolean;viewport?:ReactNode;player?:LanPlayer|null;arena?:Arena;presentation?:SimulationFrame|null;inspected?:string;onInspect?:(id:string)=>void}){
+export function ArenaShell({room,catalog,catalogStatus,playerId,settings,onSettings,invoke,notice,visible,onClose,onSurface,profileSave=EMPTY_PROFILE_SAVE,offline=false,viewport,player=null,arena,presentation,inspected='',onInspect=()=>{}}:{room:RoomState|null;catalog:RuntimeCatalog;catalogStatus?:CatalogStatus;playerId:string;settings:AppSettings;onSettings:(s:AppSettings)=>void;invoke:Invoke;notice:string;visible:boolean;onClose:()=>void;onSurface?:(page:string)=>void;profileSave?:ProfileSaveState;offline?:boolean;viewport?:ReactNode;player?:LanPlayer|null;arena?:Arena;presentation?:SimulationFrame|null;inspected?:string;onInspect?:(id:string)=>void}){
  const [page,setPage]=useState('home'),[active,setActive]=useState<{team:TeamId;slot:number}>({team:'red',slot:3}),[ownerKey,setOwnerKey]=useState(''),[connectOpen,setConnectOpen]=useState(false),[fullscreen,setFullscreen]=useState(false);
  const viewportHost=useRef<HTMLDivElement>(null),me=room?.players?.find(p=>p.id===playerId),host=!!me?.host,editable=!!room&&['lobby','finished'].includes(room.status),saving=!!profileSave.pending;
  const metadata=useMemo(()=>matchMetadata(room,catalog),[room,catalog]);
@@ -50,7 +51,7 @@ export function ArenaShell({room,catalog,playerId,settings,onSettings,invoke,not
  <AudioControls sound={(settings.volume??35)>0} volume={(settings.volume??35)/100} onToggle={()=>update('volume',(settings.volume??35)>0?0:35)} onVolume={value=>update('volume',Math.round(value*100))}/>
  <div className={`connection ${room&&!offline?'online':''}`}><span/>{offline?'连接已中断':room?'WebSocket 已连接':'本地客户端'}<b>RMUC 2027</b></div></header>
  {profileSave.status==='error'&&<div className="global-error" role="status"><Activity size={14}/><span>{profileSave.message}</span></div>}
- {page==='home'&&<Home models={catalog.models} catalog={catalogEntries} cards={{}} connected={!!room&&!offline} busy={busy} live={room?{red:'红方',blue:'蓝方'}:null} onTraining={()=>{}} onBattle={()=>room?navigate('room'):setConnectOpen(true)} onHistory={()=>{}} onRankings={()=>{}} onGallery={()=>navigate('strategies')} onWatch={()=>navigate('room')}/>}
+ {page==='home'&&<Home models={catalog.models} catalogStatus={catalogStatus} catalog={catalogEntries} cards={{}} connected={!!room&&!offline} busy={busy} live={room?{red:'红方',blue:'蓝方'}:null} onTraining={()=>{}} onBattle={()=>room?navigate('room'):setConnectOpen(true)} onHistory={()=>{}} onRankings={()=>{}} onGallery={()=>navigate('strategies')} onWatch={()=>navigate('room')}/>}
  <div className="arena-battle-page" style={{display:page==='room'?'block':'none'}}>
  <div className="page-heading"><div><span className="eyebrow">LIVE SIMULATION</span><h1>RM 对战 · RMUC 2027 · 5V5</h1></div><div className="architecture-tags"><span><Wifi size={12}/>{offline?'已断开':'局域网联机'}</span><span><Crosshair size={12}/>操作手第一视角</span></div></div>
  <main className="arena-layout"><aside className="setup-panel"><div className="panel-heading"><span className="eyebrow">MATCH SETUP</span><span className="tiny-badge">5 V 5</span></div><h2 className="matchup-title">准备上场阵容</h2>
@@ -70,7 +71,7 @@ export function ArenaShell({room,catalog,playerId,settings,onSettings,invoke,not
  </main></div>
  {page==='hangar'&&room&&<Hangar room={room} catalog={catalog} playerId={playerId} active={active} onActive={setActive} profileSave={profileSave} offline={offline} invoke={invoke} onStrategies={()=>navigate('strategies')}/>}
  {page==='strategies'&&<StrategyGallery room={room} catalog={catalog} playerId={playerId} active={active} saving={saving} offline={offline} invoke={invoke} onConfigure={()=>navigate(room?'hangar':'home')}/>}
- {page==='settings'&&<section className="archive-page lan-settings"><span className="eyebrow">INTERFACE & CONTROL</span><h1>设置</h1><label>鼠标灵敏度 <b>{settings.sensitivity||20}</b><input type="range" min={1} max={50} value={settings.sensitivity||20} onChange={e=>update('sensitivity',Number(e.target.value))}/></label><label>音乐与入场音效 <b>{settings.volume??35}%</b><input type="range" min={0} max={100} value={settings.volume??35} onChange={e=>update('volume',Number(e.target.value))}/></label><p>WASD 移动 · 鼠标云台 · 左键射击 · 右键按住自瞄<br/>Shift 加速 · Space 跳跃 · Ctrl 下蹲 · F 折叠/展开<br/>轮足底盘：W/S 前后、A/D 转向。</p>{room&&<button onClick={()=>{navigate('room');onClose();}}>返回战斗画面</button>}</section>}
+ {page==='settings'&&<section className="archive-page lan-settings"><span className="eyebrow">INTERFACE & CONTROL</span><h1>设置</h1><label>鼠标灵敏度 <b>{settings.sensitivity||20}</b><input type="range" min={1} max={50} value={settings.sensitivity||20} onChange={e=>update('sensitivity',Number(e.target.value))}/></label><label>音乐与入场音效 <b>{settings.volume??35}%</b><input type="range" min={0} max={100} value={settings.volume??35} onChange={e=>update('volume',Number(e.target.value))}/></label><p>WASD 随图传视角移动 · 鼠标云台 · 左键射击 · 右键按住自瞄<br/>Shift 加速 · Space 跳跃 · Ctrl 下蹲 · F 折叠/展开<br/>轮腿与串联腿：WASD 请求视角方向移动，底盘自动转向或倒车，不支持横移。</p>{room&&<button onClick={()=>{navigate('room');onClose();}}>返回战斗画面</button>}</section>}
  <footer><span role="status">{notice||'RMUC 2027 · 5V5 · 局域网真人联机'}</span><span>ROBOT STRATEGY LEAGUE</span></footer>
  {connectOpen&&<ConnectionDialog settings={settings} onSettings={onSettings} ownerKey={ownerKey} onOwnerKey={setOwnerKey} invoke={invoke} onClose={()=>setConnectOpen(false)}/>}
  </div>;

@@ -1,4 +1,4 @@
-"""Offline policy development, matches, and RL; never imported by the LAN host."""
+"""Policy development, live web matches, and RL; never imported by the LAN host."""
 import argparse, json, sys
 from pathlib import Path
 
@@ -9,19 +9,26 @@ def main():
         return rl_main()
     parser=argparse.ArgumentParser(prog='rmuc2027-research')
     sub=parser.add_subparsers(dest='command',required=True)
+    serve=sub.add_parser('serve', help='Start the complete Arena web application')
+    serve.add_argument('--port',type=int,default=8767)
+    serve.add_argument('--sandbox',choices=['trusted-local','docker'],default='trusted-local')
     battle=sub.add_parser('battle')
     battle.add_argument('--red',type=Path,required=True);battle.add_argument('--blue',type=Path,required=True)
     battle.add_argument('--seed',type=int,default=42);battle.add_argument('--duration',type=float,default=420)
     battle.add_argument('--sandbox',choices=['trusted-local','docker'],default='trusted-local')
     battle.add_argument('--output',type=Path,required=True)
+    battle.add_argument('--settings',type=Path,help='Exported battle settings JSON')
     new=sub.add_parser('new-strategy');new.add_argument('output',type=Path)
     save=sub.add_parser('bundle');save.add_argument('source',type=Path);save.add_argument('output',type=Path)
     migrate=sub.add_parser('migrate-model');migrate.add_argument('source',type=Path);migrate.add_argument('output',type=Path)
     args=parser.parse_args()
+    if args.command=='serve':
+        from .web.server import serve
+        return serve(args.port,args.sandbox)
     if args.command=='battle':
         from .strategies.battle import Battle
         if args.output.exists():parser.error('Output exists; choose a new replay path')
-        with Battle(args.red,args.blue,seed=args.seed,duration=args.duration,map_name='rmuc2027',sandbox=args.sandbox) as match:
+        with Battle(args.red,args.blue,seed=args.seed,duration=args.duration,map_name='rmuc2027',sandbox=args.sandbox,battle_settings=json.loads(args.settings.read_text()) if args.settings else None) as match:
             result=match.run();match.save(args.output)
         print(json.dumps(result,indent=2))
     elif args.command=='migrate-model':

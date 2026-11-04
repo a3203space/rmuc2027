@@ -10,6 +10,8 @@ def verify_replay(path):
     if replay["format"] == "rmuc-replay-v4":
         replay["frames"] = [{**replay["static"], **frame} for frame in replay["frames"]]
     meta = replay["metadata"]
+    if meta.get("physics_backend", "rapier") != "rapier":
+        raise ValueError("MJWarp training replay supports snapshot playback; Rapier deterministic verification is not applicable")
     if meta.get("map") != "rmuc2027":
         raise ValueError("Only RMUC 2027 replays are supported")
     if len(replay["frames"]) != len(replay["actions"]) + 1:

@@ -279,3 +279,41 @@ fn flip_rotates_the_tool_ninety_degrees_for_tilted_and_vertical_cores() {
         assert!(dot.abs() < 1e-9, "phi {phi}");
     }
 }
+
+#[test]
+fn timed_assembly_requires_no_stock_and_settles_only_once() {
+    let (mut m, h) = setup(1);
+    m.sim["timed_assembly"] = json!(true);
+    m.assemblies.get_mut("red").unwrap().stage = "idle".into();
+    m.robots[h].carried_units = 0;
+    m.assembly_rpc_2027(h, &json!({"assembly":1}));
+    assert_eq!(m.assemblies["red"].stage, "moving");
+    for _ in 0..199 { m.assembly_after_step_2027(); }
+    assert_eq!(m.assemblies["red"].stage, "inserting");
+    let public = m.assembly_snapshots();
+    assert_eq!(public["red"]["mode"], "timed_probability");
+    assert!(public["red"]["progress"].as_f64().unwrap() > 0.99);
+    assert!(public["red"]["attempt_remaining_s"].as_f64().unwrap() < 0.06);
+    m.assembly_after_step_2027();
+    assert!(["complete", "failed"].contains(&m.assemblies["red"].stage.as_str()));
+    let count = m.events.len();
+    for _ in 0..200 { m.assembly_after_step_2027(); }
+    assert_eq!(m.events.len(), count);
+    assert_eq!(m.robots[h].carried_units, 0);
+}
+
+#[test]
+fn timed_assembly_motion_pauses_and_death_interrupts() {
+    let (mut m, h) = setup(1);
+    m.sim["timed_assembly"] = json!(true);
+    m.robots[h].vx = 1.0;
+    for _ in 0..20 { m.assembly_after_step_2027(); }
+    assert_eq!(m.assemblies["red"].confirm_progress_s, 0.0);
+    m.robots[h].vx = 0.0;
+    m.assembly_after_step_2027();
+    assert!(m.assemblies["red"].confirm_progress_s > 0.0);
+    m.robots[h].alive = false;
+    m.assembly_after_step_2027();
+    assert_eq!(m.assemblies["red"].stage, "failed");
+    assert_eq!(m.assemblies["red"].confirm_progress_s, 0.0);
+}

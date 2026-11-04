@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 name = "rmuc2027-research"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = ["rmuc2027-core"]
+dependencies = ["rmuc2027-core", "fastapi>=0.115,<1", "uvicorn[standard]>=0.30,<1", "httpx>=0.27,<1", "imageio-ffmpeg==0.6.0"]
 [tool.setuptools.packages.find]
 include = ["rmuc2027_research*"]
 [project.scripts]

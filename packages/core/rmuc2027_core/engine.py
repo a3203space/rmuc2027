@@ -36,13 +36,19 @@ def binary_path():
 
 
 class Match:
-    def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None):
+    def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None, physics_adapter=None):
+        self.training_summary = False
+        self.external_physics = physics_adapter
+        environment = dict(os.environ)
+        environment.pop('RMUC_EXTERNAL_PHYSICS', None)
+        if self.external_physics is not None:
+            environment['RMUC_EXTERNAL_PHYSICS'] = '1'
         self.lock = threading.RLock()
         if replay_version is not None:
             raise ValueError('Legacy engines are not included; historical 2027 replays remain viewable')
         binary = binary_path()
         self.process = subprocess.Popen([str(binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=subprocess.DEVNULL)
+                                        stderr=subprocess.DEVNULL, env=environment)
         self.closed = False
         self._broken = False
         self._responses = queue.Queue()
@@ -75,6 +81,14 @@ class Match:
                 self.process.stdin.flush()
                 line = self._read_line()
                 value = json.loads(line)
+                while value.get('op') == 'external_physics':
+                    if self.external_physics is None:
+                        raise RuntimeError('Unexpected external physics request')
+                    result = self.external_physics.step(value)
+                    self.process.stdin.write(json.dumps(result, allow_nan=False).encode()+b'\n')
+                    self.process.stdin.flush()
+                    line = self._read_line()
+                    value = json.loads(line)
             except BaseException:
                 # A late response must never be mistaken for the next request's
                 # reply, including a diagnostic digest requested during close.
@@ -110,7 +124,7 @@ class Match:
         raise AttributeError(name)
 
     def step(self, commands):
-        frame, line = self._request({"op": "step", "commands": commands, "static": False}, raw=True)
+        frame, line = self._request({"op": "training_step" if self.training_summary else "step", "commands": commands, "static": False}, raw=True)
         self._frame = dict(sorted({**frame, **self._static}.items()))
         self.raw_frame = line.rstrip(b"\n")
         # Frames are treated as immutable once returned; callers may still extend their events.
@@ -141,7 +155,7 @@ class Match:
             return header["controlled_ids"], [self._read_line() for _ in viewers]
 
     def snapshot(self):
-        return copy.deepcopy(self._frame)
+        return self._request({"op": "snapshot"}) if self.training_summary else copy.deepcopy(self._frame)
 
     def digest(self):
         return self._request({"op": "digest"})["digest"]
@@ -150,6 +164,15 @@ class Match:
         self._frame = self._request({"op": "finish", "winner": winner, "reason": reason})
 
     def close(self):
+        adapter = self.external_physics
+        self.external_physics = None
+        try:
+            if adapter is not None:
+                adapter.close()
+        finally:
+            self._close_transport()
+
+    def _close_transport(self):
         if self.closed:
             return
         self.closed = True

@@ -20,6 +20,7 @@ class AimAssist:
         self.manual = None
         self.tracking = False
         self.reanchor = False
+        self.outpost_rotations = {}
 
     def reset(self):
         self.target_id = None
@@ -27,6 +28,47 @@ class AimAssist:
         self.raw = self.manual = None
         self.tracking = False
         self.reanchor = True
+        self.outpost_rotations.clear()
+
+    def outpost_targets(self, observation, robot, optical):
+        """Aim at visible armor, with rotation measured from consecutive optical samples."""
+        targets = []
+        samples = {}
+        now = observation.get('time', 0.)
+        for site, faces in optical.get('outposts', {}).items():
+            post = observation.get('outposts', {}).get(site, {})
+            if post.get('hp', 0) <= 0 or post.get('owner', site) == robot['team']:
+                continue
+            rotation = post.get('rotation', 0.)
+            last = self.outpost_rotations.get(site)
+            spin = 0.
+            if last and 0 < now-last[0] <= .25 and not post.get('rotation_stopped'):
+                spin = wrap(rotation-last[1]) / (now-last[0])
+            samples[site] = (now, rotation)
+            for plate in post.get('armor_plates', []):
+                if plate['face'] not in faces or (plate.get('heavy_only') and not sdk.is_42(robot)):
+                    continue
+                x, y, z = plate['center']
+                target = dict(id=f'{site}-outpost', x=x, y=y, aim_z=z,
+                              kind='outpost', face=plate['face'])
+                # Estimate travel time, then rotate the actual plate about the post.
+                # Preserve its individual height (the middle plates are staggered).
+                lead = dict(target)
+                for _ in range(2):
+                    pitch = sdk.aim_pitch(robot, lead)
+                    flight = math.hypot(lead['x']-robot['x'], lead['y']-robot['y']) / max(.1, sdk.muzzle_speed(robot)*math.cos(pitch))
+                    angle = spin*flight if plate['face'] < 3 else 0.
+                    c, s = math.cos(angle), math.sin(angle)
+                    dx, dy = x-post['x'], y-post['y']
+                    lead['x'], lead['y'] = post['x']+c*dx-s*dy, post['y']+s*dx+c*dy
+                nx, ny, nz = plate['normal']
+                normal = (c*nx-s*ny, s*nx+c*ny, nz)
+                toward = (robot['x']-lead['x'], robot['y']-lead['y'], robot.get('z', 0)+robot.get('muzzle_height_m', .45)-z)
+                if sum(a*b for a,b in zip(normal, toward)) > 0:
+                    target['prediction'] = lead
+                    targets.append(target)
+        self.outpost_rotations = samples
+        return targets
 
     def angles(self, observation, robot, intent):
         if not intent.active:
@@ -51,6 +93,7 @@ class AimAssist:
         self.tracking = False
         if not intent.aim_assist:
             self.target_id, self.state = None, 'idle'
+            self.outpost_rotations.clear()
             return self.manual
 
         optical = observation.get('vision', {}).get(str(robot['slot']), {})
@@ -60,11 +103,11 @@ class AimAssist:
         if camera:
             direction = camera['direction']
             direction_length = math.sqrt(sum(v*v for v in direction))
-            for target in observation.get('enemies', []):
-                if (target['id'] not in visible or target.get('team') == robot['team']
-                        or target.get('role') == 'aerial' or not target.get('alive')
-                        or not target.get('targetable', True) or target.get('invulnerable')):
-                    continue
+            robots = [target for target in observation.get('enemies', [])
+                      if target['id'] in visible and target.get('team') != robot['team']
+                      and target.get('role') != 'aerial' and target.get('alive')
+                      and target.get('targetable', True) and not target.get('invulnerable')]
+            for target in robots + self.outpost_targets(observation, robot, optical):
                 offset = (target['x'] - camera['origin'][0], target['y'] - camera['origin'][1],
                           sdk.aim_height(target) - camera['origin'][2])
                 length = math.sqrt(sum(v*v for v in offset)) * direction_length
@@ -73,9 +116,11 @@ class AimAssist:
                 angle = math.acos(max(-1., min(1., sum(a*b for a, b in zip(offset, direction))/length)))
                 retained = target['id'] == self.target_id
                 if angle <= math.radians(20 if retained else 15):
-                    candidates.append((not retained, angle, target['id'], target))
-        for target in sorted(candidates):
-            enemy = sdk.intercept(robot, target[3])
+                    candidates.append((not retained, angle, target['id'], target.get('face', -1), target))
+        else:
+            self.outpost_rotations.clear()
+        for target in sorted(candidates, key=lambda item: item[:4]):
+            enemy = target[4].get('prediction') or sdk.intercept(robot, target[4])
             if sdk.ballistic_reachable(robot, enemy):
                 self.target_id, self.state, self.tracking = enemy['id'], 'tracking', True
                 # SDK and the physics engine apply the existing muzzle geometry

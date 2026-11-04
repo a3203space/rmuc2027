@@ -1,6 +1,6 @@
 use rmuc_sim::{config, Engine};
 use serde_json::{json, Value};
-use std::io::{self, BufRead, Write};
+use std::io::{self, Write};
 
 /// The team and optional robot slots an observation request is for.
 fn viewer(request: &Value) -> Result<(&str, Option<Vec<u32>>), String> {
@@ -48,10 +48,9 @@ fn main() {
     let mut arena_json: Vec<u8> = Vec::new();
     let stdin = io::stdin();
     let mut stdout = io::BufWriter::new(io::stdout());
-    'requests: for line in stdin.lock().lines() {
-        let Ok(line) = line else {
-            break;
-        };
+    'requests: loop {
+        let mut line = String::new();
+        if stdin.read_line(&mut line).unwrap_or(0) == 0 { break; }
         // Raw observation lines that follow the response, for the batched "observations" op.
         let mut extra: Vec<Vec<u8>> = Vec::new();
         let response = (|| -> Result<Value, String> {
@@ -83,6 +82,7 @@ fn main() {
             }
             let e = engine.as_mut().ok_or("engine not initialized")?;
             match op {
+                "training_step" => { e.advance(&request["commands"]); Ok(e.training_snapshot()) }
                 // "static":false omits the match-constant fields; the client keeps them from init.
                 "step" if request["static"] == false => {
                     e.advance(&request["commands"]);

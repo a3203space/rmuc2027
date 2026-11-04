@@ -1,14 +1,17 @@
 """Optional SB3/PyTorch implementation, imported only for train/evaluate."""
+from .checkpoints import save_checkpoint
 import copy
 import hashlib
 import importlib.metadata
 import json
 import math
+import os
 from pathlib import Path
 import time
 from functools import partial
 
 import numpy as np
+os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
@@ -30,7 +33,11 @@ def vector_env(config, count):
     if count < 1:
         raise ValueError('num-envs must be positive')
     factories = [partial(make_env, config) for _ in range(count)]
-    vec = DummyVecEnv(factories) if count == 1 else SubprocVecEnv(factories, start_method='spawn')
+    if config.get('sim_backend', 'rapier') == 'mjwarp':
+        from .mjwarp.vector import WarpVecEnv
+        vec = WarpVecEnv(factories)
+    else:
+        vec = DummyVecEnv(factories) if count == 1 else SubprocVecEnv(factories, start_method='spawn')
     vec.seed(config['seed'])
     return vec
 
@@ -44,11 +51,17 @@ class TimedPPO(PPO):
 
 
 class TraceCallback(BaseCallback):
-    def __init__(self, path):
+    def __init__(self, path, deadline=None, detailed=True):
         super().__init__()
+        self.detailed = detailed
         self.path = Path(path)
         self.sampling_seconds = 0.0
         self.last_metrics = []
+        self.deadline = deadline
+        self.last_checkpoint = time.perf_counter()
+        self.timed_out = False
+        self.last_progress = time.perf_counter()
+        self.progress_started = self.last_progress
 
     def _on_training_start(self):
         self.stream = self.path.open('w')
@@ -60,7 +73,7 @@ class TraceCallback(BaseCallback):
         self.sampling_seconds += time.perf_counter()-self.started
 
     def _on_step(self):
-        for index, info in enumerate(self.locals['infos']):
+        for index, info in enumerate(self.locals['infos'] if self.detailed else []):
             # SB3 stores self.locals['actions'] and its original log probability
             # in RolloutBuffer. Do not replace them with clipped/snapped goals.
             self.stream.write(json.dumps({'env': index, 'total_steps': self.num_timesteps,
@@ -68,9 +81,32 @@ class TraceCallback(BaseCallback):
                 'environment_action': self.locals['clipped_actions'][index].tolist(),
                 **info}, allow_nan=False, default=lambda value: value.tolist() if isinstance(value, np.ndarray) else value.item())+'\n')
         self.last_metrics = self.locals['infos']
-        return True
+        now = time.perf_counter()
+        if now-self.last_progress >= 15:
+            elapsed = now-self.progress_started
+            block = self.model.n_steps*self.training_env.num_envs
+            rollout_steps = int(self.locals.get('n_steps', 0))+1
+            print(json.dumps({'kind': 'training-progress', 'total_samples': self.num_timesteps,
+                'elapsed_seconds': elapsed, 'samples_per_second': self.num_timesteps/max(elapsed, 1e-9),
+                'gradient_epochs': self.model._n_updates, 'rollout_samples': rollout_steps*self.training_env.num_envs,
+                'rollout_capacity': block}), flush=True)
+            if not self.detailed:
+                self.stream.write(json.dumps({'kind': 'summary', 'total_steps': self.num_timesteps,
+                    'gradient_epochs': self.model._n_updates, 'metrics': self.last_metrics})+'\n')
+                self.stream.flush()
+            self.last_progress = now
+        if now-self.last_checkpoint >= 300:
+            save_checkpoint(self.model, self.path.parent/'latest.zip')
+            self.stream.flush()
+            self.last_checkpoint = now
+        self.timed_out = self.deadline is not None and now >= self.deadline
+        return not self.timed_out
 
     def _on_training_end(self):
+        if self.timed_out:
+            self.sampling_seconds += time.perf_counter()-self.started
+        if not self.detailed:
+            self.stream.write(json.dumps({"kind":"final", "total_steps":self.num_timesteps, "gradient_epochs":self.model._n_updates, "metrics":self.last_metrics})+"\n")
         self.stream.close()
 
 
@@ -86,7 +122,9 @@ def experiment(config):
             ('torch', 'gymnasium', 'stable-baselines3', 'numpy')}}
 
 
-def train(config, output, steps, num_envs=1, device='cpu', resume=None):
+def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_seconds=None):
+    if wall_seconds is not None and (not math.isfinite(wall_seconds) or wall_seconds <= 0):
+        raise ValueError('wall-seconds must be finite and positive')
     device_name(device)
     torch.set_num_threads(1)
     torch.manual_seed(config['seed'])
@@ -96,7 +134,7 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None):
     metadata = experiment(config)
     if resume:
         previous = json.loads((Path(resume).parent/'experiment.json').read_text())
-        for key in ('config', 'sources', 'sdk_hash', 'obs_version', 'obs_size'):
+        for key in ('config', 'sources', 'sdk_hash', 'obs_version', 'obs_size', 'simulation'):
             if metadata[key] != previous[key]:
                 raise ValueError(f'Resume incompatibility: {key}')
         for key in ('runtime_hash', 'engine_binary_sha256', 'rules_sha256'):
@@ -104,8 +142,8 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None):
                 raise ValueError(f'Resume incompatibility: {key}')
     (output/'experiment.json').write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
     vec = vector_env(config, num_envs)
-    callback = TraceCallback(output/'actions.jsonl')
     started = time.perf_counter()
+    callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None, detailed=config.get('action_trace', False))
     model = None
     try:
         if resume:
@@ -114,6 +152,8 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None):
             model = TimedPPO('MlpPolicy', vec, seed=config['seed'], device=device, verbose=1,
                 policy_kwargs={'net_arch': {'pi': [64, 64], 'vf': [64, 64]}}, **config['ppo'])
         block = model.n_steps*num_envs
+        if steps is None:
+            steps = block * 1000000000 if wall_seconds is not None else 256
         if steps <= 0 or steps % block:
             raise ValueError(f'Steps must be a positive multiple of rollout size {block}; no hidden overshoot')
         before = _actor_parameters(model)
@@ -122,33 +162,37 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None):
         model.learn(total_timesteps=steps, callback=callback, reset_num_timesteps=resume is None)
         after = _actor_parameters(model)
         delta = math.sqrt(sum(float(torch.sum((after[name]-value)**2)) for name, value in before.items()))
-        if not math.isfinite(delta) or delta <= 0:
+        if not math.isfinite(delta) or (delta <= 0 and wall_seconds is None):
             raise RuntimeError('Actor did not receive a finite, nonzero parameter update')
-        model.save(output/'model.zip')
+        save_checkpoint(model, output/'model.zip')
         # Check predictions and optimizer restoration from the file just saved.
         loaded = TimedPPO.load(output/'model.zip', device=device)
         check_obs = np.zeros((OBS_SIZE,), dtype=np.float32)
         assert np.array_equal(model.predict(check_obs, deterministic=True)[0], loaded.predict(check_obs, deterministic=True)[0])
-        assert len(loaded.policy.optimizer.state_dict()['state']) > 0
+        optimizer_restored = len(loaded.policy.optimizer.state_dict()['state']) > 0
+        if model._n_updates > 0:
+            assert optimizer_restored
         losses = {str(key): float(value) for key, value in model.logger.name_to_value.items()
                   if key.startswith('train/') and np.isscalar(value)}
         if not all(math.isfinite(value) for value in losses.values()):
             raise RuntimeError('Non-finite PPO training statistic')
         report = {'actual_steps': model.num_timesteps-previous_steps, 'total_steps': model.num_timesteps,
             'gradient_epochs': model._n_updates-previous_updates, 'actor_parameter_l2_change': delta,
-            'reload_prediction_equal': True, 'optimizer_reloaded': True,
+            'reload_prediction_equal': True, 'optimizer_reloaded': optimizer_restored,
+            'actor_updated': delta > 0, 'requested_wall_seconds': wall_seconds,
+            'stop_reason': 'wall_time_limit' if callback.timed_out else 'step_limit',
             'num_envs': num_envs, 'device': str(model.device),
             'wall_seconds': time.perf_counter()-started, 'sampling_seconds': callback.sampling_seconds,
             'optimization_seconds': model.optimization_seconds,
-            'rl_steps_per_second': steps/max(callback.sampling_seconds, 1e-9),
-            'simulation_seconds_per_second': steps*config['rl_seconds']/max(callback.sampling_seconds, 1e-9),
+            'rl_steps_per_second': (model.num_timesteps-previous_steps)/max(callback.sampling_seconds, 1e-9),
+            'simulation_seconds_per_second': (model.num_timesteps-previous_steps)*config['rl_seconds']/max(callback.sampling_seconds, 1e-9),
             'losses': losses, 'model_sha256': hashlib.sha256((output/'model.zip').read_bytes()).hexdigest()}
         (output/'training.json').write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
         return report
     except KeyboardInterrupt:
         if model is not None:
-            model.save(output/'interrupted.zip')
+            save_checkpoint(model, output/'interrupted.zip')
         raise
     finally:
         if hasattr(callback, 'stream') and not callback.stream.closed:
@@ -176,7 +220,7 @@ def evaluate(model_path, output, seeds, sides, duration=420, device='cpu'):
         for side in sides:
             config = copy.deepcopy(metadata['config'])
             old_side = config['team']
-            config.update(team=side, episode_seconds=duration)
+            config.update(team=side, episode_seconds=duration, sim_backend='rapier')
             config['controllers'] = {f'{side if key.split(":")[0] == old_side else ("blue" if side == "red" else "red")}:{key.split(":")[1]}': value
                                      for key, value in config['controllers'].items()}
             env = SentryEnv(config, record_replay=True)

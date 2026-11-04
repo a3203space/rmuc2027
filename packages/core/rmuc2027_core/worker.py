@@ -57,6 +57,22 @@ def main():
             response = json.dumps({"actions": actions}, allow_nan=False, separators=(",", ":"))
             if len(response.encode()) > ACTIONS_LIMIT:
                 raise ValueError(f"actions exceed {ACTIONS_LIMIT // 1024} KiB")
+            if observation.get('motion_trace'):
+                def navigation(value):
+                    if not isinstance(value, dict):
+                        return {}
+                    result = {}
+                    for key, child in value.items():
+                        if key in ('navigation', 'goal', 'mode', 'executed_goal'):
+                            result[key] = child
+                        elif isinstance(child, dict):
+                            nested = navigation(child)
+                            if nested:
+                                result[key] = nested
+                    return result
+                diagnostic = navigation(new_state)
+                if len(json.dumps(diagnostic)) <= 8192:
+                    response = json.dumps({'actions': actions, 'navigation_trace': diagnostic}, allow_nan=False)
             state = new_state
             output.write(response + "\n")
             output.flush()

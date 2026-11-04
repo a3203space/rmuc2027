@@ -11,10 +11,27 @@ from .decks import prepare_decks
 from .profiles import load_profile
 
 class Battle:
-    def __init__(self, red, blue, seed=42, duration=420, map_name=None, sandbox="docker", timeout=0.2, deadline=None, stop_event=None, decks=None, team_lineup=None, practice_lineup=False, free_team_strategies=None, battle_settings=None, controller_overrides=None, record_replay=True):
+    def __init__(self, red, blue, seed=42, duration=420, map_name=None, sandbox="docker", timeout=0.2, deadline=None, stop_event=None, decks=None, team_lineup=None, practice_lineup=False, free_team_strategies=None, battle_settings=None, controller_overrides=None, record_replay=True, physics_backend="rapier", sim_device="cuda:0", fixed_policy_hz=10, learning_control_hz=10, navigation_mode="legacy", side_lineups=None):
         # Overrides implement Policy.decide/close and replace single-slot entries.
         # They receive exactly the same slot-scoped observation as that entry.
+        if side_lineups is not None and (team_lineup is not None or decks is not None):
+            raise ValueError("Independent lineups cannot be combined with shared lineups or decks")
         overrides = dict(controller_overrides or {})
+        if fixed_policy_hz not in (5, 10):
+            raise ValueError('fixed_policy_hz must be 5 or 10')
+        if learning_control_hz not in (2, 5, 10):
+            raise ValueError('learning_control_hz must be 2, 5 or 10')
+        if navigation_mode not in ("legacy", "predictive"):
+            raise ValueError("Unknown navigation mode")
+        self.timed_assembly = bool((battle_settings or {}).get("timed_assembly", False))
+        self.assembly_states = {}
+        self.motion_trace = False
+        self.navigation_mode = navigation_mode
+        self.navigation_states = {}
+        self.navigation_observations = {}
+        self.learning_policy_interval = round(1/(learning_control_hz*DT))
+        self.fixed_policy_interval = round(1/(fixed_policy_hz*DT))
+        self.override_ids = {id(p) for p in overrides.values()}
         self.record_replay = record_replay
         # The field follows the strategies' rules season unless the caller names it.
         if map_name is None:
@@ -33,18 +50,36 @@ class Battle:
                 raise ValueError(f"Both strategies must be written for the {season} season to play on {map_name}")
             selected=[normalize_team_lineup(m.get('team_lineup'),season) for m in manifests]
             chosen=normalize_team_lineup(team_lineup,season) if team_lineup is not None else selected[0]
-            if not practice_lineup and (selected[0]!=selected[1] or any(s!=chosen for s in selected)):
+            if side_lineups is None and not practice_lineup and (selected[0]!=selected[1] or any(s!=chosen for s in selected)):
                 raise ValueError('Team matches require identical registered robot lineups; develop both strategies on the same lineup')
             if chosen!=season_rules.default_lineup(season) or season!=season_rules.DEFAULT_SEASON:lineups=mirrored_lineups(chosen,season)
         elif team_lineup is not None:raise ValueError('Decks and shared team lineups cannot be combined')
+        if side_lineups is not None:
+            if set(side_lineups) != {'red', 'blue'}:
+                raise ValueError('Independent lineups require red and blue')
+            normalized = {team: normalize_team_lineup(value, season) for team, value in side_lineups.items()}
+            lineups = {team: [{'slot': int(slot), 'model': model} for slot, model in value.items()]
+                       for team, value in normalized.items()}
         from rmuc2027_core.battle_settings import normalize
         battle_settings = normalize(battle_settings or {}, season)
-        self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings), sandbox, [], False
+        if physics_backend not in ('rapier', 'mjwarp'):
+            raise ValueError('Unknown physics backend')
+        adapter = None
+        if physics_backend == 'mjwarp':
+            from ..rl.mjwarp.arena import ArenaPhysics
+            adapter = ArenaPhysics(sim_device)
+        self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False
         self.deck_mode = decks is not None
         self.deadline, self.stop_event = deadline, stop_event
         self.pool = ThreadPoolExecutor(max_workers=24 if self.deck_mode else 12)
         self.metadata = {"api_version": 3, "engine": "rust", "rules": rules_profile, "season": season, "decision_timeout_s":timeout, "policy_timeout_limit":POLICY_TIMEOUT_LIMIT, "roster":list(slot_ids), "test_match":duration!=420, "dt": DT, "policy_interval": POLICY_INTERVAL, "seed": seed, "duration": duration,
                          "map": map_name, "sandbox": sandbox, "match_mode":"deck" if self.deck_mode else "standard", "teams": {}}
+        self.metadata['physics_backend'] = physics_backend
+        self.metadata['navigation_mode'] = navigation_mode
+        self.metadata['fixed_policy_hz'] = fixed_policy_hz
+        self.metadata['learning_control_hz'] = learning_control_hz
+        if physics_backend == 'mjwarp':
+            self.metadata['sim_device'] = sim_device
         if battle_settings:
             self.metadata.update({"battle_settings": battle_settings, "test_match": True})
         self.frames, self.actions, self.diagnostics = FrameLog(self.match.snapshot()), [], []
@@ -57,7 +92,9 @@ class Battle:
             self.metadata.update({"lineups":lineups,"test_match":True,"roster":{team:[d["slot"] for d in items] for team,items in lineups.items()}})
         if not self.deck_mode:
             self.metadata['team_lineup']=chosen
-            self.metadata['test_match']=duration!=420 or practice_lineup or bool(battle_settings)
+            self.metadata['test_match']=duration!=420 or practice_lineup or bool(battle_settings) or side_lineups is not None
+        if side_lineups is not None:
+            self.metadata.pop('team_lineup', None)
         self.pending_referee = []
         self.metadata["agents"] = {}
         try:
@@ -119,14 +156,26 @@ class Battle:
         observation = self.match.observation(team, slots)
         inboxes={slot:self.communication.inboxes[team][slot] for slot in observation["controlled_ids"]}
         observation["message_inboxes"] = inboxes
+        observation["navigation_mode"] = self.navigation_mode
         observation["messages"] = [message for inbox in inboxes.values() for message in inbox]
         return observation
+
+    def policy_interval(self, policy):
+        return self.learning_policy_interval if getattr(policy, "is_learning_controller", False) else (POLICY_INTERVAL if id(policy) in self.override_ids else self.fixed_policy_interval)
 
     def encoded_observations(self, policies):
         """The same observations as `observation`, fetched together and left encoded."""
         controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
         encoded = []
-        for (team, _, _), ids, line in zip(policies, controlled, lines):
+        for (team, _, policy), ids, line in zip(policies, controlled, lines):
+            if self.policy_interval(policy) != POLICY_INTERVAL or self.navigation_mode != "legacy" or self.motion_trace or self.timed_assembly:
+                value = json.loads(line)
+                if self.motion_trace:
+                    value["motion_trace"] = True
+                self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
+                value["navigation_mode"] = self.navigation_mode
+                value["policy_dt"] = self.policy_interval(policy)*DT
+                line = json.dumps(value, allow_nan=False, separators=(",", ":")).encode()
             inboxes = {slot: self.communication.inboxes[team][slot] for slot in ids}
             messages = [message for inbox in inboxes.values() for message in inbox]
             # Append both keys last, in the order `observation` adds them.
@@ -145,7 +194,8 @@ class Battle:
             return self._latest_frame
         policy_tick = bool(self.policies) and self.match.tick % POLICY_INTERVAL == 0
         # Disabled policies return no actions, so they need no observation.
-        deciding = [item for item in self.policies if not item[2].disabled] if policy_tick else []
+        due = [item for item in self.policies if self.match.tick % self.policy_interval(item[2]) == 0] if policy_tick else []
+        deciding = [item for item in due if not item[2].disabled]
         futures = []
         if deciding:
             for (team, slots, p), observation in zip(deciding, self.encoded_observations(deciding)):
@@ -163,6 +213,17 @@ class Battle:
                 messages = action.pop("messages", [])
                 if messages:
                     outgoing.append((team, slot, messages))
+                if self.navigation_mode == 'predictive':
+                    from rmuc2027_core.sdk import predictive_navigation
+                    obs = self.navigation_observations[id(p)]
+                    robot = next(r for r in obs['robots'] if str(r['slot']) == slot and r['team'] == team)
+                    state = self.navigation_states.setdefault((team, slot), {})
+                    action = predictive_navigation(robot, action, obs, state)
+                if self.timed_assembly:
+                    from rmuc2027_core.sdk import timed_assembly_action
+                    obs = self.navigation_observations[id(p)]
+                    robot = next(r for r in obs['robots'] if str(r['slot']) == slot)
+                    action = timed_assembly_action(robot, action, obs, self.assembly_states.setdefault((team, slot), {}))
                 commands[team][slot] = action
             if error:
                 scope = "team" if slots is None else "-".join(map(str, slots))
@@ -172,6 +233,15 @@ class Battle:
                           "message": error, "logs": list(p.logs)[-8:]}
                 self.diagnostics.append(detail)
                 failures.append(detail)
+        if policy_tick:
+            merged = {team: dict(actions) for team, actions in self.held_commands.items()}
+            for team, slots, policy in due:
+                owned = slots if slots is not None else [r['slot'] for r in self.match.robots if r['team'] == team]
+                for slot in owned:
+                    merged[team].pop(str(slot), None)
+            for team in merged:
+                merged[team].update(commands[team])
+            commands = merged
         self.held_commands = commands
         communications = self.communication.route(outgoing, self.match.tick, self.match.tick + POLICY_INTERVAL) if policy_tick else []
         if self.pending_referee:

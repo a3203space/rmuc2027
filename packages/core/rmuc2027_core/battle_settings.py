@@ -36,6 +36,12 @@ def normalize(values, season):
     baseline = defaults(season)
     result = {}
     for key, value in values.items():
+        if key in ("drones_enabled", "timed_assembly"):
+            if not isinstance(value, bool):
+                raise ValueError(f"{key} must be boolean")
+            if key == "timed_assembly" or not value:
+                result[key] = value
+            continue
         field = allowed.get(key)
         if not field or isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
             raise ValueError(f'Invalid battle setting: {key}')

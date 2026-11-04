@@ -36,7 +36,7 @@ function OwnDetails({p}:{p:LanPlayer}){
  {r.pending_heal!=null&&<p>远程回血配送：{number(Math.max(0,r.pending_heal-(p.scene?.time||0)),1)} 秒</p>}
  {r.pending_ammo?.map((v,i)=><p key={i}>弹药配送：{v[1]} 发 / {number(Math.max(0,v[0]-(p.scene?.time||0)),1)} 秒</p>)}
  {r.role==='heavy'&&<div className="role-state"><b>携带 {number(r.carried_units)} 单元 · 场上剩余 {number(p.economy?.energy_units_left)}</b><p>发射机构：{labels[r.launcher||'']||'—'} {r.launcher==='installing'?`${number((r.launcher_progress||0)*100)}%`:''}</p><p>装配等级 {number(a?.difficulty)} · {({idle:'空闲',moving:'就位',inserting:'插入',buffered:'确认',complete:'完成',failed:'失败'} as Record<string,string>)[a?.stage||'']||a?.stage||'待命'}</p><Meter value={a?.progress} max={1} label="装配进度"/><p>{assemblyOperation[a?.operation||'']||a?.operation||'待命'} · 本步 {number((a?.operation_progress||0)*100)}%</p>{a?.blocked_reason&&<p className="buffs">{assemblyReason[a.blocked_reason]||a.blocked_reason}</p>}<p>{p.control?.status}</p><p>已完成等级：{p.economy?.completed_difficulties?.join(' / ')||'无'}</p></div>}
- {r.role==='infantry'&&<p>性能 {r.chassis_profile==='hp'?'血量':'功率'} / {r.weapon_profile==='cooling'?'冷却':'爆发'} · 冷却 {number(r.cooling_rate,1)}/s<br/>{r.chassis_type==='wheel_legged'?'轮腿：W/S 前后，A/D 转向':'WASD 移动'} · 鼠标云台</p>}
+ {r.role==='infantry'&&<p>性能 {r.chassis_profile==='hp'?'血量':'功率'} / {r.weapon_profile==='cooling'?'冷却':'爆发'} · 冷却 {number(r.cooling_rate,1)}/s<br/>{r.chassis_type==='wheel_legged'?'WASD 随视角移动 · 轮腿自动转向':'WASD 随视角移动'} · 鼠标云台</p>}
  {r.role==='sentry'&&<p>姿态：{({attack:'进攻',defense:'防御',move:'移动'} as Record<string,string>)[r.posture||'']||'—'}{r.posture_enhanced?' · 强化生效':''}<br/>切换冷却 {number(Math.max(0,(r.posture_ready_at||0)-(p.scene?.time||0)),1)} 秒</p>}
  {r.role==='aerial'&&<div className="fleet">{p.air?.map((d,i)=><p key={d.id}>无人机 {i+1} · {({docked:'停靠',flying:'飞行',down:'待回收',disabled:'不可用'} as Record<string,string>)[d.state]||d.state}<br/>电量 {number(d.battery_wh,1)} Wh · 完整度 {number(d.integrity)}</p>)}<p>{p.control?.status}</p></div>}
  </div>;
@@ -56,10 +56,11 @@ function OwnState({p,expanded,image}:{p:LanPlayer;expanded:boolean;image?:string
 }
 function CombatStatus({p,command,stale,finished,aimHeld}:{p:LanPlayer;command:Command;stale:boolean;finished:boolean;aimHeld?:boolean}){
  const aim=p.control?.aim_assist,tracking=(aimHeld??(!!aim&&aim.state!=='idle'))&&p.self.alive&&!stale&&!finished&&!p.control?.needs_resume;
+ const targetLabel=aim?.target_id==='red-outpost'?'红侧前哨站':aim?.target_id==='blue-outpost'?'蓝侧前哨站':aim?.target_id;
  const label=!tracking?'待机':({idle:'搜索目标',searching:'搜索目标',tracking:'跟踪目标',lost:'目标丢失 · 搜索中'} as Record<string,string>)[aim?.state||'searching'];
  return <section className="combat-status" aria-label="武器与自瞄状态"><div className="weapon-ammo"><strong>{number(p.self.ammo)}</strong><span>发<br/>{p.self.role==='heavy'?'42':'17'} mm</span></div><div className="weapon-heat">弹速 {number(p.weapon?.muzzle_speed_mps,1)} m/s<br/>额定射频 {number(p.weapon?.fire_rate_hz,1)} 发/s<br/>热量 {number(p.self.heat)} / {number(p.self.max_heat)}</div>
  <div className="ammo-entry"><span>{p.self.ammo===0?'无弹丸 · 请手动购弹':'左键点按单发 / 按住连发'}</span><button disabled={stale||finished||!!p.control?.needs_resume} onClick={()=>command('buy-ammo')}>B · 购弹</button></div>
- <div className={`aim-status ${tracking&&aim?.state==='tracking'?'tracking':''}`}>右键按住：自瞄 · {label}{tracking&&aim?.target_id?` · ${aim.target_id}`:''}</div>
+ <div className={`aim-status ${tracking&&aim?.state==='tracking'?'tracking':''}`}>右键按住：自瞄 · {label}{tracking&&aim?.target_id?` · ${targetLabel}`:''}</div>
  {p.weapon?.detail&&<p className="weapon-reason">{p.weapon.detail}</p>}
  {!!p.control?.last_press_seq&&<small>上次点按：{p.control.last_press_result||'等待主机结算'}</small>}
  </section>;

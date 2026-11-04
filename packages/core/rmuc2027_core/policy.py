@@ -240,6 +240,7 @@ class Policy:
         response = json.loads(raw, parse_constant=lambda s: (_ for _ in ()).throw(ValueError("non-finite JSON")))
         if response.get("error"):
             raise ValueError(response["error"])
+        self.navigation_trace = response.get("navigation_trace", {})
         actions = response.get("actions")
         if not isinstance(actions, dict):
             raise ValueError("Invalid action object")

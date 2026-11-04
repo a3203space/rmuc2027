@@ -622,6 +622,148 @@ def _chapter4_navigate(robot,point,arena):
     return (0.0,0.0)
 
 
+def _navigate_action_legacy(robot, point, observation, state):
+    """Stateful chassis navigation. Keep state separately for each robot.
+
+    Returns action fields, not a serialized command. Geometry and feedback come
+    exclusively from public observations. Never share state between deployments.
+    """
+    arena = observation['arena']
+    now = observation['time']
+    model = str(robot.get('model_slot', robot.get('slot')))
+    if not robot.get('alive', True):
+        state.clear()
+        return {'move': (0., 0.)}
+    if now < state.get('time', -1):
+        state.clear()
+    state['time'] = now
+    if state.get('goal') != list(point) and robot.get('grounded', True):
+        if 'tunnel' not in state and not (model in ('305', '2772') and 'entry' in state):
+            state.pop('entry', None)
+            state.pop('failed', None)
+        state['goal'] = list(point)
+    if model == '2732':
+        flip = robot['team'] == 'blue'
+        local = lambda p: (28-p[0], 15-p[1]) if flip else tuple(p)
+        x, y = local((robot['x'], robot['y']))
+        gx, gy = local(point)
+        entry = state.get('tunnel')
+        if entry is None and x < 10 and y < 13.4 and 10.5 < gx < 17.5 and not state.get('tunnel_done'):
+            entry = state['tunnel'] = {'phase': 'approach', 'since': now}
+        if entry and now-entry['since'] > 25:
+            state.pop('tunnel', None)
+            state['tunnel_done'] = True
+            entry = None
+        if entry:
+            heading = -math.pi/2 if flip else math.pi/2
+            if entry['phase'] == 'approach':
+                target = local((9.32, 11.7))
+                if math.dist((robot['x'], robot['y']), target) > .12:
+                    return {'move': navigate(robot, target, arena)}
+                entry['phase'] = 'fold'
+            error = abs((robot['heading']-heading+math.pi) % math.tau-math.pi)
+            if robot.get('transform_progress', 0) < .99 or (entry['phase'] == 'fold' and error > .08):
+                return {'move': (0., 0.), 'heading': heading, 'transform': True, 'brake': True}
+            entry['phase'] = 'cross'
+            if y < 13.55:
+                correction = max(-.3, min(.3, (9.32-x)*1.5))
+                move = (-correction, -.6) if flip else (correction, .6)
+                return {'move': move, 'heading': heading, 'transform': True, 'power': 120}
+            state.pop('tunnel', None)
+            state['tunnel_done'] = True
+        roofs = [w for w in arena['obstacles'] if '_tunnel_roof' in w.get('id', '')]
+        under = any(w['x']-.4 <= robot['x'] <= w['x']+w['w']+.4 and
+                    w['y']-.4 <= robot['y'] <= w['y']+w['h']+.4 for w in roofs)
+        return {'move': navigate(robot, point, arena), 'transform': under}
+    if model in ('2731', '305', '2772') and arena.get('layout_revision') == 'chapter4-2027-v1':
+        # The central bands and rims are explicit public geometry. Only this
+        # chassis has a validated design for this approach; other legs keep theirs.
+        flip = robot['team'] == 'blue'
+        local = lambda p: (28-p[0], 15-p[1]) if flip else tuple(p)
+        x, y = local((robot['x'], robot['y']))
+        gx, gy = local(point)
+        entry = state.get('entry')
+        if entry is None and x < 10.3 and 10.5 < gx < 17.5 and 3 < gy < 12 and not state.get('failed'):
+            entry = state['entry'] = {'phase': 'approach', 'since': now, 'jumps': 0, 'last_jump': -10.}
+        if entry:
+            if model == '2731':
+                landed = (entry['jumps'] > 0 and x > 10.3
+                          and robot.get('grounded') and robot.get('upright', 0) > .95
+                          and abs(robot.get('vz', 0)) < .2
+                          and robot.get('z', 0) - entry.get('takeoff_z', robot.get('z', 0)) > .15)
+                if landed:
+                    entry.setdefault('landed_since', now)
+                    if now-entry['landed_since'] >= .3:
+                        state.pop('entry', None)
+                        return {'move': (-.35 if flip else .35, 0.),
+                                'heading': math.pi if flip else 0., 'jump': 0.}
+                    return {'move': (0., 0.), 'brake': True, 'jump': 0.}
+                entry.pop('landed_since', None)
+                if (entry['jumps'] > 0 and entry['last_jump'] >= 0 and now-entry['last_jump'] > 2.
+                        and x < 10.65 and robot.get('grounded')):
+                    entry['phase'] = 'retreat'
+                if entry['phase'] == 'retreat':
+                    if x > 8.35:
+                        return {'move': (.35 if flip else -.35, 0.),
+                                'heading': math.pi if flip else 0., 'jump': 0.}
+                    if entry['jumps'] >= 3:
+                        state.pop('entry', None)
+                        state['failed'] = True
+                        return {'move': (0., 0.), 'brake': True}
+                    entry.update(phase='approach', since=now, last_jump=-10.)
+                    entry.pop('stable_since', None)
+            if model in ('305', '2772') and robot.get('tipped'):
+                state.pop('entry', None)
+                return {'move': (0., 0.), 'brake': True}
+            if model in ('305', '2772') and not robot.get('grounded', True):
+                entry['phase'] = 'airborne'
+                return {'move': (0., 0.), 'heading': math.pi if flip else 0., 'jump': 0.}
+            if model in ('305', '2772') and entry['phase'] == 'airborne':
+                entry.update(phase='settle', landed_at=now)
+            if model in ('305', '2772') and entry['phase'] == 'settle':
+                if now-entry['landed_at'] > 4.:
+                    state.pop('entry', None)
+                    state['failed'] = True
+                    return {'move': (0., 0.), 'brake': True, 'jump': 0.}
+                if now-entry['landed_at'] < 1. or robot.get('upright', 1.) < .95:
+                    return {'move': (0., 0.), 'brake': True, 'jump': 0.}
+                entry['phase'] = 'align'
+            if x > 10.65 and robot.get('grounded'):
+                state.pop('entry', None)
+            elif now-entry['since'] > 18 or entry['jumps'] >= 3 and now-entry['last_jump'] > 2:
+                state.pop('entry', None)
+                state['failed'] = True
+            else:
+                lane = 7.5
+                if entry['phase'] == 'approach':
+                    target = local((8.0 if model == '2731' else 8.5, lane))
+                    if math.dist((robot['x'], robot['y']), target) > .2:
+                        return {'move': navigate(robot, target, arena)}
+                    entry['phase'] = 'align'
+                heading = math.pi if flip else 0.
+                error = abs((robot['heading']-heading+math.pi) % math.tau-math.pi)
+                fields = {'heading': heading, 'leg_height': _design(robot).get('leg_min_m', .12), 'brake': True}
+                if error > .12 or (model in ('305', '2772') and robot.get('upright', 1.) < .95):
+                    fields['move'] = (0., 0.)
+                    return fields
+                fields['move'] = _physical_toward(robot, local((11., lane)))
+                fields['power'] = 180
+                if robot.get('grounded') and abs(robot.get('vz', 0)) < .2 and robot.get('upright', 1.) > .95:
+                    entry.setdefault('stable_since', now)
+                else:
+                    entry.pop('stable_since', None)
+                ready = (model != '2731' or entry['jumps'] == 0 or
+                         now-entry.get('stable_since', now) >= .4)
+                # Allow the chassis to rise before its nose reaches the stair rim.
+                # At 10 Hz a threshold at 8.65 can issue the jump only at 8.8.
+                takeoff_x = 8.55 if model == '2731' else 8.65
+                if ready and x > takeoff_x and robot.get('grounded') and now-entry['last_jump'] > _design(robot).get('jump_cooldown_s', .9)+.15:
+                    fields['jump'] = 1.
+                    entry.update(last_jump=now, jumps=entry['jumps']+1, takeoff_z=robot.get('z', 0.))
+                return fields
+    return {'move': navigate(robot, point, arena)}
+
+
 class _HeldMove(tuple):
     """A `navigate` move that must not turn the chassis; `action` sends its heading."""
     def __new__(cls,move,heading):
@@ -797,3 +939,178 @@ def hostile_plates(observation, kind):
     for owner,outpost in observation['outposts'].items():
         if outpost['hp']>0 and outpost.get('owner',owner)!=team:plates+=outpost.get('armor_plates',[])
     return plates
+
+
+def navigate_action(robot, point, observation, state):
+    """Opt-in sampled local avoidance using only the controller's observation."""
+    fields = _navigate_action_legacy(robot, point, observation, state)
+    if (observation.get('navigation_mode') == 'predictive' and
+            not any(k in state for k in ('entry', 'tunnel')) and
+            not any(fields.get(k) for k in ('jump', 'brake', 'transform')) and
+            robot.get('grounded', True) and robot.get('role') != 'aerial'):
+        fields.update(_trajectory_move(robot, point, observation, state))
+    return predictive_navigation(robot, fields, observation, state)
+
+
+def predictive_navigation(robot, fields, observation, state):
+    fields = dict(fields)
+    if observation.get('navigation_mode') != 'predictive':
+        return fields
+    state['limited'] = False
+    # Terrain manoeuvres own their heading and thrust; do not steer them sideways.
+    if (robot.get('role') == 'aerial' or robot.get('tipped') or
+            not robot.get('grounded', True) or fields.get('jump') or
+            fields.get('transform') or fields.get('brake')):
+        return fields
+    move = fields.get('move', (0., 0.))
+    magnitude = math.hypot(*move)
+    if magnitude < .001:
+        return fields
+    arena = observation['arena']
+    graph = _prepare_chapter4(arena, robot['team'], robot.get('transform_progress', 0) >= .99)
+    clear, inside = graph[2:]
+    start = (robot['x'], robot['y'])
+    near = inside(start, True)
+    reference = robot.get('speed_reference_mps', 3.)
+    design = _design(robot)
+    mass = max(1., robot.get('mass_kg', design.get('mass_kg', 25.)))
+    decel = max(.2, min(design.get('brake_force_max_n', 100.)/mass,
+                        design.get('tire_friction', .5)*9.81)*.6)
+    period = max(.05, observation.get('policy_dt', .1))
+    current = (robot.get('vx', 0.), robot.get('vy', 0.))
+    obstacles = [r for r in observation.get('robots', []) + observation.get('enemies', [])
+                 if r.get('id') != robot.get('id') and r.get('role') != 'aerial']
+    radius = robot.get('radius', .28)
+    angle = math.atan2(move[1], move[0])
+    best = None
+    for offset in (0., -.261799, .261799, -.523599, .523599):
+        for scale in (1., .75, .5):
+            requested = reference*magnitude*scale
+            target = (math.cos(angle+offset)*requested, math.sin(angle+offset)*requested)
+            pos, velocity = start, current
+            horizon = period + max(math.hypot(*current), requested)/decel
+            valid = True
+            for step in range(math.ceil(horizon/.05)):
+                t = (step+1)*.05
+                desired = target if t <= period else (0., 0.)
+                dv = (desired[0]-velocity[0], desired[1]-velocity[1])
+                length = math.hypot(*dv)
+                gain = min(1., decel*.05/max(length, 1e-9))
+                velocity = (velocity[0]+dv[0]*gain, velocity[1]+dv[1]*gain)
+                nxt = (pos[0]+velocity[0]*.05, pos[1]+velocity[1]*.05)
+                if not (radius < nxt[0] < arena['width']-radius and radius < nxt[1] < arena['height']-radius) or not clear(pos, nxt, near, True):
+                    valid = False
+                    break
+                if any(math.hypot(nxt[0]-r['x']-r.get('vx',0)*t,
+                                  nxt[1]-r['y']-r.get('vy',0)*t)
+                       < radius+r.get('radius',.28)+.08+.05*t for r in obstacles):
+                    valid = False
+                    break
+                pos = nxt
+            if valid:
+                score = scale - abs(offset)*.4 - abs(offset-state.get('avoid_offset',0))*.2
+                if best is None or score > best[0]:
+                    best = (score, offset, scale)
+    if best is None:
+        state['limited'] = True
+        return {**fields, 'move': (0.,0.), 'brake': True, 'power': 0}
+    _, offset, scale = best
+    state['avoid_offset'] = offset
+    state['limited'] = scale < 1 or offset != 0
+    if state['limited']:
+        fields.pop('power', None)
+    fields['move'] = (math.cos(angle+offset)*magnitude*scale, math.sin(angle+offset)*magnitude*scale)
+    return fields
+
+
+def _complete_route(graph, start, goal):
+    """Recover the whole Dijkstra route, then remove only visible intermediate vertices."""
+    nodes, edges, clear, inside = graph
+    near = inside(start, True)
+    if clear(start, goal, near, True):
+        return [goal]
+    costs = _route_costs(graph, goal, set(), True)
+    index = _route(graph, start, goal, near, set(), True)
+    if index is None:
+        return []
+    path, visited = [], set()
+    while index not in visited:
+        visited.add(index)
+        path.append(nodes[index])
+        if clear(nodes[index], goal, (), True):
+            path.append(goal)
+            break
+        choices = [(distance_ + costs.get(j, float('inf')), j)
+                   for j, distance_ in edges[index] if costs.get(j, float('inf')) < costs[index]]
+        if not choices:
+            return []
+        index = min(choices)[1]
+    else:
+        return []
+    result, anchor = [], start
+    while path:
+        visible = [i for i, point in enumerate(path) if clear(anchor, point, near if anchor == start else (), True)]
+        if not visible:
+            return []
+        i = max(visible)
+        anchor = path[i]
+        result.append(anchor)
+        path = path[i+1:]
+    return result
+
+
+def _trajectory_move(robot, goal, obs, state):
+    graph = _prepare_chapter4(obs['arena'], robot['team'], robot.get('transform_progress',0) >= .99)
+    start, goal = (robot['x'], robot['y']), tuple(goal)
+    path = state.get('trajectory', [])
+    if state.get('trajectory_goal') != list(goal) or not path or not graph[2](start, path[0], graph[3](start,True),True):
+        path = _complete_route(graph, start, goal)
+        state['trajectory_goal'] = list(goal)
+    while len(path)>1 and math.dist(start,path[0]) < .2 and graph[2](start,path[1],graph[3](start,True),True):
+        path = path[1:]
+    state['trajectory'] = path
+    if not path:
+        return {'move': (0.,0.), 'brake': True}
+    target = path[0]
+    gap = math.dist(start,target)
+    reference = robot.get('speed_reference_mps',3.)
+    design = _design(robot)
+    mass = max(1.,robot.get('mass_kg',design.get('mass_kg',25.)))
+    decel = max(.2,min(design.get('brake_force_max_n',100.)/mass,design.get('tire_friction',.5)*9.81)*.6)
+    # A half-second command must leave room to slow before a corner, not after it.
+    period = max(.05,obs.get('policy_dt',.1))
+    arrival = 0.
+    if len(path)>1 and gap>1e-6:
+        a = ((target[0]-start[0])/gap,(target[1]-start[1])/gap)
+        length = math.dist(target,path[1])
+        b = ((path[1][0]-target[0])/max(length,1e-9),(path[1][1]-target[1])/max(length,1e-9))
+        turn = math.acos(max(-1.,min(1.,a[0]*b[0]+a[1]*b[1])))
+        arrival = min(reference, math.sqrt(decel*.2/max(.05,math.sin(turn/2))))
+    limit = max(0., math.sqrt((decel*period)**2+arrival**2+2*decel*max(0.,gap-.1))-decel*period)
+    move = _square_to_bumps(robot,target,obs['arena'])
+    # Keep terrain-specific heading semantics and avoid changing a deliberate alignment.
+    if isinstance(move,_HeldMove):
+        return {'move': move, 'heading':move.heading}
+    scale = min(1.,limit/max(reference*math.hypot(*move),1e-9))
+    return {'move': (move[0]*scale,move[1]*scale)}
+
+
+def timed_assembly_action(robot, command, observation, state):
+    """Fixed heavy opening for the opt-in timed assembly simulation mode."""
+    if (not observation.get('simulation_assumptions', {}).get('timed_assembly')
+            or robot.get('role') != 'heavy' or not robot.get('alive') or robot.get('weak')):
+        return command
+    if robot.get('launcher') in ('unlocked', 'installing', 'fitted', 'installed'):
+        return command
+    team = robot['team']
+    done = observation['teams'][team].get('completed_difficulties', [])
+    difficulty = next((d for d in (1, 2, 3) if d not in done), None)
+    if difficulty is None:
+        return command
+    # Timed assembly only requires standing on the card, not reaching the
+    # physical arm docking point. That point can pin a chassis against the core.
+    zone = next(z for z in observation['arena']['zones'] if z['id'] == team + '_assembly')
+    goal = (zone['x'], zone['y'])
+    if math.hypot(robot['x']-goal[0], robot['y']-goal[1]) > zone['radius'] * .7:
+        return navigate_action(robot, goal, observation, state.setdefault('navigation', {}))
+    return {'move': [0, 0], 'brake': True, 'assembly': difficulty}

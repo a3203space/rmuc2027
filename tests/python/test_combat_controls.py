@@ -105,6 +105,65 @@ class AimTests(unittest.TestCase):
         yaw,_=self.aim.angles(self.observation,self.robot,intent())
         self.assertAlmostEqual(yaw,.7); self.assertEqual(self.aim.state,'idle')
 
+    def outpost_observation(self):
+        z = self.robot['muzzle_height_m'] + .08
+        self.observation['enemies'] = []
+        self.observation['time'] = 0.
+        self.observation['outposts'] = {'blue': {
+            'hp': 1000, 'owner': 'blue', 'x': 4., 'y': 0., 'rotation': math.pi,
+            'armor_plates': [{'face': 0, 'center': [3.7, 0., z],
+                              'normal': [-1., 0., 0.], 'heavy_only': False}]}}
+        self.observation['vision']['7']['outposts'] = {'blue': [0]}
+        return self.observation['outposts']['blue']
+
+    def test_outpost_lock_requires_own_camera_and_hostile_living_armor(self):
+        post = self.outpost_observation()
+        self.aim.angles(self.observation, self.robot, intent(aim_assist=True))
+        self.assertEqual(self.aim.target_id, 'blue-outpost')
+        for changes in ({'hp': 0}, {'owner': 'red'}):
+            original = dict(post); post.update(changes)
+            self.aim.angles(self.observation, self.robot, intent(aim_assist=True))
+            self.assertIsNone(self.aim.target_id)
+            post.update(original)
+        self.observation['vision']['3'] = {'outposts': {'blue': [0]}}
+        self.observation['vision']['7']['outposts'] = {}
+        self.aim.angles(self.observation, self.robot, intent(aim_assist=True))
+        self.assertIsNone(self.aim.target_id)
+        self.observation['vision']['7']['outposts'] = {'blue': [1]}
+        self.aim.angles(self.observation, self.robot, intent(aim_assist=True))
+        self.assertIsNone(self.aim.target_id)
+
+    def test_rotating_outpost_lead_preserves_plate_height_and_release_clears(self):
+        post = self.outpost_observation()
+        self.aim.angles(self.observation, self.robot, intent(aim_assist=True))
+        self.observation['time'] = .05
+        post['rotation'] += .1
+        plate = post['armor_plates'][0]
+        plate['center'][:2] = [4-.3*math.cos(.1), -.3*math.sin(.1)]
+        plate['normal'] = [-math.cos(.1), -math.sin(.1), 0]
+        predicted = copy.deepcopy(self.aim).outpost_targets(
+            self.observation, self.robot, self.observation['vision']['7'])
+        self.assertEqual(predicted[0]['prediction']['aim_z'], plate['center'][2])
+        predicted_yaw, _ = self.aim.angles(self.observation, self.robot, intent(2, aim_assist=True))
+        self.assertLess(predicted_yaw, math.atan2(plate['center'][1], plate['center'][0]))
+        self.assertEqual(self.aim.target_id, 'blue-outpost')
+        self.robot.update(aim=.12, pitch=.08)
+        self.assertEqual(self.aim.angles(self.observation, self.robot, intent(3)), (.12, .08))
+        self.assertIsNone(self.aim.target_id)
+        self.assertFalse(self.aim.outpost_rotations)
+
+    def test_outpost_competes_by_crosshair_distance_and_retains_identity(self):
+        self.outpost_observation()
+        self.observation['enemies'] = [self.enemy]
+        self.aim.angles(self.observation, self.robot, intent(aim_assist=True))
+        self.assertEqual(self.aim.target_id, 'blue-outpost')
+        self.enemy['y'] = 0
+        self.aim.angles(self.observation, self.robot, intent(2, aim_assist=True))
+        self.assertEqual(self.aim.target_id, 'blue-outpost')
+        self.observation['vision']['7']['outposts'] = {}
+        self.aim.angles(self.observation, self.robot, intent(3, aim_assist=True))
+        self.assertEqual(self.aim.target_id, 'blue-3')
+
     def test_assistance_never_fires_and_manual_fire_cancels_heavy_assistance(self):
         match=Match()
         try:

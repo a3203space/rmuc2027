@@ -128,8 +128,13 @@ def benchmark(config, counts, steps, output):
         try:
             vec.reset()
             initialization = time.perf_counter()-started
-            begin = time.perf_counter()
             actions = np.zeros((count, 2), dtype=np.float32)
+            warmup_begin = time.perf_counter()
+            vec.step(actions)  # exclude lazy model conversion and kernel compilation
+            warmup_seconds = time.perf_counter()-warmup_begin
+            if hasattr(vec, 'physics'):
+                vec.physics.reset_metrics()
+            begin = time.perf_counter()
             for _ in range(steps):
                 _, rewards, _, infos = vec.step(actions)
                 assert np.isfinite(rewards).all()
@@ -139,10 +144,22 @@ def benchmark(config, counts, steps, output):
             if hasattr(vec, 'processes'):
                 descendants = [p.pid for p in vec.processes]
             record = {'num_envs': count, 'steps_per_env': steps,
-                'initialization_seconds': initialization, 'sampling_seconds': elapsed,
+                'initialization_seconds': initialization, 'warmup_seconds': warmup_seconds, 'sampling_seconds': elapsed,
+                'per_env_simulation_seconds_per_second': steps*config['rl_seconds']/elapsed,
+                'real_seconds_per_simulation_second_per_env': elapsed/(steps*config['rl_seconds']),
                 'rl_steps_per_second': steps*count/elapsed,
                 'simulation_seconds_per_second': steps*count*config['rl_seconds']/elapsed,
                 'parent_rss_kib': rss_kib(), 'worker_pids': descendants}
+            if hasattr(vec, 'physics'):
+                service = vec.physics
+                record['physics_batches'] = service.batches
+                record['physics_world_substeps'] = service.world_steps
+                record['max_physics_batch'] = service.max_batch
+                record['physics_handler_seconds'] = service.integration_seconds
+                record['physics_phase_host_seconds'] = dict(service.phase_seconds)
+                record['physics_batch_histogram'] = dict(service.batch_histogram)
+                record['profile_note'] = 'Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.'
+            record['sim_backend'] = config.get('sim_backend', 'rapier')
             results.append(record)
             print(json.dumps(record), flush=True)
         finally:
@@ -157,6 +174,8 @@ def main():
     for command in ('check', 'random', 'train', 'benchmark'):
         p = sub.add_parser(command)
         p.add_argument('--config', type=Path, default=DEFAULT_CONFIG)
+        p.add_argument('--sim-backend', choices=('rapier', 'mjwarp'), default=None)
+        p.add_argument('--sim-device', default=None)
         p.add_argument('--run-dir', type=Path, default=Path('data/research')/command)
         if command == 'check':
             p.add_argument('--reset-cycles', type=int, default=10)
@@ -165,7 +184,8 @@ def main():
         elif command == 'random':
             p.add_argument('--steps', type=int, default=64)
         elif command == 'train':
-            p.add_argument('--total-steps', type=int, default=256)
+            p.add_argument('--total-steps', type=int)
+            p.add_argument('--wall-seconds', type=float)
             p.add_argument('--additional-steps', type=int)
             p.add_argument('--resume', type=Path)
             p.add_argument('--num-envs', type=int, default=1)
@@ -188,6 +208,10 @@ def main():
     try:
         if args.command in ('check', 'random', 'train', 'benchmark'):
             config = load_config(args.config)
+            if args.sim_backend is not None:
+                config['sim_backend'] = args.sim_backend
+            if args.sim_device is not None:
+                config['sim_device'] = args.sim_device
         if args.command == 'check':
             if args.steps < 1 or args.reset_cycles < 1:
                 raise ValueError('steps and reset-cycles must be positive')
@@ -201,7 +225,7 @@ def main():
             if args.additional_steps is not None and not args.resume:
                 raise ValueError('--additional-steps requires --resume')
             train(config, args.run_dir, args.additional_steps if args.additional_steps is not None else args.total_steps,
-                args.num_envs, args.device, args.resume)
+                args.num_envs, args.device, args.resume, args.wall_seconds)
         elif args.command == 'evaluate':
             from .learning import evaluate
             evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device)

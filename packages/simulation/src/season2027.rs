@@ -2177,13 +2177,13 @@ impl Engine {
             let time_ok = now + 1e-8 >= unlocks[(d - 1) as usize].as_f64().unwrap();
             let prev_ok = d == 1 || completed.contains(&(d - 1));
             let once_ok = d != 4 || !completed.contains(&4);
-            let stock = r.carried_units >= if d == 4 { 2 } else { 1 };
+            let stock = self.sim["timed_assembly"] == true || r.carried_units >= if d == 4 { 2 } else { 1 };
             let other = &self.assemblies[opponent(&team)];
             let other_active = ["moving", "inserting"].contains(&other.stage.as_str());
             // Level 4 needs the other core: never while the other team is assembling, and a
             // level-4 attempt in progress bars the other team from starting at all.
             let priority_ok = !(other_active && (d == 4 || other.difficulty == 4));
-            if eligible && time_ok && prev_ok && once_ok && stock && priority_ok {
+            if eligible && now >= s.retry_at && time_ok && prev_ok && once_ok && stock && priority_ok {
                 let attempt = s.attempt_by_difficulty.get(&d).copied().unwrap_or(0) + 1;
                 let generation = s.successes_by_difficulty.get(&d).copied().unwrap_or(0) + 1;
                 let mut rng = (self.seed as u64)
@@ -2242,6 +2242,12 @@ impl Engine {
                     json!({"team":team,"difficulty":d,"pose":pose}),
                 );
             }
+        }
+        if self.sim["timed_assembly"] == true {
+            if rpc["assembly_cancel"] == true {
+                self.fail_assembly_2027(&team, "cancelled");
+            }
+            return;
         }
         let state = self.assemblies[&team].clone();
         if state.stage != "inserting" || now < state.ready_at || self.assembly_motion_blocked(i) {
@@ -2418,6 +2424,20 @@ impl Engine {
     /// Public assembly state in 2027: the step each core is on, with what blocks it.
     pub(super) fn assembly_snapshot_2027(&self, team: &str, out: &mut Value) {
         let s = &self.assemblies[team];
+        if self.sim["timed_assembly"] == true {
+            let duration = [10.0, 15.0, 20.0, 30.0][(s.difficulty.saturating_sub(1).min(3)) as usize];
+            let active = ["moving", "inserting"].contains(&s.stage.as_str());
+            let progress = if s.stage == "complete" { 1.0 } else { (s.confirm_progress_s / duration).clamp(0.0, 1.0) };
+            out["mode"] = json!("timed_probability");
+            out["operation"] = json!(if active { "timed_assembly" } else { s.stage.as_str() });
+            out["operation_progress"] = json!(progress);
+            out["progress"] = json!(progress);
+            out["attempt_remaining_s"] = json!(if active { (duration-s.confirm_progress_s).max(0.0) } else { 0.0 });
+            out["retry_remaining_s"] = json!((s.retry_at-self.time()).max(0.0));
+            out["alignment"] = Value::Null;
+            out["cores"] = json!([]);
+            return;
+        }
         let a = &self.rules["assembly"];
         let profile = self.assembly_difficulty(s.difficulty).clone();
         let tolerance =
@@ -2691,11 +2711,14 @@ impl Engine {
         self.event("assembly_success", json!({"team":team,"difficulty":difficulty,"first":first,"income_per_10s":self.teams[team].tech_income}));
     }
     fn fail_assembly_2027(&mut self, team: &str, reason: &str) {
+        let retry_at = self.time() + 5.0;
+        let timed = self.sim["timed_assembly"] == true;
         let s = self.assemblies.get_mut(team).unwrap();
         if !["moving", "inserting"].contains(&s.stage.as_str()) {
             return;
         }
         s.stage = "failed".into();
+        if timed { s.retry_at = retry_at; s.confirm_progress_s = 0.0; }
         s.second = None;
         let difficulty = s.difficulty;
         self.event(
@@ -2703,9 +2726,40 @@ impl Engine {
             json!({"team":team,"difficulty":difficulty,"reason":reason}),
         );
     }
+    fn timed_assembly_step(&mut self, team: &str) {
+        let s = self.assemblies[team].clone();
+        if !["moving", "inserting"].contains(&s.stage.as_str()) { return; }
+        let Some(i) = self.robots.iter().position(|r| r.team == team && r.role == "heavy") else { return; };
+        let r = &self.robots[i];
+        if !r.alive || r.tipped || !self.raw_zone(i, "assembly", Some(team)) {
+            self.fail_assembly_2027(team, "interrupted");
+            return;
+        }
+        if r.weak || r.vx.hypot(r.vy) > 0.05 || r.angular_velocity.iter().any(|w| w.abs() > 0.12) { return; }
+        let dual = r.arm_count == 2;
+        let duration = [10.0, 15.0, 20.0, 30.0][(s.difficulty-1) as usize];
+        let state = self.assemblies.get_mut(team).unwrap();
+        state.stage = "inserting".into();
+        state.confirm_progress_s += DT;
+        if state.confirm_progress_s + 1e-8 < duration { return; }
+        let chance = if dual { [0.98, 0.92, 0.85, 0.70] } else { [0.95, 0.85, 0.70, 0.50] }[(s.difficulty-1) as usize];
+        let mut rng = self.seed as u64 ^ (s.attempt as u64).wrapping_mul(0x9e3779b97f4a7c15)
+            ^ (s.difficulty as u64).wrapping_mul(0xbf58476d1ce4e5b9)
+            ^ if team == "red" { 0x12345678 } else { 0x87654321 };
+        rng ^= rng >> 30; rng = rng.wrapping_mul(0xbf58476d1ce4e5b9);
+        rng ^= rng >> 27; rng = rng.wrapping_mul(0x94d049bb133111eb); rng ^= rng >> 31;
+        let draw = (rng >> 11) as f64 / (1u64 << 53) as f64;
+        if draw < chance { self.complete_assembly_2027(team, i, s.difficulty); }
+        else { self.fail_assembly_2027(team, "probability"); }
+    }
+
     fn assembly_after_step_2027(&mut self) {
         let now = self.time();
         for team in ["red", "blue"] {
+            if self.sim["timed_assembly"] == true {
+                self.timed_assembly_step(team);
+                continue;
+            }
             let mut s = self.assemblies[team].clone();
             if s.stage == "moving"
                 && now >= s.ready_at

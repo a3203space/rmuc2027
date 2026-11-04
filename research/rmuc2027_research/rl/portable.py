@@ -106,7 +106,7 @@ class SdkNavigator(NavigationBackend):
         folded = robot.get('transform_progress', 0) >= .99
         graph = _sdk._prepare_chapter4(arena, robot['team'], folded)
         _, _, clear, inside = graph
-        key = (arena['layout_revision'], robot['team'], folded)
+        key = (arena['layout_revision'], robot['team'], folded, robot.get('radius', .28), self.grid_m)
         if key not in self.grids:
             margin = max(.36, robot.get('radius', .28)+.08)
             g = self.grid_m
@@ -143,6 +143,43 @@ def select_goal(obs, state, action, navigator, config):
                  clipped_action=clipped, proposed_goal=proposed)
 
 
+def held_fire_safe(robot, seconds):
+    """Budget all possible 17 mm shots before the next decision, without cooling credit."""
+    # The referee can emit at most one shot per 50 ms game tick.
+    ticks = max(1, math.ceil(seconds / .05 - 1e-9))
+    interval = max(.05, float(robot.get('trigger_interval_s', .05)))
+    spacing = max(1, math.ceil(interval / .05 - 1e-9))
+    shots = min(int(robot['ammo']), 1 + (ticks - 1) // spacing)
+    # Posture can change in this same command, so never assume the old no-heat buff persists.
+    heat = 10
+    return robot['heat'] + shots * heat <= robot['max_heat'] + 1e-8
+
+
+def learning_ready(robot, state):
+    """Latch hero takeover only after the referee confirms launcher installation."""
+    if robot['role'] != 'heavy':
+        return True
+    if robot.get('launcher') == 'installed':
+        if not state.get('hero_active'):
+            for key in ('navigation', 'goal', 'goal_time', 'goal_tick', 'control_tick', 'held_actions', 'execution'):
+                state.pop(key, None)
+        state['hero_active'] = True
+    return bool(state.get('hero_active'))
+
+
+def fixed_opening(obs, state, config, baseline):
+    if config['slot'] != 1:
+        return None
+    if learning_ready(own_robot(obs, config['slot']), state):
+        return None
+    actions, memory = baseline.act(obs, state.get('opening', {}))
+    state['opening'] = memory
+    slot = str(config['slot'])
+    actions[slot] = _sdk.timed_assembly_action(own_robot(obs, config['slot']), actions.get(slot, {}),
+                                              obs, state.setdefault('opening_adapter', {}))
+    return actions
+
+
 def execute_goal(obs, state, navigator, config, baseline):
     """Movement arbitration; weapon and resource operations remain rule modules."""
     robot = own_robot(obs, config['slot'])
@@ -155,6 +192,7 @@ def execute_goal(obs, state, navigator, config, baseline):
     state['recovering'] = bool(recovering)
     if not robot['alive'] or robot.get('red_card'):
         mode, goal = 'dead', None
+        state.pop('navigation', None)
         fields.update(baseline.revive_fields(robot, ctx))
     elif robot.get('tipped'):
         mode, goal = 'tipped', None
@@ -166,13 +204,18 @@ def execute_goal(obs, state, navigator, config, baseline):
     else:
         mode = 'policy' if goal is not None else 'unreachable'
     move = navigator.command(robot, goal, obs) if goal is not None else (0.0, 0.0)
-    fields['move'] = move
+    fields.update(_sdk.navigate_action(robot, goal, obs, state.setdefault('navigation', {}))
+                  if goal is not None else {'move': move})
+    move = fields['move']
     if robot['alive']:
         fields.update(baseline.weapon(robot, ctx, reach=10))
-        fields.update(baseline.ammo_fields(robot, ctx, 40, 100, 100, 50))
+        if fields.get('fire') and not held_fire_safe(robot, 1 / config.get('learning_control_hz', 10)):
+            fields['fire'] = False
+        fields.update(baseline.ammo_fields(robot, ctx, 8, 20, 10, 100) if robot['role'] == 'heavy'
+                      else baseline.ammo_fields(robot, ctx, 40, 100, 100, 50))
         moving = math.hypot(*move) > .05
         wanted = 'move' if moving else ('defense' if recovering else 'attack')
-        if obs['time'] >= (robot.get('posture_ready_at') or 0) and wanted != robot.get('posture'):
+        if robot['role'] == 'sentry' and obs['time'] >= (robot.get('posture_ready_at') or 0) and wanted != robot.get('posture'):
             fields['posture'] = wanted
     command = _sdk.action(**fields)
     state.update(mode=mode, executed_goal=goal, executed_action=command)

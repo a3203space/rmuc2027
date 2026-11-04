@@ -27,7 +27,7 @@
     "source": "Arena-1/frontend/src/home.css",
     "source_sha256": "cddc98358dda4bdb0f1220e4c526698c50b60340bbf179848dccd9f0b2229933",
     "path": "apps/client/web/arena/home.css",
-    "mode": "copied"
+    "mode": "adapted"
   },
   {
     "source": "Arena-1/frontend/src/agentLogos.tsx",

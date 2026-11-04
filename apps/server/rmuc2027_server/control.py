@@ -39,6 +39,7 @@ class HumanController:
         self.last_press_seq = 0
         self.last_press_result = ''
         self._attempted_press = False
+        self.view_forward = None
 
     def stop_combat(self):
         self.last_jump = False
@@ -106,10 +107,20 @@ class HumanController:
         if fire_press_seq is not None:
             self.last_press_seq = fire_press_seq
             self._attempted_press = True
-        view_yaw = robot["aim"]
+        # Use the same physical camera as the operator, including body tilt.
+        # Looking nearly straight up/down must not produce a noisy ground axis.
+        camera = observation.get('vision', {}).get(str(robot['slot']), {}).get('camera') or {}
+        direction = camera.get('direction', [])
+        if len(direction) >= 2 and all(math.isfinite(v) for v in direction[:2]):
+            length = math.hypot(*direction[:2])
+            if length > 1e-3:
+                self.view_forward = (direction[0] / length, direction[1] / length)
+        if self.view_forward is None:
+            self.view_forward = (math.cos(robot['aim']), math.sin(robot['aim']))
+        fx, fy = self.view_forward
         size = max(1, math.hypot(forward, strafe))
-        action = {"move": [(math.cos(view_yaw) * forward - math.sin(view_yaw) * strafe) / size,
-                           (math.sin(view_yaw) * forward + math.cos(view_yaw) * strafe) / size],
+        action = {"move": [(fx * forward - fy * strafe) / size,
+                           (fy * forward + fx * strafe) / size],
                   "aim": yaw, "pitch": pitch,
                   "heading": robot['heading'] if self.aim.tracking else yaw,
                   "fire": firing, "skill": intent.boost, "crouch": intent.crouch,
@@ -119,10 +130,13 @@ class HumanController:
             if self.folded is None: self.folded = robot.get('transform_progress', 0) >= .5
             action["transform"] = self.folded
         if robot.get("chassis_type") in ("wheel_legged", "serial_legged"):
-            # Two-wheel legs cannot strafe. A/D steers the chassis while the
-            # mouse continues to command the independent gimbal.
-            action["move"] = [math.cos(robot["heading"]) * forward, math.sin(robot["heading"]) * forward]
-            action["yaw_rate"] = strafe * 2.
+            # Let the engine choose the closest forward/reverse heading for the
+            # requested world motion and project drive onto its forward axis.
+            # A zero yaw_rate would override that automatic steering entirely.
+            if moving:
+                action.pop('heading')
+            else:
+                action['heading'] = robot['heading']
         self.last_jump = intent.jump
         if self.mode and robot["alive"]:
             memory = self.state.setdefault("heavy", {})

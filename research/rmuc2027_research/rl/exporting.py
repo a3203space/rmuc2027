@@ -29,6 +29,8 @@ def export_layers(layers, metadata, output):
             raise ValueError(f'Training runtime changed: {key}')
     # The deployment side follows the observation and therefore supports swaps.
     runtime_config = {key: config[key] for key in ('slot', 'rl_seconds', 'grid_m', 'recover_enter', 'recover_exit')}
+    runtime_config['learning_control_hz'] = config.get('learning_control_hz', 10)
+    runtime_config['navigation_mode'] = config.get('navigation_mode', 'legacy')
     source = Path(portable.__file__).read_text()
     _, entries = load_submission(resource(config['friendly']))
     baseline = entries[str(config['slot'])].read_text()
@@ -42,13 +44,20 @@ def export_layers(layers, metadata, output):
     code += '''
 def act(obs, state):
     state = dict(state or {})
+    opening = fixed_opening(obs, state, _CONFIG, _BASELINE)
+    if opening is not None:
+        return opening, state
     # Integer scheduling agrees with the Gym session's exact game-tick count.
     if 'goal_time' not in state or obs['tick'] - state.get('goal_tick', 0) >= round(_CONFIG['rl_seconds']/.05):
         features = encode_observation(obs, state, _CONFIG['slot'], _CONFIG['rl_seconds'])
         select_goal(obs, state, mlp_forward(features, _LAYERS), _NAVIGATOR, _CONFIG)
         state['goal_tick'] = obs['tick']
-    actions = execute_goal(obs, state, _NAVIGATOR, _CONFIG, _BASELINE)
-    return actions, state
+    if ('control_tick' not in state or obs['tick'] < state['control_tick']
+            or obs['tick'] - state['control_tick'] >= round(1 / (_CONFIG['learning_control_hz'] * .05))):
+        control_obs = dict(obs, policy_dt=1 / _CONFIG['learning_control_hz'], navigation_mode=_CONFIG['navigation_mode'])
+        state['held_actions'] = execute_goal(control_obs, state, _NAVIGATOR, _CONFIG, _BASELINE)
+        state['control_tick'] = obs['tick']
+    return state['held_actions'], state
 '''
     with tempfile.TemporaryDirectory(prefix='arena-rl-export-') as directory:
         policy = Path(directory)/'sentry.py'

@@ -3,16 +3,17 @@ import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties,type Ke
 import {Bot,ChevronLeft,ChevronRight,Crown,GraduationCap,History,LibraryBig,Radio,Shield,Trophy,Wifi,WifiOff} from 'lucide-react';
 import {ROLE_NAMES,type CatalogEntry,type RobotHardware,type Standing} from './types';
 import {RobotPreview} from '../RobotPreview';
+import type {CatalogStatus} from '../useCatalog';
 import './home.css';
 export type ArenaMode='standard'|'deck';
 
 type MenuItem={id:string;title:string;en:string;icon:typeof Shield;accent:string;brief:string;tags:string[];cta:string;run:()=>void};
 const ROLE_ORDER=['heavy','infantry','sentry','aerial'];
-const CHASSIS:Record<string,string>={mecanum:'麦克纳姆轮',swerve:'舵轮',omni:'全向轮',wheel_legged:'双轮足',quadrotor:'多旋翼'};
+const CHASSIS:Record<string,string>={mecanum:'麦克纳姆轮',swerve:'舵轮',omni:'全向轮',wheel_legged:'双轮足',quadrotor:'多旋翼',hangar:'固定机库'};
 // Deterministic sparks so the backdrop is stable across renders.
 const SPARKS=Array.from({length:18},(_,i)=>({left:(i*37+11)%100,delay:-(i*1.7)%12,duration:9+(i*7)%8,size:2+(i%3),hue:i%3===0?'var(--home-red)':i%3===1?'var(--home-blue)':'var(--home-gold)'}));
 
-export function Home({models,catalog,cards,standings=[],connected=false,live,onTraining,onBattle,onHistory,onRankings,onGallery,onWatch,busy}:{models:Record<string,RobotHardware>;catalog:Record<string,CatalogEntry>;cards:Record<string,CatalogEntry>;standings?:Standing[];connected?:boolean;live?:{red:string;blue:string}|null;onTraining:()=>void;onBattle:(mode:ArenaMode)=>void;onHistory:()=>void;onRankings:()=>void;onGallery:()=>void;onWatch:()=>void;busy:boolean}){
+export function Home({models,catalog,catalogStatus,cards,standings=[],connected=false,live,onTraining,onBattle,onHistory,onRankings,onGallery,onWatch,busy}:{models:Record<string,RobotHardware>;catalog:Record<string,CatalogEntry>;catalogStatus?:CatalogStatus;cards:Record<string,CatalogEntry>;standings?:Standing[];connected?:boolean;live?:{red:string;blue:string}|null;onTraining:()=>void;onBattle:(mode:ArenaMode)=>void;onHistory:()=>void;onRankings:()=>void;onGallery:()=>void;onWatch:()=>void;busy:boolean}){
   const champion=standings[0];
   const menu=useMemo<MenuItem[]>(()=>[
     {id:'rm',title:'RM 对战',en:'RM COMPETITION',icon:Shield,accent:'#f2c35b',brief:'RMUC 2027 五对五局域网对战。选择重装、步兵、机库或哨兵席位，真人操作，AI 补位，七分钟决出胜负。',tags:['RMUC 2027','局域网联机','真人与 AI'],cta:'准备正式对战',run:()=>onBattle('standard')},
@@ -21,7 +22,7 @@ export function Home({models,catalog,cards,standings=[],connected=false,live,onT
   const [active,setActive]=useState(0),buttons=useRef<(HTMLButtonElement|null)[]>([]);
   const units=useMemo(()=>Object.values(models).sort((a,b)=>ROLE_ORDER.indexOf(a.role)-ROLE_ORDER.indexOf(b.role)||a.slot-b.slot),[models]);
   const [unitIndex,setUnitIndex]=useState<number|null>(null);
-  const shown=unitIndex??Math.max(0,units.findIndex(u=>u.slot===2731));
+  const shown=(unitIndex??Math.max(0,units.findIndex(u=>u.slot===2731)))%Math.max(1,units.length);
   const unit=units[shown];
   const cycle=useCallback((step:number)=>{if(units.length)setUnitIndex(i=>((i??Math.max(0,units.findIndex(u=>u.slot===2731)))+step+units.length)%units.length);},[units]);
   const ranges=useMemo(()=>({hp:Math.max(1,...units.map(u=>u.initial_stats?.hp||0)),speed:Math.max(1,...units.map(u=>u.speed_reference_mps||0)),heat:Math.max(1,...units.map(u=>u.initial_stats?.max_heat||0)),battery:Math.max(1,...units.map(u=>u.battery_wh||0))}),[units]);
@@ -56,7 +57,8 @@ export function Home({models,catalog,cards,standings=[],connected=false,live,onT
       <div className="home-showcase">
         <span className="home-corner tl"/><span className="home-corner tr"/><span className="home-corner bl"/><span className="home-corner br"/>
         <div className="home-showcase-head"><span><i/>UNIT SELECT</span>{unit&&<b>{String(shown+1).padStart(2,'0')}<small> / {String(units.length).padStart(2,'0')}</small></b>}</div>
-        <div className="home-showcase-stage">{unit?<RobotPreview model={unit} slot={unit.slot>100?Math.floor(unit.slot/100):unit.slot} framing={1.1}/>:<div className="home-showcase-empty"><Bot size={30}/>连接机器人构型库…</div>}
+        {unit&&catalogStatus?.error&&<div className="home-catalog-error" role="status"><span>{catalogStatus.error}</span><button onClick={catalogStatus.retry}>重试</button></div>}
+        <div className="home-showcase-stage">{unit?<RobotPreview model={unit} slot={unit.slot>100?Math.floor(unit.slot/100):unit.slot} framing={1.1}/>:<div className="home-showcase-empty" role="status"><Bot size={30}/><span>{catalogStatus?.error||'正在加载机器人构型库…'}</span>{catalogStatus?.error&&<button onClick={catalogStatus.retry}>重新加载构型库</button>}</div>}
           {units.length>1&&<><button className="home-unit-nav prev" aria-label="上一台机器人" onClick={()=>cycle(-1)}><ChevronLeft size={22}/></button><button className="home-unit-nav next" aria-label="下一台机器人" onClick={()=>cycle(1)}><ChevronRight size={22}/></button></>}</div>
         {unit&&<div key={unit.slot} className="home-unit" aria-live="polite"><div className="home-unit-title"><div><span className="home-unit-role">{ROLE_NAMES[unit.role]}</span><h2>{unit.name}</h2><p>{unit.focus}</p></div><div className="home-unit-chips"><span>{CHASSIS[unit.chassis_type]||unit.chassis_type}</span><span>{unit.mass_kg.toFixed(1)} kg</span>{caliber&&<span>{caliber}</span>}</div></div>
           <div className="home-unit-stats">{stats.map(s=><div key={s.label} className="home-stat"><span>{s.label}</span><div className="home-stat-bar" role="meter" aria-label={s.label} aria-valuemin={0} aria-valuemax={s.max} aria-valuenow={s.value}>{Array.from({length:10},(_,k)=><i key={k} className={k<Math.round(s.value/s.max*10)?'on':''}/>)}</div><b>{s.text}</b></div>)}</div></div>}

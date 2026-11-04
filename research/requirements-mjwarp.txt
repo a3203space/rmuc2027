@@ -1,0 +1,5 @@
+# Training-only physics runtime; validated together on Linux.
+mujoco-warp==3.17.0
+mujoco==3.17.0
+warp-lang==1.19.0
+numpy==2.2.6

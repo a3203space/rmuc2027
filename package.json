@@ -24,6 +24,8 @@
   "version": "0.1.0",
   "scripts": {
     "build": "tsc --noEmit && vite build",
-    "dev": "vite --host 127.0.0.1"
+    "dev": "vite --host 127.0.0.1",
+    "build:arena-web": "tsc -p apps/arena-web/tsconfig.json --noEmit && vite build --config apps/arena-web/vite.config.ts",
+    "dev:arena-web": "vite --config apps/arena-web/vite.config.ts"
   }
 }

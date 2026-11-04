@@ -71,7 +71,11 @@ def drive(robot, goal, obs, memory, tolerance=.35):
     bump handling and turn-in-place are not overridden by a full-speed command."""
     if goal is None or distance(robot, goal) <= tolerance:
         return {'move': (0, 0), 'brake': True}
-    fields = unstick(robot, navigate(robot, goal, obs['arena']), memory, obs['time'])
+    from sdk import navigate_action
+    nav = memory.setdefault('navigation', {}).setdefault(str(robot['slot']), {})
+    fields = navigate_action(robot, goal, obs, nav)
+    if len(fields) == 1:
+        fields = unstick(robot, fields['move'], memory, obs['time'])
     if math.hypot(robot['vx'], robot['vy']) < .3 and math.hypot(*fields['move']) > .2:
         fields['power'] = 200
     return fields

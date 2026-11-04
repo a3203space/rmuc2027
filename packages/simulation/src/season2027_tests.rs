@@ -27,6 +27,29 @@ fn zone_center(m: &Engine, id: &str) -> [f64; 2] {
 }
 
 #[test]
+fn outpost_optical_plates_require_camera_range_facing_and_clear_ray() {
+    use rapier3d::prelude::*;
+    let mut m = match_();
+    let mut r = m.robots[robot(&m, "red-7")].clone();
+    let plate = Engine::structure_plates_2027(&m.outposts["blue"], true)[0];
+    r.x = plate.center[0] + plate.normal[0] * 2.0;
+    r.y = plate.center[1] + plate.normal[1] * 2.0;
+    r.z = plate.center[2] - r.muzzle_height_m - 0.08;
+    r.heading = 0.0; r.quaternion = [0.0, 0.0, 0.0, 1.0]; r.pitch = 0.0;
+    r.aim = (-plate.normal[1]).atan2(-plate.normal[0]);
+    assert!(m.visible_outpost_plates(&r).get("blue").unwrap().contains(&plate.face));
+    let mut away = r.clone(); away.aim += std::f64::consts::PI;
+    assert!(!m.visible_outpost_plates(&away).contains_key("blue"));
+    away = r.clone(); away.x += plate.normal[0] * 100.0; away.y += plate.normal[1] * 100.0;
+    assert!(!m.visible_outpost_plates(&away).contains_key("blue"));
+    let world = m.physics.as_mut().unwrap();
+    world.colliders.insert(ColliderBuilder::cuboid(0.5, 0.5, 1.0)
+        .translation(Vector::new((r.x + plate.center[0]) / 2.0, (r.y + plate.center[1]) / 2.0, plate.center[2])).build());
+    world.update_base_covers(&m.bases);
+    assert!(!m.visible_outpost_plates(&r).contains_key("blue"));
+}
+
+#[test]
 fn operator_camera_mount_follows_gimbal_and_body_pose() {
     use rapier3d::na::{UnitQuaternion, Vector3};
     let m = match_();

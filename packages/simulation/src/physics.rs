@@ -4,6 +4,9 @@ use rapier3d::na as nalgebra;
 use rapier3d::na::{Quaternion, UnitQuaternion};
 use rapier3d::prelude::*;
 
+#[path = "physics_external.rs"]
+mod external;
+
 pub const PHYSICS_DT: f64 = 1.0 / 120.0;
 fn n(v: &Value, key: &str) -> f64 {
     v[key].as_f64().unwrap_or(0.0)
@@ -42,6 +45,7 @@ pub(super) fn arm_direction_for(r: &Robot, secondary: bool) -> [f64; 3] {
 }
 
 pub struct PhysicsWorld {
+    external_colliders: BTreeMap<u32, (SharedShape, Value)>,
     pipeline: PhysicsPipeline,
     parameters: IntegrationParameters,
     islands: IslandManager,
@@ -233,6 +237,7 @@ pub fn arm_ik(arm: &Value, tip: Point<f64>, dir: Vector<f64>, roll: f64, grip: f
 impl PhysicsWorld {
     pub fn new(arena: &Arena, robots: &[Robot], designs: &BTreeMap<String, Value>) -> Self {
         let mut world = Self {
+            external_colliders: BTreeMap::new(),
             pipeline: PhysicsPipeline::new(),
             parameters: IntegrationParameters {
                 dt: PHYSICS_DT,
@@ -1397,7 +1402,12 @@ impl PhysicsWorld {
                     let at = if legged { point } else { anchor };
                     self.bodies[h].add_force_at_point(normal * support, at, true);
                     normal_total += support;
-                    contacts.push((point, normal, support));
+                    // A suspension probe can see terrain beyond the tucked leg.
+                    // Such a ray is not a loaded tyre contact: treating it as
+                    // grounded disables airborne attitude control during a jump.
+                    if support > 1.0 && normal.norm_squared() > 0.5 {
+                        contacts.push((point, normal, support));
+                    }
                     r.suspension[wheel] = length;
                     r.wheel_loads_n[wheel] = support;
                     if legged {
@@ -1886,6 +1896,9 @@ impl PhysicsWorld {
             self.bodies[self.handles[j]].add_force_at_point(force, grasp, true);
             self.bodies[self.handles[i]].add_force_at_point(-force, tip, true);
         }
+        if std::env::var_os("RMUC_EXTERNAL_PHYSICS").is_some() {
+            self.external_step(robots);
+        } else {
         self.pipeline.step(
             &vector![0.0, 0.0, -9.81],
             &self.parameters,
@@ -1901,6 +1914,7 @@ impl PhysicsWorld {
             &(),
             &(),
         );
+        }
         for pair in self.narrow.contact_pairs() {
             let impulse = pair.total_impulse();
             if impulse.x.hypot(impulse.y) < 3.0 {

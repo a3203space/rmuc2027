@@ -64,7 +64,11 @@ def smart_drive(robot, goal, obs, memory, tolerance=0.30, turbo=False):
     """Smart navigation with dynamic supercap power burst."""
     if goal is None or distance(robot, goal) <= tolerance:
         return {'move': (0, 0)}
-    fields = unstick(robot, navigate(robot, goal, obs['arena']), memory, obs['time'])
+    from sdk import navigate_action
+    nav = memory.setdefault('navigation', {}).setdefault(str(robot['slot']), {})
+    fields = navigate_action(robot, goal, obs, nav)
+    if len(fields) == 1:
+        fields = unstick(robot, fields['move'], memory, obs['time'])
     speed = math.hypot(robot['vx'], robot['vy'])
     move_mag = math.hypot(*fields['move'])
     

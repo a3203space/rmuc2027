@@ -3,6 +3,28 @@ use super::*;
 use rapier3d::na::{Quaternion, UnitQuaternion, Vector3};
 
 impl Engine {
+    /// Individual cameras expose only front-facing, unoccluded outpost plates.
+    pub(super) fn visible_outpost_plates(&self, observer: &Robot) -> BTreeMap<String, Vec<usize>> {
+        let mut visible = BTreeMap::new();
+        let Some(world) = &self.physics else { return visible; };
+        let index = self.robots.iter().position(|r| r.id == observer.id).unwrap();
+        let eye = Self::eye(observer);
+        for (site, outpost) in &self.outposts {
+            if outpost.hp <= 0.0 { continue; }
+            let faces: Vec<usize> = Self::structure_plates_2027(outpost, true).iter()
+                .filter(|plate| {
+                    let offset = Vector3::from(eye) - Vector3::from(plate.center);
+                    offset.dot(&Vector3::from(plate.normal)) > 0.0
+                        && offset.norm() < self.effective_vision(observer)
+                        && self.point_in_camera(observer, plate.center)
+                        && world.visible_point(index, eye, plate.center)
+                })
+                .map(|plate| plate.face).collect();
+            if !faces.is_empty() { visible.insert(site.clone(), faces); }
+        }
+        visible
+    }
+
     pub(super) fn camera_rotation(r: &Robot) -> UnitQuaternion<f64> {
         let q = r.quaternion;
         UnitQuaternion::new_normalize(Quaternion::new(q[3], q[0], q[1], q[2]))

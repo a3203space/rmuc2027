@@ -15,3 +15,5 @@ Qt 联机客户端及界面源自 RM26_Client；原始许可证见 apps/client/L
 Arena 风格界面适配了 Arena-1 的 RobotPreview、intro.css、broadcast.css、teamLineup.css 和入场镜头，原始参考提交为 `bbaa885b774e86582e8e537e5e01197f1c2bb1ea`。新增的首页、机库、入场、倒计时和结算音频来自同一提交；逐文件来源与哈希见 [arena-audio.json](arena-audio.json)。94 个内置 2027 策略包从本项目保留的策略示例复制到 `packages/core/bots/catalog`，原 manifest、版本哈希与作者信息保留。均遵循根目录 Arena-1 许可证。
 
 右键自瞄参考 [chenjunnn/rm_auto_aim 的 tracker.cpp](https://github.com/chenjunnn/rm_auto_aim/blob/main/armor_tracker/src/tracker.cpp) 中准星中心优先、目标身份保持与连续角度处理的设计。该项目采用 MIT 许可证；本项目为仿真数据与现有 SDK 单独实现，没有复制其源代码或引入运行依赖，具体说明见 [自瞄设计](../aim-assist.md)。
+
+完整网页版本直接复制 Arena-1 的完整前端、Web 服务、比赛记录、训练工作区、策略展示、模型上传、视频导出与 2027 策略开发指南，并适配本仓库引擎、路径和 2027 合规目录。来源与原文件哈希见 [arena-web-port.json](arena-web-port.json)；字节未改动的文件标为 copied，其余标为 adapted。网页沿用本项目当前共享渲染器的视角及灯带修正，自定义 GLB 拟合方法从原版移至共享渲染模块。继续遵循 Arena-1 根目录许可证。

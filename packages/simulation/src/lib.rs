@@ -877,6 +877,14 @@ impl Engine {
                 .as_object()
                 .ok_or("Battle settings must be an object")?
             {
+                if key == "timed_assembly" {
+                    sim["timed_assembly"] = json!(value.as_bool().ok_or("timed_assembly must be boolean")?);
+                    continue;
+                }
+                if key == "drones_enabled" {
+                    sim["drones_enabled"] = json!(value.as_bool().ok_or("drones_enabled must be boolean")?);
+                    continue;
+                }
                 let field = fields
                     .as_array()
                     .unwrap()
@@ -1203,7 +1211,7 @@ impl Engine {
                     supply_grants_taken: 0,
                     respawned_at: 0.0,
                     crossing_buffs: BTreeMap::new(),
-                    drones: if role == "aerial" {
+                    drones: if role == "aerial" && sim["drones_enabled"] != false {
                         season2027::make_drones(team, slot, d, &arena)
                     } else {
                         Vec::new()
@@ -1394,6 +1402,17 @@ impl Engine {
         ]
     }
     /// The snapshot without its static fields; transports send those once per match.
+    /// Minimal bookkeeping state for headless RL; policy vision is requested separately.
+    pub fn training_snapshot(&self) -> Value {
+        let robots: Vec<Value> = self.robots.iter().map(|r| json!({
+            "id":r.id,"team":r.team,"slot":r.slot,"alive":r.alive,"weak":r.weak
+        })).collect();
+        json!({"tick":self.tick,"time":self.time(),"status":self.status,
+            "winner":self.winner,"reason":self.reason,"robots":robots,
+            "bases":self.base_snapshots(),"teams":self.teams,"zones":self.zones,
+            "positions":self.position_snapshots(),"events":[]})
+    }
+
     pub fn dynamic_snapshot(&self) -> Value {
         static RULES_HASH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
         let roster = self.roster();
@@ -1696,7 +1715,7 @@ impl Engine {
                     .map(|d| d.id.clone())
                     .collect()
             };
-            vision.insert(a.slot.to_string(), json!({"enemies":foes,"allies":allies,"drones":drones,"range_m":self.effective_vision(a),"fpv_dimmed":a.overheated&&a.heat>1e-8,"camera":self.camera_metadata(a)}));
+            vision.insert(a.slot.to_string(), json!({"enemies":foes,"allies":allies,"drones":drones,"outposts":self.visible_outpost_plates(a),"range_m":self.effective_vision(a),"fpv_dimmed":a.overheated&&a.heat>1e-8,"camera":self.camera_metadata(a)}));
         }
         let enemies: Vec<Value> = self
             .robots

@@ -223,7 +223,7 @@ class RustMatchTests(unittest.TestCase):
             room.ready(token, True)
             room.start(token)
             deadline = time.monotonic() + 10
-            while room.status == "starting" and time.monotonic() < deadline:
+            while room.status in ("starting", "loading") and len(processes) < 3 and time.monotonic() < deadline:
                 time.sleep(.01)
             room.close()
             self.assertFalse(room.runner.thread.is_alive())
@@ -274,7 +274,7 @@ class RustMatchTests(unittest.TestCase):
             room.start(token)
             start = time.monotonic()
             position = None
-            while room.status in ("starting", "running") and time.monotonic() - start < 20:
+            while room.status in ("starting", "loading", "running") and time.monotonic() - start < 20:
                 if room.status == "running":
                     room.submit(token, Input(match_id=room.match_id, seq=room.player(token).seq + 1, forward=1, yaw=0, pitch=0))
                     snapshot = room.snapshot(token)["player"]
@@ -305,7 +305,7 @@ class RustMatchTests(unittest.TestCase):
             room.ready(token, True)
             room.start(token)
             deadline = time.monotonic() + 10
-            while room.status == "starting" and time.monotonic() < deadline:
+            while room.status in ("starting", "loading") and time.monotonic() < deadline:
                 time.sleep(.005)
             self.assertEqual(room.status, "running")
             room.submit(token, Input(match_id=room.match_id, seq=1, forward=1, yaw=0, pitch=0, fire=True))

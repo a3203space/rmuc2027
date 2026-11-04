@@ -12,7 +12,7 @@ from rmuc2027_core.paths import ROOT
 from ..strategies.battle import Battle
 from rmuc2027_core.policy import EncodedObservation, Policy
 from rmuc2027_core.submissions import load_submission
-from .portable import SdkNavigator, encode_observation, execute_goal, select_goal
+from .portable import SdkNavigator, encode_observation, execute_goal, select_goal, fixed_opening, learning_ready, own_robot
 
 DEFAULT_CONFIG = ROOT / 'configs/rl/sentry.json'
 
@@ -25,8 +25,33 @@ def load_config(source=None):
             config[key].update(value)
         else:
             config[key] = value
-    if config['map'] != 'rmuc2027' or config['slot'] != 7 or config['team'] not in ('red', 'blue'):
-        raise ValueError('v1 trains the RMUC 2027 slot-7 sentry, on either side')
+    if config.get('lineups') is not None:
+        from rmuc2027_core.models import normalize_team_lineup
+        if set(config['lineups']) != {'red', 'blue'}:
+            raise ValueError('lineups requires red and blue')
+        config['lineups'] = {team: normalize_team_lineup(value, '2027')
+                             for team, value in config['lineups'].items()}
+    config.setdefault('policy_timeout_s', 5.0)
+    config.setdefault('navigation_mode', 'legacy')
+    config.setdefault('timed_assembly', False)
+    if not isinstance(config['timed_assembly'], bool):
+        raise ValueError('timed_assembly must be boolean')
+    config.setdefault('drones_enabled', True)
+    if not isinstance(config['drones_enabled'], bool):
+        raise ValueError('drones_enabled must be boolean')
+    config.setdefault('fixed_policy_hz', 10)
+    config.setdefault('learning_control_hz', 10)
+    if config['learning_control_hz'] not in (2, 5, 10):
+        raise ValueError('learning_control_hz must be 2, 5 or 10')
+    config.setdefault('training_summary', True)
+    config.setdefault('action_trace', False)
+    if config['fixed_policy_hz'] not in (5, 10):
+        raise ValueError('fixed_policy_hz must be 5 or 10')
+    timeout = config['policy_timeout_s']
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError('policy_timeout_s must be finite and positive')
+    if config['map'] != 'rmuc2027' or config['slot'] not in (1, 3, 4, 7) or config['team'] not in ('red', 'blue'):
+        raise ValueError('RL supports ground slots 1, 3, 4 and 7 on either side')
     for key in ('duration', 'episode_seconds', 'rl_seconds', 'grid_m'):
         if not math.isfinite(config[key]) or config[key] <= 0:
             raise ValueError(f'{key} must be finite and positive')
@@ -42,14 +67,16 @@ def load_config(source=None):
         raise ValueError('Reward weights must be finite')
     # The selected side follows team. The default file is convenient for red;
     # explicit non-default controller maps must name the desired side themselves.
-    if config['team'] == 'blue' and config['controllers'] == {'red:7': {'kind': 'learning'}}:
-        config['controllers'] = {'blue:7': {'kind': 'learning'}}
+    if 'controllers' not in supplied:
+        config['controllers'] = {f"{config['team']}:{config['slot']}": {'kind': 'learning'}}
     for key, spec in config['controllers'].items():
         parts = key.split(':')
         if len(parts) != 2 or parts[0] not in ('red', 'blue') or parts[1] not in ('1', '3', '4', '6', '7'):
             raise ValueError('Controller keys must be canonical team:slot identifiers')
         if spec['kind'] not in ('learning', 'script', 'frozen') or (spec['kind'] != 'learning' and 'submission' not in spec):
             raise ValueError('Invalid controller assignment')
+    if config.get('sim_backend', 'rapier') not in ('rapier', 'mjwarp'):
+        raise ValueError('Unknown simulation backend')
     return config
 
 
@@ -88,6 +115,14 @@ def provenance(config):
     result['runtime_hash'] = hashlib.sha256(Path(__file__).with_name('portable.py').read_bytes()).hexdigest()
     result['engine_binary_sha256'] = hashlib.sha256(binary_path().read_bytes()).hexdigest()
     result['rules_sha256'] = hashlib.sha256((ROOT/'configs/rules.json').read_bytes()).hexdigest()
+    if config.get('sim_backend', 'rapier') == 'mjwarp':
+        from importlib.metadata import version
+        folder = Path(__file__).with_name('mjwarp')
+        result['simulation'] = {'backend': 'mjwarp', 'device': config.get('sim_device', 'cuda:0'),
+            'dt': 1/120, 'files': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in folder.glob('*.py')},
+            'dependencies': {n: version(n) for n in ('mujoco', 'mujoco-warp', 'warp-lang')}}
+    else:
+        result['simulation'] = {'backend': 'rapier', 'dt': 1/120}
     return result
 
 
@@ -95,6 +130,7 @@ class GoalController:
     """Policy-compatible external target latch; one instance per episode."""
     def __init__(self, config):
         self.config = config
+        self.is_learning_controller = True
         self.navigator = SdkNavigator(config['grid_m'])
         self.baseline = baseline_module(config)
         self.state, self.logs = {}, []
@@ -106,6 +142,9 @@ class GoalController:
     def decide(self, observation):
         obs = json.loads(observation.payload) if isinstance(observation, EncodedObservation) else observation
         self.calls += 1
+        opening = fixed_opening(obs, self.state, self.config, self.baseline)
+        if opening is not None:
+            return opening, None
         return execute_goal(obs, self.state, self.navigator, self.config, self.baseline), None
 
     def close(self):
@@ -136,7 +175,7 @@ class ArenaSession:
         learning = f"{cfg['team']}:{cfg['slot']}"
         assignments = cfg['controllers']
         if assignments.get(learning, {}).get('kind') != 'learning' or sum(v['kind'] == 'learning' for v in assignments.values()) != 1:
-            raise ValueError('Exactly one learning controller must own the selected sentry')
+            raise ValueError('Exactly one learning controller must own the selected robot')
         self.controller = GoalController(cfg)
         overrides = {(cfg['team'], cfg['slot']): self.controller}
         try:
@@ -150,16 +189,28 @@ class ArenaSession:
                     raise ValueError('Controller kind must be learning, script or frozen')
                 manifest, entries = load_submission(resource(spec['submission']))
                 path = entries[str(int(slot))]
-                overrides[(team, int(slot))] = Policy(path, self.seed*100+int(slot), 'trusted-local', .2,
+                overrides[(team, int(slot))] = Policy(path, self.seed*100+int(slot), 'trusted-local', cfg['policy_timeout_s'],
                     expected_digest=manifest['hashes'][manifest['entries'][str(int(slot))]])
             sources = (resource(cfg['friendly']), resource(cfg['opponent']))
             red, blue = sources if cfg['team'] == 'red' else sources[::-1]
-            self.battle = Battle(red, blue, self.seed, cfg['duration'], cfg['map'], sandbox='trusted-local',
-                controller_overrides=overrides, record_replay=self.record_replay)
+            self.battle = Battle(red, blue, self.seed, cfg['duration'], cfg['map'], sandbox='trusted-local', timeout=cfg['policy_timeout_s'],
+                controller_overrides=overrides, record_replay=self.record_replay, side_lineups=cfg.get('lineups'),
+                navigation_mode=cfg['navigation_mode'], battle_settings={'drones_enabled': cfg['drones_enabled'], 'timed_assembly': cfg['timed_assembly']}, physics_backend=cfg.get('sim_backend', 'rapier'), sim_device=cfg.get('sim_device', 'cuda:0'), fixed_policy_hz=cfg['fixed_policy_hz'], learning_control_hz=cfg['learning_control_hz'])
+            self.battle.match.training_summary = cfg['training_summary'] and not self.record_replay
             self.battle.metadata['rl'] = provenance(cfg)
             # These are development experiments, never ranked submissions.
             self.battle.metadata['test_match'] = True
             self.obs = self.battle.observation(cfg['team'], [cfg['slot']])
+            self.opening_seconds = 0.0
+            while not learning_ready(own_robot(self.obs, cfg['slot']), self.controller.state):
+                if self.battle.match.status == 'finished' or self.battle.match.time >= cfg['episode_seconds']:
+                    raise RuntimeError('Heavy opening ended before launcher installation; no RL samples collected')
+                self.battle.step()
+                if self.battle.diagnostics:
+                    raise RuntimeError(f'Invalid fixed opening: {self.battle.diagnostics[-1]}')
+                self.obs = self.battle.observation(cfg['team'], [cfg['slot']])
+                self.opening_seconds = self.battle.match.time
+            self.battle.held_commands[cfg['team']].pop(str(cfg['slot']), None)
             self.metrics = {'alive_seconds': 0.0, 'weak_seconds': 0.0, 'deaths': 0, 'revives': 0,
                 'takeover_seconds': {mode: 0.0 for mode in ('dead', 'recover', 'tipped', 'unreachable')},
                 'capture_seconds': 0.0, 'policy_errors': 0}
@@ -233,7 +284,7 @@ class ArenaSession:
 
     def info(self, terms):
         battle, cfg = self.battle, self.config
-        return {'seed': self.seed, 'tick': battle.match.tick, 'time': battle.match.time,
+        return {'opening_simulation_seconds': self.opening_seconds, 'seed': self.seed, 'tick': battle.match.tick, 'time': battle.match.time,
             'winner': battle.match.winner, 'reason': battle.match.reason,
             'bases': {team: {'hp': battle.match.bases[team]['hp'], 'max_hp': battle.match.bases[team]['max_hp']} for team in ('red', 'blue')},
             'control': {t: battle.match.teams[t]['control'] for t in ('red', 'blue')},
