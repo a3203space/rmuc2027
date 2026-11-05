@@ -37,5 +37,6 @@
   "learning_control_hz": 2,
   "drones_enabled": false,
   "navigation_mode": "legacy",
-  "timed_assembly": true
+  "timed_assembly": true,
+  "github_backup_repo": "a3203space/rmuc2027"
 }

@@ -203,6 +203,9 @@ def main():
     p = sub.add_parser('export')
     p.add_argument('--model', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p = sub.add_parser('compose')
+    p.add_argument('--exports', type=Path, nargs='+', required=True)
+    p.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     try:
@@ -229,6 +232,9 @@ def main():
         elif args.command == 'evaluate':
             from .learning import evaluate
             evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device)
+        elif args.command == 'compose':
+            from .exporting import compose_exports
+            print(json.dumps(compose_exports(args.exports, args.output)), flush=True)
         elif args.command == 'export':
             from .exporting import export_model
             print(json.dumps(export_model(args.model, args.output)), flush=True)

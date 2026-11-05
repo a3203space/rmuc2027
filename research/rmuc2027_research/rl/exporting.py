@@ -32,7 +32,9 @@ def export_layers(layers, metadata, output):
     runtime_config['learning_control_hz'] = config.get('learning_control_hz', 10)
     runtime_config['navigation_mode'] = config.get('navigation_mode', 'legacy')
     source = Path(portable.__file__).read_text()
-    _, entries = load_submission(resource(config['friendly']))
+    base_manifest, entries = load_submission(resource(config['friendly']))
+    from rmuc2027_core.models import normalize_team_lineup
+    lineup = normalize_team_lineup(config.get('lineups', {}).get(config['team'], base_manifest.get('team_lineup')), '2027')
     baseline = entries[str(config['slot'])].read_text()
     packed = base64.b85encode(zlib.compress(json.dumps(layers, allow_nan=False).encode())).decode()
     code = source + '\nimport base64, json, zlib\n'
@@ -60,13 +62,16 @@ def act(obs, state):
     return state['held_actions'], state
 '''
     with tempfile.TemporaryDirectory(prefix='arena-rl-export-') as directory:
-        policy = Path(directory)/'sentry.py'
+        policy = Path(directory)/'learned_role.py'
         policy.write_text(code)
         files = {**entries, str(config['slot']): policy}
-        manifest = save_submission(Path(output), 'squad', files, season='2027')
+        manifest = save_submission(Path(output), 'squad', files, season='2027', team_lineup=lineup)
+    from rmuc2027_core.battle_settings import defaults
+    assembly_settings = {k:v for k,v in defaults('2027').items() if k.startswith('timed_assembly_profile.')}
     metadata = {**metadata, 'portable_source_hash': hashlib.sha256(source.encode()).hexdigest(),
         'actor_layers_hash': hashlib.sha256(json.dumps(layers, sort_keys=True).encode()).hexdigest(),
-        'sentry_source_bytes': len(code.encode()), 'deployment_version': manifest['version']}
+        'sentry_source_bytes': len(code.encode()), 'learned_slots': [config['slot']],
+        'deployment': {'team_lineup': lineup, 'battle_settings': {**assembly_settings, 'timed_assembly': config.get('timed_assembly', False), 'drones_enabled': config.get('drones_enabled', True)}}, 'deployment_version': manifest['version']}
     (Path(output)/'rl-metadata.json').write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
     return metadata
 
@@ -96,3 +101,38 @@ def export_model(model_path, output):
     metadata['actor_parity_max_error'] = error
     metadata['model_sha256'] = hashlib.sha256(model_path.read_bytes()).hexdigest()
     return export_layers(layers, metadata, output)
+
+
+def compose_exports(sources, output):
+    """Combine independently learned roles; never silently overwrite a role."""
+    from rmuc2027_core.models import normalize_team_lineup
+    files, learned, members, deployment = {}, set(), [], None
+    for source in sources:
+        source = Path(source)
+        manifest, entries = load_submission(source)
+        metadata = json.loads((source/'rl-metadata.json').read_text())
+        if metadata.get('deployment_version') != manifest['version']:
+            raise ValueError('Export metadata does not match its submission')
+        spec = metadata.get('deployment')
+        if spec is None:
+            raise ValueError('Re-export this model to include its deployment settings')
+        normalize_team_lineup(spec['team_lineup'], '2027')
+        if deployment is not None and deployment != spec:
+            raise ValueError('Cannot compose models with different lineups or battle settings')
+        deployment = spec
+        slots = {str(slot) for slot in metadata['learned_slots']}
+        if learned & slots:
+            raise ValueError('Multiple learned models claim the same slot')
+        if not files:
+            files.update(entries)
+        for slot in slots:
+            files[slot] = entries[slot]
+        learned.update(slots)
+        members.append({'version': manifest['version'], 'learned_slots': sorted(slots)})
+    if not members:
+        raise ValueError('At least one exported model is required')
+    manifest = save_submission(Path(output), 'squad', files, season='2027', team_lineup=deployment['team_lineup'])
+    result = {'deployment_version': manifest['version'], 'deployment': deployment,
+              'learned_slots': sorted(map(int, learned)), 'members': members}
+    (Path(output)/'rl-metadata.json').write_text(json.dumps(result, indent=2, ensure_ascii=False))
+    return result

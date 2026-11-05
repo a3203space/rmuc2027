@@ -1,0 +1,58 @@
+{
+  "seed": 42,
+  "team": "red",
+  "slot": 7,
+  "map": "rmuc2027",
+  "duration": 420,
+  "episode_seconds": 420,
+  "rl_seconds": 0.5,
+  "grid_m": 0.25,
+  "recover_enter": 0.25,
+  "recover_exit": 0.8,
+  "friendly": "examples/claude_opus55_xhigh_2027_squad",
+  "opponent": "examples/claude_opus55_xhigh_2027_hold",
+  "controllers": {
+    "red:7": {
+      "kind": "learning"
+    }
+  },
+  "rewards": {
+    "control": 0.01,
+    "outcome": 10.0,
+    "capture_seconds": 0.001,
+    "death": -0.1
+  },
+  "ppo": {
+    "n_steps": 64,
+    "batch_size": 64,
+    "n_epochs": 4,
+    "learning_rate": 0.0003,
+    "gamma": 0.995,
+    "gae_lambda": 0.95,
+    "ent_coef": 0.01
+  },
+  "sim_backend": "mjwarp",
+  "sim_device": "cuda:0",
+  "policy_timeout_s": 5.0,
+  "learning_control_hz": 2,
+  "drones_enabled": false,
+  "navigation_mode": "legacy",
+  "timed_assembly": true,
+  "github_backup_repo": "a3203space/rmuc2027",
+  "lineups": {
+    "red": {
+      "1": 2714,
+      "3": 2731,
+      "4": 2732,
+      "6": 2761,
+      "7": 2773
+    },
+    "blue": {
+      "1": 2714,
+      "3": 2731,
+      "4": 2732,
+      "6": 2761,
+      "7": 2773
+    }
+  }
+}

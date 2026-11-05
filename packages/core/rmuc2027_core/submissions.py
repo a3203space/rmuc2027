@@ -46,8 +46,8 @@ def save_submission(output, mode, entries, robot=None, team_lineup=None, showcas
     if season is None:
         season = season_rules.infer_season(team_lineup.keys()) if mode == "team" and team_lineup else \
             season_rules.infer_season(entries.keys()) if mode in ("squad", "distributed") and len(entries) == 5 else season_rules.DEFAULT_SEASON
-    lineup=normalize_team_lineup(team_lineup,season) if mode=='team' else None
-    if mode!='team' and team_lineup is not None:raise ValueError('A shared team lineup is only for team mode')
+    lineup=normalize_team_lineup(team_lineup,season) if mode=='team' or team_lineup is not None else None
+    if mode not in ('team','squad','distributed') and team_lineup is not None:raise ValueError('A team lineup requires a full squad')
     if set(entries) != submission_keys(mode, robot, season=season):
         raise ValueError("Entries do not match the selected control mode")
     if any(p.is_symlink() or not p.is_file() or p.stat().st_size > SOURCE_LIMIT for p in entries.values()):
@@ -62,7 +62,7 @@ def save_submission(output, mode, entries, robot=None, team_lineup=None, showcas
         sidecars["profile.json"] = profile
     output.mkdir(parents=True)
     manifest = {"api_version": 3, "rules_profile":season_rules.rules_profile(season), "mode": mode, "robot": robot, "entries": {}, "hashes": {}}
-    if mode=='team':manifest['team_lineup']=lineup
+    if lineup is not None:manifest['team_lineup']=lineup
     for slot, source in sources.items():
         name = "strategy.py" if mode in ("team", "robot", "adaptive") else f"robot_{slot}.py"
         (output / name).write_bytes(source)
@@ -88,7 +88,7 @@ def load_submission(path):
         raise ValueError("Invalid submission manifest")
     if mode == "robot" and manifest.get("robot") not in slots:
         raise ValueError("Invalid robot slot")
-    if mode=='team':normalize_team_lineup(manifest.get('team_lineup'),season)
+    if mode=='team' or 'team_lineup' in manifest:normalize_team_lineup(manifest.get('team_lineup'),season)
     # Refuse nested paths and symlinks before resolving or mounting anything.
     for name in manifest["entries"].values():
         p = path / name

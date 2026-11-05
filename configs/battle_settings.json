@@ -247,5 +247,113 @@
     "seasons": [
       "2027"
     ]
+  },
+  {
+    "path": "timed_assembly_profile.duration_s.0",
+    "label": "难度 1 装配耗时（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0.1,
+    "max": 300,
+    "step": 0.1,
+    "unit": "秒"
+  },
+  {
+    "path": "timed_assembly_profile.duration_s.1",
+    "label": "难度 2 装配耗时（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0.1,
+    "max": 300,
+    "step": 0.1,
+    "unit": "秒"
+  },
+  {
+    "path": "timed_assembly_profile.duration_s.2",
+    "label": "难度 3 装配耗时（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0.1,
+    "max": 300,
+    "step": 0.1,
+    "unit": "秒"
+  },
+  {
+    "path": "timed_assembly_profile.duration_s.3",
+    "label": "难度 4 装配耗时（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0.1,
+    "max": 300,
+    "step": 0.1,
+    "unit": "秒"
+  },
+  {
+    "path": "timed_assembly_profile.single_probability.0",
+    "label": "难度 1 单臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.single_probability.1",
+    "label": "难度 2 单臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.single_probability.2",
+    "label": "难度 3 单臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.single_probability.3",
+    "label": "难度 4 单臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.dual_probability.0",
+    "label": "难度 1 双臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.dual_probability.1",
+    "label": "难度 2 双臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.dual_probability.2",
+    "label": "难度 3 双臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
+  },
+  {
+    "path": "timed_assembly_profile.dual_probability.3",
+    "label": "难度 4 双臂成功率（仿真原型）",
+    "group": "计时概率装配",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "unit": ""
   }
 ]

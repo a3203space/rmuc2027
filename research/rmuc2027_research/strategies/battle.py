@@ -23,6 +23,9 @@ class Battle:
             raise ValueError('learning_control_hz must be 2, 5 or 10')
         if navigation_mode not in ("legacy", "predictive"):
             raise ValueError("Unknown navigation mode")
+        if decks is None and red is not None and blue is not None:
+            from rmuc2027_core.deployment import deployment_settings
+            battle_settings = deployment_settings((red, blue), battle_settings)
         self.timed_assembly = bool((battle_settings or {}).get("timed_assembly", False))
         self.assembly_states = {}
         self.motion_trace = False

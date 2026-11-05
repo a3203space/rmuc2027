@@ -2425,7 +2425,7 @@ impl Engine {
     pub(super) fn assembly_snapshot_2027(&self, team: &str, out: &mut Value) {
         let s = &self.assemblies[team];
         if self.sim["timed_assembly"] == true {
-            let duration = [10.0, 15.0, 20.0, 30.0][(s.difficulty.saturating_sub(1).min(3)) as usize];
+            let duration = self.sim["timed_assembly_profile"]["duration_s"][(s.difficulty.saturating_sub(1).min(3)) as usize].as_f64().unwrap();
             let active = ["moving", "inserting"].contains(&s.stage.as_str());
             let progress = if s.stage == "complete" { 1.0 } else { (s.confirm_progress_s / duration).clamp(0.0, 1.0) };
             out["mode"] = json!("timed_probability");
@@ -2737,12 +2737,12 @@ impl Engine {
         }
         if r.weak || r.vx.hypot(r.vy) > 0.05 || r.angular_velocity.iter().any(|w| w.abs() > 0.12) { return; }
         let dual = r.arm_count == 2;
-        let duration = [10.0, 15.0, 20.0, 30.0][(s.difficulty-1) as usize];
+        let duration = self.sim["timed_assembly_profile"]["duration_s"][(s.difficulty-1) as usize].as_f64().unwrap();
         let state = self.assemblies.get_mut(team).unwrap();
         state.stage = "inserting".into();
         state.confirm_progress_s += DT;
         if state.confirm_progress_s + 1e-8 < duration { return; }
-        let chance = if dual { [0.98, 0.92, 0.85, 0.70] } else { [0.95, 0.85, 0.70, 0.50] }[(s.difficulty-1) as usize];
+        let chance = self.sim["timed_assembly_profile"][if dual { "dual_probability" } else { "single_probability" }][(s.difficulty-1) as usize].as_f64().unwrap();
         let mut rng = self.seed as u64 ^ (s.attempt as u64).wrapping_mul(0x9e3779b97f4a7c15)
             ^ (s.difficulty as u64).wrapping_mul(0xbf58476d1ce4e5b9)
             ^ if team == "red" { 0x12345678 } else { 0x87654321 };

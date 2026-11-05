@@ -240,3 +240,27 @@ research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.diagnose \
 停滞标记要求持续有移动指令且两秒位移不足 0.1 米；零指令驻守不自动判错。
 所有告警仍需结合目标、导航阶段和接触数据复核。首次采集只能定位问题，
 不能替代 GPU 修复验收，也不能将无异常程序退出当成全场运动正常。
+
+### 分别训练后组合地面角色
+
+每个训练运行只学习一个席位。可使用 `configs/rl/infantry3-mjwarp-hour.json`、
+`infantry4-mjwarp-hour.json`、`heavy-mjwarp-hour.json` 和 `sentry-mjwarp-hour.json`。
+重装的固定装配与武器安装前期不计入 PPO 样本，确认安装后才开始学习。
+
+分别导出模型，再组合成一个标准 Arena squad：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl export \
+  --model data/research/infantry-run/model.zip --output data/research/export-infantry
+research/.venv/bin/python -m rmuc2027_research.rl export \
+  --model data/research/sentry-run/model.zip --output data/research/export-sentry
+research/.venv/bin/python -m rmuc2027_research.rl compose \
+  --exports data/research/export-infantry data/research/export-sentry \
+  --output data/research/export-combined
+```
+
+这些运行路径是示例，请替换成实际目录。组合包保留每个学习席位的源码与哈希；
+其他席位沿用第一个包的固定策略。重复学习席位、不同阵容或不同对局设置会报错。
+`rl-metadata.json` 中的 `deployment` 保存所需阵容和装配设置。网页和 CLI 对战会读取
+所选导出包的要求，自动应用装配模式、概率、耗时及无人机开关；双方要求冲突或显式
+参数与训练要求冲突时拒绝启动。网页后端短局已验证，浏览器画面与完整训练模型对局仍需验收。

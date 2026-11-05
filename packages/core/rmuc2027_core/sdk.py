@@ -608,14 +608,18 @@ def _physical_toward(robot,point):
 def _chapter4_navigate(robot,point,arena):
     graph=_prepare_chapter4(arena,robot['team'],robot.get('transform_progress',0.0)>=.99);nodes,_,clear,inside=graph
     start=(robot['x'],robot['y']);goal=tuple(point)
-    # Obstacles the goal overlaps never block reaching it. A robot pushed inside an
-    # obstacle's margin may leave or pass it but not close in on it (driving straight on
-    # would wedge it against a ramp guard's end); ignoring that obstacle outright, and
-    # relaxed checks, are fallbacks for a robot already standing at an edge.
-    near_goal=inside(goal);guarded=inside(start,True)
+    # A goal inside the safety margin may relax that margin, never remove the
+    # physical obstacle: the final segment must approach its reachable side.
+    near_goal={k:max(0., gap or 0.) for k,gap in inside(goal,True).items()}
+    guarded=inside(start,True)
     for strict in (True,False):
         for near_start in ((guarded,set(guarded)) if guarded else (guarded,)):
-            ignore={**near_start,**dict.fromkeys(near_goal)} if isinstance(near_start,dict) else near_start|near_goal
+            ignore=dict(near_start) if isinstance(near_start,dict) else dict.fromkeys(near_start)
+            for k,gap in near_goal.items():
+                if k not in ignore:
+                    ignore[k]=gap
+                elif ignore[k] is not None:
+                    ignore[k]=min(ignore[k],gap)
             if clear(start,goal,ignore,strict):return _square_to_bumps(robot,goal,arena)
             step=_route(graph,start,goal,near_start,near_goal,strict,.3 if arena.get('season')=='2027' else 0)
             if step is not None:return _square_to_bumps(robot,nodes[step],arena)
@@ -631,6 +635,12 @@ def _navigate_action_legacy(robot, point, observation, state):
     arena = observation['arena']
     now = observation['time']
     model = str(robot.get('model_slot', robot.get('slot')))
+    design = _design(robot)
+    capabilities = design.get('capabilities', {})
+    tunnel_chassis = bool(design.get('transform_allowed') and capabilities.get('tunnel'))
+    stair_chassis = bool(capabilities.get('jump') and capabilities.get('step_climb_m', 0) > 0)
+    serial_legs = stair_chassis and design.get('leg_type') == 'serial'
+    parallel_legs = stair_chassis and not serial_legs
     if not robot.get('alive', True):
         state.clear()
         return {'move': (0., 0.)}
@@ -638,11 +648,11 @@ def _navigate_action_legacy(robot, point, observation, state):
         state.clear()
     state['time'] = now
     if state.get('goal') != list(point) and robot.get('grounded', True):
-        if 'tunnel' not in state and not (model in ('305', '2772') and 'entry' in state):
+        if 'tunnel' not in state and not (serial_legs and 'entry' in state):
             state.pop('entry', None)
             state.pop('failed', None)
         state['goal'] = list(point)
-    if model == '2732':
+    if tunnel_chassis:
         flip = robot['team'] == 'blue'
         local = lambda p: (28-p[0], 15-p[1]) if flip else tuple(p)
         x, y = local((robot['x'], robot['y']))
@@ -664,6 +674,13 @@ def _navigate_action_legacy(robot, point, observation, state):
             error = abs((robot['heading']-heading+math.pi) % math.tau-math.pi)
             if robot.get('transform_progress', 0) < .99 or (entry['phase'] == 'fold' and error > .08):
                 return {'move': (0., 0.), 'heading': heading, 'transform': True, 'brake': True}
+            if entry['phase'] == 'fold' and abs(x-9.32) > .15 and y > 12.:
+                return {'move': (0., .25 if flip else -.25),
+                        'heading': heading, 'transform': True, 'brake': True}
+            if entry['phase'] == 'fold' and (abs(x-9.32) > .06 or abs(robot.get('vx', 0)) > .12):
+                correction = max(-.18, min(.18, (9.32-x)))
+                return {'move': (-correction if flip else correction, 0.),
+                        'heading': heading, 'transform': True, 'brake': True}
             entry['phase'] = 'cross'
             if y < 13.55:
                 correction = max(-.3, min(.3, (9.32-x)*1.5))
@@ -675,7 +692,7 @@ def _navigate_action_legacy(robot, point, observation, state):
         under = any(w['x']-.4 <= robot['x'] <= w['x']+w['w']+.4 and
                     w['y']-.4 <= robot['y'] <= w['y']+w['h']+.4 for w in roofs)
         return {'move': navigate(robot, point, arena), 'transform': under}
-    if model in ('2731', '305', '2772') and arena.get('layout_revision') == 'chapter4-2027-v1':
+    if stair_chassis and arena.get('layout_revision') == 'chapter4-2027-v1':
         # The central bands and rims are explicit public geometry. Only this
         # chassis has a validated design for this approach; other legs keep theirs.
         flip = robot['team'] == 'blue'
@@ -686,7 +703,7 @@ def _navigate_action_legacy(robot, point, observation, state):
         if entry is None and x < 10.3 and 10.5 < gx < 17.5 and 3 < gy < 12 and not state.get('failed'):
             entry = state['entry'] = {'phase': 'approach', 'since': now, 'jumps': 0, 'last_jump': -10.}
         if entry:
-            if model == '2731':
+            if parallel_legs:
                 landed = (entry['jumps'] > 0 and x > 10.3
                           and robot.get('grounded') and robot.get('upright', 0) > .95
                           and abs(robot.get('vz', 0)) < .2
@@ -712,15 +729,15 @@ def _navigate_action_legacy(robot, point, observation, state):
                         return {'move': (0., 0.), 'brake': True}
                     entry.update(phase='approach', since=now, last_jump=-10.)
                     entry.pop('stable_since', None)
-            if model in ('305', '2772') and robot.get('tipped'):
+            if serial_legs and robot.get('tipped'):
                 state.pop('entry', None)
                 return {'move': (0., 0.), 'brake': True}
-            if model in ('305', '2772') and not robot.get('grounded', True):
+            if serial_legs and not robot.get('grounded', True):
                 entry['phase'] = 'airborne'
                 return {'move': (0., 0.), 'heading': math.pi if flip else 0., 'jump': 0.}
-            if model in ('305', '2772') and entry['phase'] == 'airborne':
+            if serial_legs and entry['phase'] == 'airborne':
                 entry.update(phase='settle', landed_at=now)
-            if model in ('305', '2772') and entry['phase'] == 'settle':
+            if serial_legs and entry['phase'] == 'settle':
                 if now-entry['landed_at'] > 4.:
                     state.pop('entry', None)
                     state['failed'] = True
@@ -736,29 +753,37 @@ def _navigate_action_legacy(robot, point, observation, state):
             else:
                 lane = 7.5
                 if entry['phase'] == 'approach':
-                    target = local((8.0 if model == '2731' else 8.5, lane))
+                    target = local((8.0 if parallel_legs else 8.5, lane))
                     if math.dist((robot['x'], robot['y']), target) > .2:
                         return {'move': navigate(robot, target, arena)}
                     entry['phase'] = 'align'
                 heading = math.pi if flip else 0.
                 error = abs((robot['heading']-heading+math.pi) % math.tau-math.pi)
                 fields = {'heading': heading, 'leg_height': _design(robot).get('leg_min_m', .12), 'brake': True}
-                if error > .12 or (model in ('305', '2772') and robot.get('upright', 1.) < .95):
+                if error > .12 or (serial_legs and robot.get('upright', 1.) < .95):
                     fields['move'] = (0., 0.)
                     return fields
                 fields['move'] = _physical_toward(robot, local((11., lane)))
                 fields['power'] = 180
+                launch_time = design.get('jump_duration_s', .16) + design.get('jump_tuck_s', .35) + .1
+                if parallel_legs and 0 <= now-entry['last_jump'] < launch_time:
+                    # Preserve run-up momentum without accelerating at the tyre
+                    # patch while the legs extend; that traction pitches the hull.
+                    fields.update(move=(0., 0.), brake=False, jump=0.)
+                    return fields
                 if robot.get('grounded') and abs(robot.get('vz', 0)) < .2 and robot.get('upright', 1.) > .95:
                     entry.setdefault('stable_since', now)
                 else:
                     entry.pop('stable_since', None)
-                ready = (model != '2731' or entry['jumps'] == 0 or
+                ready = (not parallel_legs or entry['jumps'] == 0 or
                          now-entry.get('stable_since', now) >= .4)
                 # Allow the chassis to rise before its nose reaches the stair rim.
                 # At 10 Hz a threshold at 8.65 can issue the jump only at 8.8.
-                takeoff_x = 8.55 if model == '2731' else 8.65
+                takeoff_x = 8.55 if parallel_legs else 8.65
                 if ready and x > takeoff_x and robot.get('grounded') and now-entry['last_jump'] > _design(robot).get('jump_cooldown_s', .9)+.15:
                     fields['jump'] = 1.
+                    if parallel_legs:
+                        fields.update(move=(0., 0.), brake=False)
                     entry.update(last_jump=now, jumps=entry['jumps']+1, takeoff_z=robot.get('z', 0.))
                 return fields
     return {'move': navigate(robot, point, arena)}
@@ -814,7 +839,7 @@ def _route_costs(graph,goal,near_goal,strict):
     """Distances from public waypoints to a fixed goal, reused across decisions."""
     import heapq
     nodes,edges,clear,_=graph
-    key=(id(graph),clear,goal,frozenset(near_goal),strict)
+    key=(id(graph),clear,goal,frozenset(near_goal.items()) if isinstance(near_goal,dict) else frozenset(near_goal),strict)
     if key in _NAV_ROUTE_COSTS:return _NAV_ROUTE_COSTS[key]
     distances={i:math.dist(p,goal) for i,p in enumerate(nodes) if clear(p,goal,near_goal,strict)}
     queue=[(cost,i) for i,cost in distances.items()];heapq.heapify(queue)

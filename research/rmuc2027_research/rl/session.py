@@ -5,6 +5,7 @@ import json
 import math
 from pathlib import Path
 import random
+import time
 from types import SimpleNamespace
 
 from rmuc2027_core.engine import DT, binary_path
@@ -152,6 +153,10 @@ class GoalController:
         self.navigator.grids.clear()
 
 
+class OpeningDeadline(TimeoutError):
+    """The real-time budget expired before a valid learning observation existed."""
+
+
 class ArenaSession:
     """Standard-library core used directly by diagnostic CLI and by Gymnasium.
 
@@ -160,6 +165,7 @@ class ArenaSession:
     """
     def __init__(self, config=None, record_replay=False):
         self.config = load_config(config)
+        self.deadline = self.config.pop('_training_deadline', None)
         self.record_replay = record_replay
         self.rng = random.Random(self.config['seed'])
         self.battle = None
@@ -202,7 +208,17 @@ class ArenaSession:
             self.battle.metadata['test_match'] = True
             self.obs = self.battle.observation(cfg['team'], [cfg['slot']])
             self.opening_seconds = 0.0
+            opening_started = time.monotonic()
+            last_opening_report = opening_started
             while not learning_ready(own_robot(self.obs, cfg['slot']), self.controller.state):
+                now = time.monotonic()
+                if self.deadline is not None and now >= self.deadline:
+                    raise OpeningDeadline('Training wall-time budget expired during fixed heavy opening')
+                if now-last_opening_report >= 15:
+                    print(json.dumps({'kind':'fixed-opening-progress', 'slot':cfg['slot'],
+                        'simulation_seconds':self.battle.match.time, 'wall_seconds':now-opening_started,
+                        'launcher':own_robot(self.obs, cfg['slot']).get('launcher'), 'learning_samples':0}), flush=True)
+                    last_opening_report = now
                 if self.battle.match.status == 'finished' or self.battle.match.time >= cfg['episode_seconds']:
                     raise RuntimeError('Heavy opening ended before launcher installation; no RL samples collected')
                 self.battle.step()

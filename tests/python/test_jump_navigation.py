@@ -1,8 +1,28 @@
+import math
 import unittest
 from unittest.mock import patch
 from rmuc2027_core import sdk
 
 class JumpTests(unittest.TestCase):
+    def test_launch_keeps_momentum_without_driving_or_braking(self):
+        for team in ('red', 'blue'):
+            flip = team == 'blue'
+            robot = dict(model_slot=2731, team=team, alive=True,
+                         x=19.4 if flip else 8.6, y=7.5, z=.12, vz=0.,
+                         upright=1., grounded=True, heading=math.pi if flip else 0.)
+            state = {'goal':[14,7.5], 'entry':{'phase':'align', 'since':0.,
+                     'jumps':0, 'last_jump':-10.}}
+            obs = {'time':1., 'arena':{'layout_revision':'chapter4-2027-v1'}}
+            command = sdk.navigate_action(robot, (14,7.5), obs, state)
+            self.assertEqual(command['jump'], 1.)
+            self.assertEqual(command['move'], (0.,0.))
+            self.assertFalse(command['brake'])
+            obs['time'] = 1.1
+            command = sdk.navigate_action(robot, (14,7.5), obs, state)
+            self.assertEqual(command['jump'], 0.)
+            self.assertEqual(command['move'], (0.,0.))
+            self.assertFalse(command['brake'])
+
     def test_rejump_requires_stable_ground_not_rim_contact(self):
         for team in ('red','blue'):
             flip=team=='blue'
@@ -49,3 +69,14 @@ class JumpTests(unittest.TestCase):
             a=sdk.navigate_action(r,(14,7.5),obs,state)
             self.assertEqual(a['move'],(-.35 if flip else .35,0.))
             self.assertNotIn('entry',state)
+
+    def test_tunnel_capability_does_not_depend_on_model_id(self):
+        design = dict(sdk.DESIGNS['2732'])
+        with patch.dict(sdk.DESIGNS, {'9999': design}):
+            robot = dict(model_slot=9999, team='red', alive=True, x=9.32, y=11.7,
+                         heading=1.57079632679, transform_progress=0., grounded=True)
+            state = {}
+            obs = {'time':1., 'arena':{'layout_revision':'chapter4-2027-v1'}}
+            command = sdk.navigate_action(robot,(14.,7.5),obs,state)
+            self.assertTrue(command['transform'])
+            self.assertEqual(command['move'],(0.,0.))

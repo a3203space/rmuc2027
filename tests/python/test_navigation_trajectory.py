@@ -3,6 +3,18 @@ from unittest.mock import patch
 from rmuc2027_core import sdk
 
 class NavigationTests(unittest.TestCase):
+    def test_goal_near_outpost_does_not_allow_driving_through_pedestal(self):
+        robot = dict(team='blue', x=16., y=1.8, model_slot=2732, transform_progress=0.)
+        goal = (16.881168202514765, 4.27379453665575)
+        with patch.object(sdk, '_square_to_bumps', side_effect=lambda r,p,a:p):
+            waypoint = sdk._chapter4_navigate(robot, goal, sdk._REFERENCE_ARENA)
+        self.assertNotEqual(waypoint, goal)
+        # A waypoint to the left of the pedestal makes the final approach from
+        # its open side, instead of relaxing the entire obstacle at the goal.
+        self.assertLess(waypoint[0], 16.694)
+        graph = sdk._prepare_chapter4(sdk._REFERENCE_ARENA, 'blue', False)
+        self.assertTrue(graph[2]((robot['x'],robot['y']), waypoint))
+
     def test_route_retains_obstructed_corner(self):
         nodes = [(1.,2.), (3.,2.)]
         def clear(a,b,*args):

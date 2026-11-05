@@ -16,7 +16,7 @@ from fastapi import FastAPI, Header, HTTPException, Query, Request, WebSocket, W
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field, StrictFloat
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictBool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.background import BackgroundTask
 
@@ -71,7 +71,7 @@ class StartRequest(BaseModel):
     red_team_strategy: str | None = None
     blue_team_strategy: str | None = None
     save_mp4: bool = False
-    battle_settings: dict[str, StrictFloat] | None = None
+    battle_settings: dict[str, StrictFloat | StrictBool] | None = None
     # Uploaded appearances, by hardware model number.
     red_skins: dict[str,str] = Field(default_factory=dict)
     blue_skins: dict[str,str] = Field(default_factory=dict)
@@ -80,7 +80,7 @@ class StartRequest(BaseModel):
 class BattleSettingsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     season: Literal["2027"]
-    values: dict[str, StrictFloat]
+    values: dict[str, StrictFloat | StrictBool]
 
 
 class FreeControllerRequest(BaseModel):
@@ -240,7 +240,7 @@ class ArenaService:
                             preset = preset_metadata(key, manifest['robot'], model['role'], strategy_season)
                             if preset:
                                 choices[key]['preset'] = preset
-                    if manifest['mode']=='team':choices[key]['team_lineup']=normalize_team_lineup(manifest.get('team_lineup'),strategy_season)
+                    if manifest['mode']=='team' or 'team_lineup' in manifest:choices[key]['team_lineup']=normalize_team_lineup(manifest.get('team_lineup'),strategy_season)
                     profile = load_profile(manifest_path.parent, bundled=source != "local")
                     choices[key]['agent'] = profile['agent']
                     if profile.get('display_name'):
@@ -295,6 +295,7 @@ class ArenaService:
 
     def start(self, data):
         args, season = self.resolve_season(StartRequest.model_validate(data))
+        explicit_settings = args.battle_settings is not None
         args.battle_settings = normalize_settings(args.battle_settings if args.battle_settings is not None else self.settings.get(season)["overrides"], season)
         if args.duration!=420 and not self.test_mode:
             raise ValueError("Ranked matches are 420 seconds; use CLI for unranked short test matches")
@@ -319,6 +320,10 @@ class ArenaService:
             elif args.red not in choices or args.blue not in choices:
                 raise ValueError(f"双方策略都必须是 {season} 赛季的策略" if any(k in self.catalog() for k in (args.red,args.blue)) else "Unknown submission")
             if not decks:
+                from rmuc2027_core.deployment import deployment_settings
+                args.battle_settings = deployment_settings(
+                    [choices[key]['path'] for key in (args.red,args.blue)], args.battle_settings,
+                    explicit=explicit_settings, season=season)
                 manifests=[load_submission(choices[key]['path'])[0] for key in (args.red,args.blue)]
                 registered=[normalize_team_lineup(m.get('team_lineup'),season) for m in manifests]
                 selected=normalize_team_lineup(args.team_lineup,season) if args.team_lineup is not None else registered[0]

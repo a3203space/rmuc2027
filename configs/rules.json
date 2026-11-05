@@ -1573,6 +1573,11 @@
       "vertical": 70.0,
       "note": "Ground FPV follows the physical muzzle direction and chassis pose. Own robot state and referee telemetry remain unrestricted; aerial vision keeps its existing coverage."
     },
+    "timed_assembly_profile": {
+      "duration_s": [10, 15, 20, 30],
+      "single_probability": [0.95, 0.85, 0.70, 0.50],
+      "dual_probability": [0.98, 0.92, 0.85, 0.70]
+    },
     "assembly_difficulties": [
       {
         "name": "基础",
@@ -1652,6 +1657,387 @@
     "arm_flip_speed_deg_s": 180
   },
   "robot_designs": {
+    "2773": {
+      "slot": 2773,
+      "role": "sentry",
+      "name": "S27-T 折叠过洞哨兵（仿真原型）",
+      "focus": "Research chassis prototype; physical validation pending",
+      "revision": "research-prototype-v1",
+      "asset": "/assets/robot-2732-spec2027.glb",
+      "bare_mass_kg": 23.9,
+      "referee_mass_kg": 3.25,
+      "mass_kg": 27.15,
+      "battery_wh": 290,
+      "voltage_v": 24,
+      "stowed_m": [
+        0.56,
+        0.55,
+        0.56
+      ],
+      "extended_m": [
+        0.7,
+        0.7,
+        0.68
+      ],
+      "chassis_size_m": [
+        0.46,
+        0.44,
+        0.025
+      ],
+      "ground_clearance_m": 0.1,
+      "com_m": [
+        0,
+        0,
+        0.13
+      ],
+      "wheelbase_m": 0.36,
+      "track_m": 0.36,
+      "wheel_radius_m": 0.076,
+      "wheel_width_m": 0.045,
+      "chassis_type": "mecanum",
+      "speed_reference_mps": 3.9,
+      "tire_friction": 1.22,
+      "lateral_friction_ratio": 0.82,
+      "drive_efficiency": 0.85,
+      "rolling_resistance": 0.025,
+      "drag_area_m2": 0.18,
+      "motor_force_max_n": 95,
+      "brake_force_max_n": 130,
+      "yaw_torque_max_nm": 5,
+      "velocity_gain_per_s": 4,
+      "yaw_gain_per_s": 5,
+      "suspension_rest_m": 0.09,
+      "suspension_travel_m": 0.06,
+      "suspension_static_compression_m": 0.018,
+      "suspension_sag_m": 0.035,
+      "suspension_free_length_m": 0.107,
+      "suspension_stiffness_npm": 1902.4389671457905,
+      "suspension_damping_nspm": 90.90734291581109,
+      "inertia_kgm2": [
+        0.439429,
+        0.480159,
+        0.916767
+      ],
+      "supercap_nominal_j": 1800,
+      "supercap_max_current_a": 12,
+      "chassis_profile": "hp",
+      "weapon_profile": "burst",
+      "armor_count": 4,
+      "armor_width_m": 0.135,
+      "armor_height_m": 0.125,
+      "armor_center_z_m": 0.15,
+      "armor_inset_m": 0.032,
+      "armor_normal_to_up_deg": 75,
+      "armor_mount_offset_m": 0.0,
+      "armor_hit_face_offset_m": 0.011,
+      "turret_yaw_rate_rad_s": 5.5,
+      "turret_pitch_rate_rad_s": 2.5,
+      "pitch_limits_rad": [
+        -0.2617993878,
+        0.7853981634
+      ],
+      "muzzle_z_m": 0.4,
+      "muzzle_reach_m": 0.23,
+      "trigger_interval_s": 0.05,
+      "finish_gloss_gs": 20,
+      "contact_restitution": 0.08,
+      "source_status": "Simulation prototype: donor chassis geometry and role mass; scaled inertia and suspension, not measured hardware.",
+      "coast_friction": 0.22,
+      "transform_allowed": true,
+      "folded_muzzle_z_m": 0.145,
+      "folded_height_m": 0.235,
+      "transform_time_s": 0.8,
+      "name_en": "S27-T 折叠过洞哨兵（仿真原型）",
+      "focus_en": "Folds under the 250 mm tunnel roofs for the tunnel cooling buff",
+      "arm_count": 0,
+      "rotor_count": 0,
+      "capabilities": {
+        "deployment": false,
+        "transformation": true,
+        "jump": false,
+        "self_righting": false,
+        "tunnel": true,
+        "arms": 0,
+        "drive": "mecanum",
+        "launcher": "one_17mm",
+        "drones": 0,
+        "step_climb_m": 0
+      },
+      "seasons": {
+        "2027": {
+          "legal": true,
+          "role": "sentry",
+          "issues": []
+        }
+      },
+      "step_climb_m": 0,
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ],
+      "launcher": "one_17mm",
+      "muzzle_speed_mps": 24.6,
+      "season": "2027",
+      "base_model": 2732,
+      "deploy_allowed": false,
+      "charge_receiver": false,
+      "control": "automatic",
+      "magazine_capacity": 700,
+      "prototype": {
+        "chassis_donor": 2732,
+        "role_base": 2771,
+        "validation": "pending"
+      }
+    },
+    "2714": {
+      "slot": 2714,
+      "role": "heavy",
+      "name": "HV-W 单臂轮腿重装（仿真原型）",
+      "focus": "Research chassis prototype; physical validation pending",
+      "revision": "research-prototype-v1",
+      "asset": "/assets/robot-2731-spec2027.glb",
+      "bare_mass_kg": 28.9,
+      "referee_mass_kg": 2.9,
+      "mass_kg": 31.8,
+      "battery_wh": 280,
+      "voltage_v": 24,
+      "stowed_m": [
+        0.5,
+        0.52,
+        0.58
+      ],
+      "extended_m": [
+        0.66,
+        0.66,
+        0.8
+      ],
+      "chassis_size_m": [
+        0.42,
+        0.36,
+        0.12
+      ],
+      "ground_clearance_m": 0.035,
+      "com_m": [
+        0,
+        0,
+        0.28
+      ],
+      "wheelbase_m": 0,
+      "track_m": 0.44,
+      "wheel_radius_m": 0.1,
+      "wheel_width_m": 0.05,
+      "chassis_type": "wheel_legged",
+      "speed_reference_mps": 4.3,
+      "tire_friction": 1.0,
+      "lateral_friction_ratio": 1.0,
+      "drive_efficiency": 0.8,
+      "rolling_resistance": 0.015,
+      "drag_area_m2": 0.12,
+      "motor_force_max_n": 170,
+      "brake_force_max_n": 120,
+      "yaw_torque_max_nm": 7,
+      "velocity_gain_per_s": 4,
+      "yaw_gain_per_s": 5,
+      "suspension_rest_m": 0.2,
+      "suspension_travel_m": 0.16,
+      "suspension_static_compression_m": 0.018,
+      "suspension_stiffness_npm": 4332.750666666667,
+      "suspension_damping_nspm": 231.99333333333334,
+      "inertia_kgm2": [
+        0.3816,
+        0.505613,
+        0.810893
+      ],
+      "supercap_nominal_j": 1800,
+      "supercap_max_current_a": 12,
+      "chassis_profile": "power",
+      "weapon_profile": "cooling",
+      "armor_count": 4,
+      "armor_width_m": 0.135,
+      "armor_height_m": 0.125,
+      "armor_center_z_m": 0.28,
+      "armor_inset_m": 0.032,
+      "armor_normal_to_up_deg": 75,
+      "armor_mount_offset_m": 0.03,
+      "armor_hit_face_offset_m": 0.011,
+      "turret_yaw_rate_rad_s": 6.5,
+      "turret_pitch_rate_rad_s": 2.5,
+      "pitch_limits_rad": [
+        -0.2617993878,
+        0.7853981634
+      ],
+      "muzzle_z_m": 0.435,
+      "muzzle_reach_m": 0.22,
+      "trigger_interval_s": 0.2,
+      "finish_gloss_gs": 20,
+      "contact_restitution": 0.08,
+      "source_status": "Simulation prototype: donor chassis geometry and role mass; scaled inertia and suspension, not measured hardware.",
+      "leg_type": "five_bar",
+      "hip_height_m": 0.3,
+      "leg_min_m": 0.12,
+      "leg_max_m": 0.39,
+      "leg_nominal_m": 0.24500000000000002,
+      "leg_speed_mps": 1.6,
+      "leg_stiffness_npm": 2228.272,
+      "leg_damping_nspm": 293.3333333333333,
+      "leg_passive_ratio": 0.2,
+      "jump_duration_s": 0.16,
+      "jump_thrust_gain": 2.2,
+      "jump_cooldown_s": 0.9,
+      "jump_tuck_s": 0.35,
+      "balance_kp_nm_per_rad": 180,
+      "balance_kd_nms_per_rad": 19,
+      "balance_torque_max_nm": 45,
+      "air_torque_max_nm": 5,
+      "stand_torque_max_nm": 80,
+      "coast_friction": 0.1,
+      "leg_holding_power_w": 18,
+      "leg_upper_m": 0.15,
+      "leg_lower_m": 0.33,
+      "name_en": "HV-W 单臂轮腿重装（仿真原型）",
+      "focus_en": "Strong legs climb the high-point steps and hop tunnel roofs",
+      "transform_allowed": false,
+      "arm_count": 1,
+      "rotor_count": 0,
+      "capabilities": {
+        "deployment": false,
+        "transformation": false,
+        "jump": true,
+        "self_righting": false,
+        "tunnel": false,
+        "arms": 1,
+        "drive": "wheel_legged",
+        "launcher": "modular_42mm",
+        "drones": 0,
+        "step_climb_m": 0.2
+      },
+      "seasons": {
+        "2027": {
+          "legal": true,
+          "role": "heavy",
+          "issues": []
+        }
+      },
+      "step_climb_m": 0.2,
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "video_transmitter",
+        "field_interaction",
+        "positioning",
+        "supercap_manager",
+        "speed_42mm_on_module"
+      ],
+      "launcher": "modular_42mm",
+      "muzzle_speed_mps": 15.6,
+      "season": "2027",
+      "base_model": 2731,
+      "deploy_allowed": false,
+      "charge_receiver": false,
+      "arm": {
+        "joints": [
+          "slew",
+          "lift",
+          "reach",
+          "wrist_yaw",
+          "wrist_pitch",
+          "wrist_roll",
+          "grip"
+        ],
+        "base_m": [
+          0.18,
+          -0.21,
+          0.245
+        ],
+        "shoulder_rest_z_m": 0.3,
+        "tool_length_m": 0.15,
+        "jaw_travel_m": 0.032,
+        "limits": [
+          [
+            -2.97,
+            2.97
+          ],
+          [
+            0,
+            0.64
+          ],
+          [
+            0.22,
+            0.7
+          ],
+          [
+            -1.75,
+            1.75
+          ],
+          [
+            -1.66,
+            1.75
+          ],
+          [
+            -3.14159,
+            3.14159
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "rates": [
+          2.4,
+          0.6,
+          0.7,
+          3.0,
+          3.0,
+          4.0,
+          4.0
+        ],
+        "stowed": [
+          1.5708,
+          0.09,
+          0.22,
+          0,
+          0,
+          0,
+          0
+        ],
+        "boom_tail_m": 0.06,
+        "mast_half_size_m": [
+          0.05,
+          0.05,
+          0.16
+        ],
+        "grip_force_max_n": 320,
+        "grasp_tolerance_m": 0.05,
+        "rescue_upright_cos": 0.93,
+        "source_status": "chosen lift/boom/wrist hardware inside the 600 mm stowed and 1200x1200x1100 mm extended envelopes; 2027 lift stage 0.64 m for the 0.70 m resource hub; 2027 mast at a front corner beside the central 42 mm gimbal",
+        "workspace_half_m": 0.84
+      },
+      "launcher_module_kg": 5.2,
+      "launcher_module_stowed_m": [
+        0.38,
+        0.3,
+        0.26
+      ],
+      "launcher_module_voltage_v": 24,
+      "launcher_capacitance_mf": 40,
+      "launcher_install_s": 6.0,
+      "carried_units_max": 2,
+      "prototype": {
+        "chassis_donor": 2731,
+        "role_base": 2711,
+        "validation": "pending"
+      }
+    },
     "3": {
       "slot": 3,
       "role": "infantry",

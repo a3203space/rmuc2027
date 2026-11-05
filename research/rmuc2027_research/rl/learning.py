@@ -19,7 +19,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from .env import SentryEnv, make_env
 from .portable import OBS_SIZE, OBS_VERSION
-from .session import provenance
+from .session import provenance, OpeningDeadline
 
 
 def device_name(requested):
@@ -37,7 +37,7 @@ def vector_env(config, count):
         from .mjwarp.vector import WarpVecEnv
         vec = WarpVecEnv(factories)
     else:
-        vec = DummyVecEnv(factories) if count == 1 else SubprocVecEnv(factories, start_method='spawn')
+        vec = DummyVecEnv(factories) if count == 1 or config.get('slot') == 1 else SubprocVecEnv(factories, start_method='spawn')
     vec.seed(config['seed'])
     return vec
 
@@ -59,6 +59,8 @@ class TraceCallback(BaseCallback):
         self.last_metrics = []
         self.deadline = deadline
         self.last_checkpoint = time.perf_counter()
+        self.last_backup = self.last_checkpoint
+        self.backup = None
         self.timed_out = False
         self.last_progress = time.perf_counter()
         self.progress_started = self.last_progress
@@ -99,6 +101,10 @@ class TraceCallback(BaseCallback):
             save_checkpoint(self.model, self.path.parent/'latest.zip')
             self.stream.flush()
             self.last_checkpoint = now
+            if self.backup is not None and now-self.last_backup >= 1800:
+                self.backup.submit(self.path.parent/'latest.zip', {'total_steps':self.num_timesteps,
+                    'gradient_epochs':self.model._n_updates,'elapsed_seconds':now-self.progress_started})
+                self.last_backup = now
         self.timed_out = self.deadline is not None and now >= self.deadline
         return not self.timed_out
 
@@ -141,10 +147,16 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
             if previous.get(key, metadata[key]) != metadata[key]:
                 raise ValueError(f'Resume incompatibility: {key}')
     (output/'experiment.json').write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
-    vec = vector_env(config, num_envs)
     started = time.perf_counter()
+    runtime_config = dict(config)
+    if wall_seconds is not None:
+        runtime_config['_training_deadline'] = time.monotonic()+wall_seconds
+    vec = vector_env(runtime_config, num_envs)
     callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None, detailed=config.get('action_trace', False))
     model = None
+    if config.get('github_backup_repo'):
+        from .backup import ReleaseBackup
+        callback.backup = ReleaseBackup(output, config['github_backup_repo'])
     try:
         if resume:
             model = TimedPPO.load(resume, env=vec, device=device)
@@ -190,11 +202,33 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
         (output/'training.json').write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
         return report
+    except OpeningDeadline:
+        if model is None:
+            raise
+        save_checkpoint(model, output/'model.zip')
+        report = {'stop_reason':'wall_time_limit_during_opening',
+                  'total_steps':model.num_timesteps, 'actual_steps':model.num_timesteps-previous_steps,
+                  'gradient_epochs':model._n_updates-previous_updates,
+                  'wall_seconds':time.perf_counter()-started,
+                  'requested_wall_seconds':wall_seconds, 'opening_incomplete':True}
+        (output/'training.json').write_text(json.dumps(report, indent=2))
+        print(json.dumps(report), flush=True)
+        return report
     except KeyboardInterrupt:
         if model is not None:
             save_checkpoint(model, output/'interrupted.zip')
         raise
     finally:
+        if callback.backup is not None:
+            try:
+                candidates = [output/name for name in ('model.zip','interrupted.zip','latest.zip') if (output/name).exists()]
+                if candidates:
+                    checkpoint = max(candidates,key=lambda p:p.stat().st_mtime_ns)
+                    callback.backup.submit(checkpoint, {'total_steps':getattr(model,'num_timesteps',0), 'final':True})
+            except Exception as error:
+                print(json.dumps({'kind':'backup-error','error':type(error).__name__}),flush=True)
+            finally:
+                callback.backup.close()
         if hasattr(callback, 'stream') and not callback.stream.closed:
             callback.stream.close()
         vec.close()

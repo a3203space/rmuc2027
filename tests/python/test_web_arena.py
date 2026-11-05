@@ -214,6 +214,24 @@ class WebArenaTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/custom-models').json(),[])
         self.assertEqual(self.client.post('/api/video-export',content=b'invalid',headers={'Content-Type':'video/webm'}).status_code,400)
 
+    def test_exported_rl_settings_are_used_and_conflicts_rejected(self):
+        from rmuc2027_research.rl.exporting import export_layers
+        from rmuc2027_research.rl.session import load_config, provenance
+        from rmuc2027_research.rl.portable import OBS_SIZE
+        cfg=load_config({'timed_assembly':True,'drones_enabled':False})
+        layers=[{'weight':[[0.0]*OBS_SIZE for _ in range(2)],'bias':[0.0,0.0]}]
+        export_layers(layers,provenance(cfg),self.root/'submissions'/'rl-web-test')
+        self.post('/api/start',{'red':'rl-web-test','blue':'rl-web-test','duration':1})
+        self.post('/api/control',{'command':'skip_prematch'})
+        self.wait(lambda:not self.app.state.arena.busy,seconds=30)
+        self.assertIsNone(self.app.state.arena.error)
+        settings=self.app.state.arena.metadata['battle_settings']
+        self.assertTrue(settings['timed_assembly'])
+        self.assertFalse(settings['drones_enabled'])
+        response=self.client.post('/api/start',json={'red':'rl-web-test','blue':'rl-web-test',
+            'duration':1,'battle_settings':{'timed_assembly':False}})
+        self.assertEqual(response.status_code,409,response.text)
+
 
 if __name__=='__main__':
     unittest.main()

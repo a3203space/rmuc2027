@@ -21,3 +21,16 @@ class WallTimeTests(unittest.TestCase):
             self.assertTrue(report['reload_prediction_equal'])
             self.assertEqual(report['gradient_epochs'], 0)
             self.assertFalse(report['actor_updated'])
+
+    def test_heavy_deadline_does_not_create_opening_samples(self):
+        from rmuc2027_research.rl.learning import train
+        from rmuc2027_research.rl.session import load_config
+        from stable_baselines3 import PPO
+        config = load_config({'slot':1,'timed_assembly':True})
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)/'run'
+            report = train(config, output, None, wall_seconds=.000001)
+            self.assertEqual(report['stop_reason'], 'wall_time_limit_during_opening')
+            self.assertEqual(report['actual_steps'], 0)
+            restored = PPO.load(output/'model.zip', device='cpu')
+            self.assertEqual(restored.num_timesteps, 0)
