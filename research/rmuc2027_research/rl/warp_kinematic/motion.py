@@ -38,7 +38,8 @@ def segment_box(p: wp.vec2, d: wp.vec2, lo: wp.vec2, hi: wp.vec2):
 def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
               commands: wp.array(dtype=wp.vec2), limits: wp.array(dtype=wp.vec3),
               enabled: wp.array(dtype=wp.int32), boxes: wp.array(dtype=wp.vec4),
-              dt: float, output: wp.array(dtype=wp.vec2)):
+              angles: wp.array(dtype=float), wall_z: wp.array(dtype=wp.vec2),
+              body_z: wp.array(dtype=wp.vec2), dt: float, output: wp.array(dtype=wp.vec2)):
     i = wp.tid()
     p = pos[i]
     v = wp.vec2(0.0, 0.0)
@@ -54,10 +55,15 @@ def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
         hit = wp.vec3(1.0, 0.0, 0.0)
         for j in range(boxes.shape[0]):
             b = boxes[j]
-            candidate = segment_box(p, delta, wp.vec2(b[0]-radius,b[1]-radius),
-                                    wp.vec2(b[2]+radius,b[3]+radius))
-            if candidate[0] < hit[0]:
-                hit = candidate
+            if body_z[i][1] > wall_z[j][0] and body_z[i][0] < wall_z[j][1]:
+                center=wp.vec2((b[0]+b[2])*0.5,(b[1]+b[3])*0.5)
+                half=wp.vec2((b[2]-b[0])*0.5+radius,(b[3]-b[1])*0.5+radius)
+                c=wp.cos(angles[j]);s=wp.sin(angles[j]);relative=p-center
+                local=wp.vec2(c*relative[0]+s*relative[1],-s*relative[0]+c*relative[1])
+                direction=wp.vec2(c*delta[0]+s*delta[1],-s*delta[0]+c*delta[1])
+                candidate=segment_box(local,direction,-half,half)
+                if candidate[0] < hit[0]:
+                    hit=wp.vec3(candidate[0],c*candidate[1]-s*candidate[2],s*candidate[1]+c*candidate[2])
         fraction = wp.max(0.0, hit[0] - 1.e-5)
         if hit[0] >= 1.0:
             fraction = 1.0
@@ -103,6 +109,13 @@ class MotionBatch:
         self.enabled = wp.ones(self.count,dtype=wp.int32,device=self.device)
         self.limits = wp.array(values,dtype=wp.vec3,device=self.device)
         self.boxes = wp.array(walls,dtype=wp.vec4,device=self.device)
+        self.angles = wp.zeros(len(walls),dtype=float,device=self.device)
+        self.wall_z = wp.array([[-1.e6,1.e6]]*len(walls),dtype=wp.vec2,device=self.device)
+        self.body_z = wp.array([[0.,1.]]*self.count,dtype=wp.vec2,device=self.device)
+        self.height_offsets = wp.array([[0.,1.]]*self.count,dtype=wp.vec2,device=self.device)
+        self.terrain = None
+        self.heights = wp.zeros(self.count,dtype=float,device=self.device)
+        self.step_limits = wp.array([.04]*self.count,dtype=float,device=self.device)
         self.output = wp.empty(self.count,dtype=wp.vec2,device=self.device)
 
     def step(self, commands, dt=.05):
@@ -114,13 +127,24 @@ class MotionBatch:
 
     def _advance(self, dt):
         wp.copy(self.previous,self.pos)
+        if self.terrain is not None:
+            from .terrain import sample_heights, update_body_height
+            wp.launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
+            wp.launch(update_body_height,self.count,inputs=[self.heights,self.height_offsets,self.body_z],device=self.device)
         wp.launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.limits,
-                  self.enabled,self.boxes,float(dt),self.output],device=self.device)
+                  self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,float(dt),self.output],device=self.device)
 
+        if self.terrain is not None:
+            from .terrain import limit_terrain
+            wp.launch(limit_terrain,self.count,inputs=[self.terrain.data,self.previous,self.pos,
+                      self.vel,self.limits,self.step_limits,self.heights],device=self.device)
         wp.launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
                   self.worlds,self.resolved,self.resolved_velocity],device=self.device)
         wp.copy(self.pos,self.resolved)
         wp.copy(self.vel,self.resolved_velocity)
+        if self.terrain is not None:
+            from .terrain import sample_heights
+            wp.launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
 
     def frame(self, commands):
         """Queue six 120 Hz samples; one readback per 50 ms rule frame."""

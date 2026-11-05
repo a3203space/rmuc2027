@@ -41,8 +41,12 @@ class Match:
         self.external_physics = physics_adapter
         environment = dict(os.environ)
         environment.pop('RMUC_EXTERNAL_PHYSICS', None)
+        environment.pop('RMUC_KINEMATIC_PHYSICS', None)
         if self.external_physics is not None:
-            environment['RMUC_EXTERNAL_PHYSICS'] = '1'
+            mode = getattr(self.external_physics, 'protocol', 'external_physics')
+            if mode not in ('external_physics', 'kinematic_frame'):
+                raise ValueError('Unknown physics adapter protocol')
+            environment['RMUC_KINEMATIC_PHYSICS' if mode == 'kinematic_frame' else 'RMUC_EXTERNAL_PHYSICS'] = '1'
         self.lock = threading.RLock()
         if replay_version is not None:
             raise ValueError('Legacy engines are not included; historical 2027 replays remain viewable')
@@ -81,7 +85,7 @@ class Match:
                 self.process.stdin.flush()
                 line = self._read_line()
                 value = json.loads(line)
-                while value.get('op') == 'external_physics':
+                while value.get('op') in ('external_physics', 'kinematic_frame'):
                     if self.external_physics is None:
                         raise RuntimeError('Unexpected external physics request')
                     result = self.external_physics.step(value)

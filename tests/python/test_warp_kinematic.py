@@ -51,3 +51,18 @@ class CudaMotionTests(unittest.TestCase):
             p,v = reference.state()
             np.testing.assert_allclose(positions[index],p,atol=1e-7)
             np.testing.assert_allclose(velocities[index],v,atol=1e-7)
+
+    def test_roof_clearance_and_rotated_wall(self):
+        for top, blocked in ((.2,False),(.5,True)):
+            sim=MotionBatch([[0,0]],[[3,100,.1]],[[1,-2,1.1,2]])
+            sim.wall_z.assign(np.array([[.3,.8]],dtype=np.float32))
+            sim.body_z.assign(np.array([[0.,top]],dtype=np.float32))
+            for _ in range(20):sim.step([[1,0]])
+            p,_=sim.state()
+            self.assertEqual(p[0,0]<1.,blocked)
+        sim=MotionBatch([[0,0]],[[3,100,.1]],[[1,-2,1.1,2]])
+        sim.angles.assign(np.array([np.pi/4],dtype=np.float32))
+        for _ in range(6):sim.step([[1,0]])
+        p,_=sim.state()
+        self.assertLess(p[0,0],1.)
+        self.assertGreater(abs(p[0,1]),.001)

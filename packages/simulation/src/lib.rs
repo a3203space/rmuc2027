@@ -1984,11 +1984,18 @@ impl Engine {
         let goals = self.arm_goals(&actions);
         let mut world = self.physics.take().expect("physics initialized");
         world.update_base_covers(&self.bases);
+        let motion_frame = if std::env::var_os("RMUC_KINEMATIC_PHYSICS").is_some() {
+            Some(world.request_motion_frame(&self.arena,&self.robots,&actions,self.tick,self.time()))
+        } else { None };
         self.micro_dt = physics::PHYSICS_DT;
         for substep in 0..6 {
             self.micro_time = (substep + 1) as f64 * physics::PHYSICS_DT;
             let now = self.time();
-            world.step(&self.arena, &mut self.robots, &actions, &goals, now);
+            if let Some(frame)=&motion_frame {
+                world.apply_motion_sample(&mut self.robots,&actions,frame,substep,now);
+            } else {
+                world.step(&self.arena, &mut self.robots, &actions, &goals, now);
+            }
             self.physics = Some(world);
             {
                 self.fire_2027(&actions);

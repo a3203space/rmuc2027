@@ -7,6 +7,9 @@ use rapier3d::prelude::*;
 #[path = "physics_external.rs"]
 mod external;
 
+#[path = "physics_kinematic.rs"]
+mod kinematic;
+
 pub const PHYSICS_DT: f64 = 1.0 / 120.0;
 fn n(v: &Value, key: &str) -> f64 {
     v[key].as_f64().unwrap_or(0.0)
@@ -42,6 +45,37 @@ pub(super) fn arm_direction_for(r: &Robot, secondary: bool) -> [f64; 3] {
             -pitch.sin()
         ];
     [v.x, v.y, v.z]
+}
+
+/// Gimbal and firing-clock updates shared by physical and rule-based motion.
+fn advance_weapon_clock(r: &mut Robot, a: &Action, d: &Value, pose: &Isometry<Real>) {
+// A wreck keeps its gimbal mount fixed relative to its physical body.
+if r.alive {
+    let world_yaw = a.aim.unwrap_or(r.aim);
+    let desired = vector![
+        world_yaw.cos() * a.pitch.cos(),
+        world_yaw.sin() * a.pitch.cos(),
+        a.pitch.sin()
+    ];
+    let local = pose.rotation.inverse() * desired;
+    let local_yaw = local.y.atan2(local.x);
+    let local_pitch = local
+        .z
+        .atan2(local.x.hypot(local.y))
+        .clamp(-0.261799, 0.785398);
+    r.aim = r.heading
+        + turn(
+            r.aim - r.heading,
+            local_yaw,
+            n(d, "turret_yaw_rate_rad_s") * PHYSICS_DT,
+        );
+    r.pitch = approach(
+        r.pitch,
+        local_pitch,
+        n(d, "turret_pitch_rate_rad_s") * PHYSICS_DT,
+    );
+}
+r.cooldown = (r.cooldown - PHYSICS_DT).max(0.0);
 }
 
 pub struct PhysicsWorld {
@@ -865,33 +899,7 @@ impl PhysicsWorld {
             let velocity = *self.bodies[h].linvel();
             let angular = *self.bodies[h].angvel();
             let a = &actions[i];
-            // A wreck keeps its gimbal mount fixed relative to its physical body.
-            if r.alive {
-                let world_yaw = a.aim.unwrap_or(r.aim);
-                let desired = vector![
-                    world_yaw.cos() * a.pitch.cos(),
-                    world_yaw.sin() * a.pitch.cos(),
-                    a.pitch.sin()
-                ];
-                let local = pose.rotation.inverse() * desired;
-                let local_yaw = local.y.atan2(local.x);
-                let local_pitch = local
-                    .z
-                    .atan2(local.x.hypot(local.y))
-                    .clamp(-0.261799, 0.785398);
-                r.aim = r.heading
-                    + turn(
-                        r.aim - r.heading,
-                        local_yaw,
-                        n(d, "turret_yaw_rate_rad_s") * PHYSICS_DT,
-                    );
-                r.pitch = approach(
-                    r.pitch,
-                    local_pitch,
-                    n(d, "turret_pitch_rate_rad_s") * PHYSICS_DT,
-                );
-            }
-            r.cooldown = (r.cooldown - PHYSICS_DT).max(0.0);
+            advance_weapon_clock(r, a, d, &pose);
             if r.arm_count > 0 && d["arm"].is_object() {
                 let arm = &d["arm"];
                 let goal = &goals[i];
