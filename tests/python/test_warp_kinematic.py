@@ -66,3 +66,22 @@ class CudaMotionTests(unittest.TestCase):
         p,_=sim.state()
         self.assertLess(p[0,0],1.)
         self.assertGreater(abs(p[0,1]),.001)
+
+    def test_power_budget_bounds_kinetic_energy(self):
+        sim=MotionBatch([[0,0]],[[30,100,.1]],[])
+        sim.drive.assign(np.array([[20.,.75,23.]],dtype=np.float32))
+        for _ in range(20):sim.step([[1,0]])
+        _,v=sim.state()
+        self.assertLessEqual(.5*20*float(np.sum(v*v)),20*.75+1e-4)
+        zero=MotionBatch([[0,0]],[[30,100,.1]],[])
+        zero.drive.assign(np.array([[20.,.75,0.]],dtype=np.float32))
+        zero.step([[1,0]])
+        np.testing.assert_array_equal(zero.state()[0],[[0.,0.]])
+
+    def test_per_agent_forbidden_mask(self):
+        sim=MotionBatch([[0,0],[0,0]],[[3,100,.1]]*2,[[1,-2,1.1,2]],worlds=[0,1])
+        sim.wall_masks.assign(np.array([[1],[0]],dtype=np.int32))
+        for _ in range(20):sim.step([[1,0],[1,0]])
+        p,_=sim.state()
+        self.assertLess(p[0,0],1.)
+        self.assertGreater(p[1,0],2.)

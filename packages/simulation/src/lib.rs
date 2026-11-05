@@ -1992,7 +1992,7 @@ impl Engine {
             self.micro_time = (substep + 1) as f64 * physics::PHYSICS_DT;
             let now = self.time();
             if let Some(frame)=&motion_frame {
-                world.apply_motion_sample(&mut self.robots,&actions,frame,substep,now);
+                world.apply_motion_sample(&mut self.robots,&actions,frame,substep,now,&self.arena);
             } else {
                 world.step(&self.arena, &mut self.robots, &actions, &goals, now);
             }

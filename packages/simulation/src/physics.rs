@@ -78,6 +78,32 @@ if r.alive {
 r.cooldown = (r.cooldown - PHYSICS_DT).max(0.0);
 }
 
+/// Common battery/supercapacitor accounting for both motion models.
+fn account_drive_energy(r: &mut Robot, d: &Value, disabled: bool, leg_power: f64) {
+    let limit=r.power_limit;
+let cap_out = (r.motor_power_w - limit)
+    .max(0.0)
+    .min(r.supercap_energy_j / PHYSICS_DT);
+r.supercap_energy_j = (r.supercap_energy_j - cap_out * PHYSICS_DT).max(0.0);
+let recharge = (limit - r.motor_power_w)
+    .max(0.0)
+    .min(35.0)
+    .min((n(d, "supercap_nominal_j") - r.supercap_energy_j) / PHYSICS_DT)
+    .max(0.0);
+if !disabled {
+    r.supercap_energy_j += recharge * PHYSICS_DT * 0.9;
+}
+r.power_w = if disabled {
+    0.0
+} else {
+    r.motor_power_w - cap_out + recharge
+};
+// Leg joint motors are not chassis power (construction manual p.49) but drain the battery.
+r.battery_remaining_wh = (r.battery_remaining_wh
+    - (r.power_w + leg_power) * PHYSICS_DT / 3600.0)
+    .max(0.0);
+}
+
 pub struct PhysicsWorld {
     external_colliders: BTreeMap<u32, (SharedShape, Value)>,
     pipeline: PhysicsPipeline,
@@ -1774,27 +1800,7 @@ impl PhysicsWorld {
                     + (torque * angular.z).abs() / 0.75
                     + (balance * angular.y).abs() / 0.75
             };
-            let cap_out = (r.motor_power_w - limit)
-                .max(0.0)
-                .min(r.supercap_energy_j / PHYSICS_DT);
-            r.supercap_energy_j = (r.supercap_energy_j - cap_out * PHYSICS_DT).max(0.0);
-            let recharge = (limit - r.motor_power_w)
-                .max(0.0)
-                .min(35.0)
-                .min((n(d, "supercap_nominal_j") - r.supercap_energy_j) / PHYSICS_DT)
-                .max(0.0);
-            if !disabled {
-                r.supercap_energy_j += recharge * PHYSICS_DT * 0.9;
-            }
-            r.power_w = if disabled {
-                0.0
-            } else {
-                r.motor_power_w - cap_out + recharge
-            };
-            // Leg joint motors are not chassis power (construction manual p.49) but drain the battery.
-            r.battery_remaining_wh = (r.battery_remaining_wh
-                - (r.power_w + if legged { leg_power } else { 0.0 }) * PHYSICS_DT / 3600.0)
-                .max(0.0);
+            account_drive_energy(r,d,disabled,leg_power);
             r.charging_power_w = self.charge_power(arena, r, d, &pose);
             if r.charging_power_w > 0.0 {
                 r.supercap_energy_j = (r.supercap_energy_j + r.charging_power_w * PHYSICS_DT * 0.9)

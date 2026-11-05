@@ -51,6 +51,9 @@ impl PhysicsWorld {
                 "folded":r.transform_progress,"grounded":r.grounded,
                 "enabled":r.alive && now>=r.power_cutoff_until && r.battery_remaining_wh>0.0 && !r.deployed,
                 "alive":r.alive,"radius":r.radius,"power_limit":r.power_limit,
+                "motor_budget":a.power.unwrap_or(r.power_limit).clamp(0.,200.).min(r.power_limit+
+                    if r.supercap_energy_j>0. {n(&self.designs[i],"voltage_v")*n(&self.designs[i],"supercap_max_current_a")} else {0.}),
+                "fly_pass":r.fly_pass,
                 "move":a.mv,"heading_goal":a.heading,"yaw_rate":a.yaw_rate,
                 "transform":a.transform.unwrap_or(a.crouch),"jump":a.jump,
                 "coast":a.coast,"design":if sequence==0 {self.designs[i].clone()} else {Value::Null}})
@@ -71,17 +74,22 @@ impl PhysicsWorld {
     }
 
     pub(crate) fn apply_motion_sample(&mut self, robots: &mut [Robot], actions: &[Action],
-                                     frame: &MotionFrame, sample: usize, now: f64) {
+                                     frame: &MotionFrame, sample: usize, now: f64, arena: &Arena) {
         for (i,r) in robots.iter_mut().enumerate() {
             let d=&self.designs[i];let h=self.handles[i];let a=&actions[i];
             // A death or power cutoff caused by an earlier combat sample wins
             // over all remaining predicted poses in this frame.
             r.powered=r.alive && now>=r.power_cutoff_until && r.battery_remaining_wh>0.0;
             let previous_heading=r.heading;
+            let previous_speed=r.vx.hypot(r.vy);
             if r.powered && !r.deployed && r.role!="aerial" {
                 let p=frame.positions[sample][i];let v=frame.velocities[sample][i];
                 r.x=p[0];r.y=p[1];r.z=p[2];r.vx=v[0];r.vy=v[1];r.vz=v[2];
                 r.heading=frame.headings[sample][i];r.grounded=frame.grounded[sample][i];
+                if arena.forbidden.iter().any(|z| forbidden_for(z,&r.team,r.fly_pass) && in_zone_rect(z,r.x,r.y,0.0)) {
+                    r.x=self.last[i][0];r.y=self.last[i][1];r.z=self.last[i][2];
+                    r.vx=0.;r.vy=0.;r.vz=0.;
+                }
             } else {
                 r.vx=0.0;r.vy=0.0;r.vz=0.0;
             }
@@ -97,6 +105,19 @@ impl PhysicsWorld {
             r.angular_velocity=[0.0,0.0,heading_rate];
             r.upright=1.0;r.tipped=false;r.self_righting=false;
             advance_weapon_clock(r,a,d,&pose);
+            let disabled=!r.powered || r.deployed || r.role=="aerial";
+            let budget=a.power.unwrap_or(r.power_limit).clamp(0.,200.).min(r.power_limit+
+                if r.supercap_energy_j>0. {n(d,"voltage_v")*n(d,"supercap_max_current_a")} else {0.});
+            let speed=r.vx.hypot(r.vy);
+            let kinetic=0.5*r.mass_kg*(speed*speed-previous_speed*previous_speed).max(0.)/PHYSICS_DT;
+            let drag=(n(d,"rolling_resistance")*r.mass_kg*9.81+0.5*1.225*n(d,"drag_area_m2")*speed*speed)*speed;
+            r.motor_power_w=if disabled {0.} else {(3.+(kinetic+drag)/n(d,"drive_efficiency").max(0.1)+heading_rate.abs()*2.).min(budget)};
+            let leg_power=if r.powered && d["chassis_type"]=="wheel_legged" {
+                n(d,"leg_holding_power_w")+if !r.grounded {r.mass_kg*9.81*r.vz.max(0.)/0.75} else {0.}
+            } else {0.};
+            account_drive_energy(r,d,disabled,leg_power);
+            r.charging_power_w=self.charge_power(arena,r,d,&pose);
+            r.supercap_energy_j=(r.supercap_energy_j+r.charging_power_w*PHYSICS_DT*0.9).min(n(d,"supercap_nominal_j"));
             if r.transform_allowed && r.powered {
                 let progress=frame.folded[sample][i];
                 if (progress-r.transform_progress).abs()>1e-8 {
@@ -139,15 +160,29 @@ mod tests {
         let mut actions=vec![Action::default();count];actions[index].aim=Some(1.);
         engine.robots[index].cooldown=0.2;
         let mut world=engine.physics.take().unwrap();
-        world.apply_motion_sample(&mut engine.robots,&actions,&frame,0,0.);
+        world.apply_motion_sample(&mut engine.robots,&actions,&frame,0,0.,&engine.arena);
         assert!((engine.robots[index].cooldown-(0.2-PHYSICS_DT)).abs()<1e-10);
         assert!(engine.robots[index].aim>0.);
         let position=[engine.robots[index].x,engine.robots[index].y,engine.robots[index].z];
         engine.robots[index].alive=false;
         frame.positions[1][index][0]+=5.;
-        world.apply_motion_sample(&mut engine.robots,&actions,&frame,1,PHYSICS_DT);
+        world.apply_motion_sample(&mut engine.robots,&actions,&frame,1,PHYSICS_DT,&engine.arena);
         assert_eq!([engine.robots[index].x,engine.robots[index].y,engine.robots[index].z],position);
         assert_eq!(engine.robots[index].vx,0.);
+    }
+
+    #[test]
+    fn energy_accounting_keeps_original_capacitor_units() {
+        let mut engine=Engine::new(42,420.0,"rmuc2027").unwrap();
+        let i=engine.robots.iter().position(|r|r.id=="red-3").unwrap();
+        let d=engine.physics.as_ref().unwrap().design(i).clone();
+        let r=&mut engine.robots[i];
+        r.power_limit=50.;r.motor_power_w=200.;r.supercap_energy_j=1.;
+        let battery=r.battery_remaining_wh;
+        account_drive_energy(r,&d,false,18.);
+        assert!(r.supercap_energy_j.abs()<1e-10);
+        assert!((r.power_w-80.).abs()<1e-9);
+        assert!((battery-r.battery_remaining_wh-98.*PHYSICS_DT/3600.).abs()<1e-10);
     }
 
     #[test]

@@ -65,7 +65,7 @@ def sample_heights(scene: TerrainData, points: wp.array(dtype=wp.vec2), result: 
 def limit_terrain(scene: TerrainData, previous: wp.array(dtype=wp.vec2),
                   positions: wp.array(dtype=wp.vec2), velocities: wp.array(dtype=wp.vec2),
                   radii: wp.array(dtype=wp.vec3), steps: wp.array(dtype=float),
-                  heights: wp.array(dtype=float)):
+                  heights: wp.array(dtype=float), flight: wp.array(dtype=wp.int32)):
     i=wp.tid()
     start=previous[i];end=positions[i];delta=end-start
     accepted=start
@@ -75,7 +75,7 @@ def limit_terrain(scene: TerrainData, previous: wp.array(dtype=wp.vec2),
     for j in range(1,13):
         p=start+delta*(float(j)/12.0)
         h=surface_height(scene,p)
-        if p[0]<radii[i][2] or p[0]>scene.width-radii[i][2] or p[1]<radii[i][2] or p[1]>scene.height-radii[i][2] or wp.abs(h-old_height)>steps[i]:
+        if p[0]<radii[i][2] or p[0]>scene.width-radii[i][2] or p[1]<radii[i][2] or p[1]>scene.height-radii[i][2] or (flight[i]==0 and wp.abs(h-old_height)>steps[i]):
             blocked=1
         if blocked==0:
             accepted=p
@@ -100,7 +100,7 @@ class Terrain:
             if kind==2 and t.get('bump_pitch',0)<=0: raise ValueError('Invalid bump pitch')
             kinds.append(kind);edges.append(t.get('edge_ramp_m',0))
             profiles.append((t.get('base_elevation',0),t['elevation'],t.get('bump_pitch',0),t.get('bump_height',0)))
-            ramps.append((*t.get('ramp_start',[0,0]),*t.get('ramp_end',[0,0])))
+            ramps.append((*(t.get('ramp_start') or [0,0]),*(t.get('ramp_end') or [0,0])))
         self.data=TerrainData()
         for name,values,dtype in [('bounds',bounds,wp.vec4),('ranges',ranges,wp.vec2i),
                                  ('vertices',vertices,wp.vec2),('profiles',profiles,wp.vec4),

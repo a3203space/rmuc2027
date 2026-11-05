@@ -19,7 +19,7 @@ class TerrainTests(unittest.TestCase):
         sim.step([[1,0]])
         heights=wp.zeros(1,dtype=float,device=sim.device)
         limits=wp.array([.04],dtype=float,device=sim.device)
-        wp.launch(limit_terrain,1,inputs=[scene.data,sim.previous,sim.pos,sim.vel,sim.limits,limits,heights],device=sim.device)
+        wp.launch(limit_terrain,1,inputs=[scene.data,sim.previous,sim.pos,sim.vel,sim.limits,limits,heights,sim.flight],device=sim.device)
         p,v=sim.state()
         self.assertLess(p[0,0],2.)
         self.assertEqual(v[0,0],0.)

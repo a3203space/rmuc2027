@@ -39,7 +39,9 @@ def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
               commands: wp.array(dtype=wp.vec2), limits: wp.array(dtype=wp.vec3),
               enabled: wp.array(dtype=wp.int32), boxes: wp.array(dtype=wp.vec4),
               angles: wp.array(dtype=float), wall_z: wp.array(dtype=wp.vec2),
-              body_z: wp.array(dtype=wp.vec2), dt: float, output: wp.array(dtype=wp.vec2)):
+              body_z: wp.array(dtype=wp.vec2), masks: wp.array2d(dtype=wp.int32),
+              drive: wp.array(dtype=wp.vec3), resistance: wp.array(dtype=wp.vec2),
+              flight: wp.array(dtype=wp.int32), goal: wp.array(dtype=wp.vec2), dt: float, output: wp.array(dtype=wp.vec2)):
     i = wp.tid()
     p = pos[i]
     v = wp.vec2(0.0, 0.0)
@@ -48,6 +50,15 @@ def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
         desired = command / wp.max(1.0, wp.length(command)) * limits[i][0]
         change = desired - vel[i]
         v = vel[i] + change * wp.min(1.0, limits[i][1] * dt / wp.max(wp.length(change), 1.e-8))
+        # Positive kinetic work is bounded by electrical budget and drivetrain
+        # efficiency; passive resistance still acts when commanded power is zero.
+        old_speed=wp.length(vel[i]);spec=drive[i]
+        loss=(resistance[i][0]*spec[0]*9.81+0.6125*resistance[i][1]*old_speed*old_speed)*old_speed
+        maximum=wp.sqrt(wp.max(0.0,old_speed*old_speed+2.0*dt*(wp.max(0.0,spec[2]-3.0)*spec[1]-loss)/spec[0]))
+        if wp.length(v)>maximum:
+            v=v*(maximum/wp.max(wp.length(v),1.e-8))
+    if flight[i]!=0 and enabled[i]!=0:
+        v=(goal[i]-p)/dt
     delta = v * dt
     radius = limits[i][2]
     # Bounded successive sweeps allow wall sliding without endpoint tunnelling.
@@ -55,7 +66,7 @@ def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
         hit = wp.vec3(1.0, 0.0, 0.0)
         for j in range(boxes.shape[0]):
             b = boxes[j]
-            if body_z[i][1] > wall_z[j][0] and body_z[i][0] < wall_z[j][1]:
+            if masks[i,j]!=0 and body_z[i][1] > wall_z[j][0] and body_z[i][0] < wall_z[j][1]:
                 center=wp.vec2((b[0]+b[2])*0.5,(b[1]+b[3])*0.5)
                 half=wp.vec2((b[2]-b[0])*0.5+radius,(b[3]-b[1])*0.5+radius)
                 c=wp.cos(angles[j]);s=wp.sin(angles[j]);relative=p-center
@@ -98,6 +109,9 @@ class MotionBatch:
             raise ValueError('Expected nonnegative world ids[N]')
         self.count = len(p)
         self.worlds = wp.array(world_ids,dtype=wp.int32,device=self.device)
+        self.flight = wp.zeros(self.count,dtype=wp.int32,device=self.device)
+        self.flight_goal = wp.empty(self.count,dtype=wp.vec2,device=self.device)
+        self.flight_z = wp.zeros(self.count,dtype=float,device=self.device)
         self.previous = wp.empty(self.count,dtype=wp.vec2,device=self.device)
         self.resolved = wp.empty(self.count,dtype=wp.vec2,device=self.device)
         self.resolved_velocity = wp.empty(self.count,dtype=wp.vec2,device=self.device)
@@ -109,6 +123,9 @@ class MotionBatch:
         self.enabled = wp.ones(self.count,dtype=wp.int32,device=self.device)
         self.limits = wp.array(values,dtype=wp.vec3,device=self.device)
         self.boxes = wp.array(walls,dtype=wp.vec4,device=self.device)
+        self.wall_masks = wp.ones((self.count,len(walls)),dtype=wp.int32,device=self.device)
+        self.drive = wp.array([[1.,1.,1.e9]]*self.count,dtype=wp.vec3,device=self.device)
+        self.resistance = wp.zeros(self.count,dtype=wp.vec2,device=self.device)
         self.angles = wp.zeros(len(walls),dtype=float,device=self.device)
         self.wall_z = wp.array([[-1.e6,1.e6]]*len(walls),dtype=wp.vec2,device=self.device)
         self.body_z = wp.array([[0.,1.]]*self.count,dtype=wp.vec2,device=self.device)
@@ -131,15 +148,17 @@ class MotionBatch:
             from .terrain import sample_heights, update_body_height
             wp.launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
             wp.launch(update_body_height,self.count,inputs=[self.heights,self.height_offsets,self.body_z],device=self.device)
+        from .traversal import jump_envelope
+        wp.launch(jump_envelope,self.count,inputs=[self.flight,self.flight_z,self.body_z],device=self.device)
         wp.launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.limits,
-                  self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,float(dt),self.output],device=self.device)
+                  self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,self.wall_masks,self.drive,self.resistance,self.flight,self.flight_goal,float(dt),self.output],device=self.device)
 
         if self.terrain is not None:
             from .terrain import limit_terrain
             wp.launch(limit_terrain,self.count,inputs=[self.terrain.data,self.previous,self.pos,
-                      self.vel,self.limits,self.step_limits,self.heights],device=self.device)
+                      self.vel,self.limits,self.step_limits,self.heights,self.flight],device=self.device)
         wp.launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
-                  self.worlds,self.resolved,self.resolved_velocity],device=self.device)
+                  self.worlds,self.body_z,self.resolved,self.resolved_velocity],device=self.device)
         wp.copy(self.pos,self.resolved)
         wp.copy(self.vel,self.resolved_velocity)
         if self.terrain is not None:
@@ -165,13 +184,13 @@ class MotionBatch:
 @wp.kernel
 def resolve_agents(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=wp.vec2),
                    velocity: wp.array(dtype=wp.vec2), limits: wp.array(dtype=wp.vec3),
-                   worlds: wp.array(dtype=wp.int32), result: wp.array(dtype=wp.vec2),
+                   worlds: wp.array(dtype=wp.int32), body_z: wp.array(dtype=wp.vec2), result: wp.array(dtype=wp.vec2),
                    result_velocity: wp.array(dtype=wp.vec2)):
     i = wp.tid()
     displacement = proposed[i] - previous[i]
     fraction = float(1.0)
     for j in range(previous.shape[0]):
-        if i != j and worlds[i] == worlds[j]:
+        if i != j and worlds[i] == worlds[j] and body_z[i][1]>body_z[j][0] and body_z[j][1]>body_z[i][0]:
             separation = previous[i]-previous[j]
             relative = displacement-(proposed[j]-previous[j])
             radius = limits[i][2]+limits[j][2]
