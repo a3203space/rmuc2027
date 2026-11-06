@@ -4,3 +4,4 @@ numpy==2.2.6
 gymnasium>=1.2,<2
 stable-baselines3==2.9.0
 torch>=2.8,<3
+orjson==3.13.0

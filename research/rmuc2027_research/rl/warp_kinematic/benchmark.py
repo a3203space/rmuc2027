@@ -7,7 +7,7 @@ import cProfile
 from pathlib import Path
 import time
 
-from rmuc2027_core.engine import Match
+from rmuc2027_core.engine import Match, RESPONSE_JSON_DECODER
 from rmuc2027_core import sdk
 from ..session import load_config, resource
 from ...strategies.battle import Battle
@@ -77,6 +77,7 @@ def main():
             profiler.disable()
             profiler.dump_stats(str(args.output/'profile.pstats'))
         report = dict(kind='fixed-policy-benchmark', backend='warp_kinematic', ppo_included=False,
+                      response_json_decoder=RESPONSE_JSON_DECODER,
                       profiled=args.profile,
                       warmup_seconds=warmup_seconds, setup_seconds=setup_seconds,
                       wall_seconds=elapsed, sim_seconds=battle.match.time,

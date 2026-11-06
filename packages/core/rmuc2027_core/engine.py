@@ -8,6 +8,12 @@ import queue
 import subprocess
 import threading
 
+try:
+    import orjson as _response_json
+except ImportError:
+    _response_json = json
+RESPONSE_JSON_DECODER = _response_json.__name__
+
 from .paths import ROOT
 DT = 0.05
 POLICY_INTERVAL = 2
@@ -84,7 +90,7 @@ class Match:
                 self.process.stdin.write(payload)
                 self.process.stdin.flush()
                 line = self._read_line()
-                value = json.loads(line)
+                value = _response_json.loads(line)
                 while value.get('op') in ('external_physics', 'kinematic_frame'):
                     if self.external_physics is None:
                         raise RuntimeError('Unexpected external physics request')
@@ -92,7 +98,7 @@ class Match:
                     self.process.stdin.write(json.dumps(result, allow_nan=False,separators=(",", ":")).encode()+b'\n')
                     self.process.stdin.flush()
                     line = self._read_line()
-                    value = json.loads(line)
+                    value = _response_json.loads(line)
             except BaseException:
                 # A late response must never be mistaken for the next request's
                 # reply, including a diagnostic digest requested during close.
