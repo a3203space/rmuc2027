@@ -31,7 +31,7 @@ def advance(adapter,command,frames=40):
 
 class TraversalTests(unittest.TestCase):
     def test_graph_matches_direct_launches_through_jump(self):
-        adapters=[ArenaMotion(reuse_commands=False),ArenaMotion(),ArenaMotion(use_graph=True)]
+        adapters=[ArenaMotion(reuse_commands=False,packed_readback=False),ArenaMotion(),ArenaMotion(use_graph=True)]
         commands=[launch_request(8.6,0.) for _ in adapters]
         for tick in range(40):
             frames=[]

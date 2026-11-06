@@ -8,6 +8,7 @@ from pathlib import Path
 import time
 
 from rmuc2027_core.engine import Match
+from rmuc2027_core import sdk
 from ..session import load_config, resource
 from ...strategies.battle import Battle
 from .arena import ArenaMotion
@@ -29,6 +30,9 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     sources = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                for p in sorted(Path(__file__).parent.glob('*.py'))}
+    sources['core/sdk.py']=hashlib.sha256(Path(sdk.__file__).read_bytes()).hexdigest()
+    sources['strategies/battle.py']=hashlib.sha256((Path(__file__).parents[2]/'strategies/battle.py').read_bytes()).hexdigest()
+    sources['config']=hashlib.sha256(Path(args.config).read_bytes()).hexdigest()
     (args.output/'sources.json').write_text(json.dumps(sources, indent=2))
     settings = {key: config[key] for key in ('drones_enabled', 'timed_assembly')}
     # Compilation and initial CUDA context cost are reported separately.

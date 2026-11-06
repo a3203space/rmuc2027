@@ -68,20 +68,25 @@ def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
            last_z: wp.array(dtype=float), positions: wp.array2d(dtype=wp.vec3),
            velocities: wp.array2d(dtype=wp.vec3), angles: wp.array2d(dtype=float),
            folded: wp.array2d(dtype=float), flight: wp.array(dtype=wp.int32), altitude: wp.array(dtype=float),
-           grounded: wp.array2d(dtype=wp.int32), index: int):
+           grounded: wp.array2d(dtype=wp.int32), packed: wp.array3d(dtype=float), index: int):
     i=wp.tid();z=ground[i]+offsets[i][0]
     if flight[i]!=0:z=altitude[i]
     grounded[index,i]=1-flight[i]
     positions[index,i]=wp.vec3(pos[i][0],pos[i][1],z)
     velocities[index,i]=wp.vec3(vel[i][0],vel[i][1],(z-last_z[i])/DT)
     last_z[i]=z;angles[index,i]=headings[i];folded[index,i]=folds[i]
+    for axis in range(3):
+        packed[index,i,axis]=positions[index,i][axis]
+        packed[index,i,axis+3]=velocities[index,i][axis]
+    packed[index,i,6]=headings[i];packed[index,i,7]=folds[i];packed[index,i,8]=float(grounded[index,i])
 
 
 class ArenaMotion:
     protocol='kinematic_frame'
-    def __init__(self,device='cuda:0',use_graph=False,reuse_commands=True):
+    def __init__(self,device='cuda:0',use_graph=False,reuse_commands=True,packed_readback=True):
         self.device=device;self.motion=None;self.next_sequence=0;self.closed=False
         self.use_graph=use_graph;self.graph=None
+        self.packed_readback=packed_readback
         self.reuse_commands=reuse_commands;self.launches=[];self.launch_index=0
 
     def initialize(self,request):
@@ -124,6 +129,8 @@ class ArenaMotion:
         self.heading=wp.zeros(n,dtype=float,device=m.device);self.fold=wp.zeros(n,dtype=float,device=m.device)
         self.requested=wp.zeros(n,dtype=wp.vec2,device=m.device);self.targets=wp.zeros(n,dtype=wp.vec2,device=m.device)
         self.flags=wp.zeros(n,dtype=wp.vec3i,device=m.device);self.last_z=wp.zeros(n,dtype=float,device=m.device)
+        self.packed=wp.empty((6,n,9),dtype=float,device=m.device)
+        m.resistance.assign(np.asarray([[d.get('rolling_resistance',0),d.get('drag_area_m2',0)] for d in self.designs],dtype=np.float32))
         self.positions=wp.empty((6,n),dtype=wp.vec3,device=m.device);self.velocities=wp.empty((6,n),dtype=wp.vec3,device=m.device)
         self.angles=wp.empty((6,n),dtype=float,device=m.device);self.folds=wp.empty((6,n),dtype=float,device=m.device)
 
@@ -144,7 +151,6 @@ class ArenaMotion:
         self.flags.assign(np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
         m.enabled.assign(np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
         assign(m.drive,[[d.get('mass_kg',25),max(.1,d.get('drive_efficiency',.75)),r.get('motor_budget',r['power_limit'])] for r,d in zip(robots,self.designs)])
-        assign(m.resistance,[[d.get('rolling_resistance',0),d.get('drag_area_m2',0)] for d in self.designs])
         masks=[]
         for r in robots:
             masks.append([1]*self.physical_count+[int(z['kind'] in ('base','dart_station','pad') or
@@ -160,8 +166,13 @@ class ArenaMotion:
             wp.capture_launch(self.graph)
         else:
             self._simulate()
-        reply=MotionFrame(self.ids,self.positions.numpy(),self.velocities.numpy(),self.angles.numpy(),self.folds.numpy(),
-                          self.grounded.numpy().astype(bool)).response(request['sequence'])
+        if self.packed_readback:
+            samples=self.packed.numpy()
+            frame=MotionFrame(self.ids,samples[:,:,:3],samples[:,:,3:6],samples[:,:,6],samples[:,:,7],samples[:,:,8].astype(bool))
+        else:
+            frame=MotionFrame(self.ids,self.positions.numpy(),self.velocities.numpy(),self.angles.numpy(),self.folds.numpy(),
+                              self.grounded.numpy().astype(bool))
+        reply=frame.response(request['sequence'])
         self.next_sequence+=1
         return reply
 
@@ -191,7 +202,7 @@ class ArenaMotion:
             self._launch(finish_jump,m.count,inputs=[m.pos,m.vel,m.flight,m.flight_z,m.heights,self.base,self.jump_end,
                 self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,m.flight_goal,self.fall_speed],device=m.device)
             self._launch(record,m.count,inputs=[m.pos,m.vel,m.heights,m.height_offsets,self.heading,self.fold,self.last_z,
-                      self.positions,self.velocities,self.angles,self.folds,m.flight,m.flight_z,self.grounded,index],device=m.device)
+                      self.positions,self.velocities,self.angles,self.folds,m.flight,m.flight_z,self.grounded,self.packed,index],device=m.device)
 
     def close(self):
         self.closed=True
