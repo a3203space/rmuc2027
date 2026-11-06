@@ -20,15 +20,35 @@ class StationaryFixture:
     def close(self): pass
 
 class ShootingFixture(StationaryFixture):
+    def __init__(self,positions=None):
+        super().__init__()
+        self.positions=positions or {'red-3':(5.,3.),'blue-4':(7.,3.)}
     def step(self,request):
         if request['sequence']==0:self.arena=request['arena']
         for robot in request['robots']:
-            if robot['id'] in ('red-3','blue-4'):
-                x=5. if robot['id']=='red-3' else 7.
-                robot['pos']=[x,3.,terrain_height(self.arena,x,3.)]
+            if robot['id'] in self.positions:
+                x,y=self.positions[robot['id']]
+                robot['pos']=[x,y,terrain_height(self.arena,x,y)]
         return super().step(request)
 
 class KinematicEngineTests(unittest.TestCase):
+    def test_existing_rune_pedestal_occludes_camera_and_projectiles(self):
+        fixture=ShootingFixture({'red-3':(12.45,8.313),'blue-4':(13.95,8.313)})
+        with Match(physics_adapter=fixture,battle_settings={'drones_enabled':False}) as match:
+            for _ in range(120):match.step({})
+            match.step({'red':{'3':{'buy_ammo':{'remote':True,'amount':100}}}})
+            for _ in range(130):frame=match.step({})
+            self.assertFalse(any(r['id']=='blue-4' for r in match.observation('red',[3])['enemies']))
+            initial=next(r['hp'] for r in frame['robots'] if r['id']=='blue-4');events=[]
+            for _ in range(60):
+                shooter=next(r for r in frame['robots'] if r['id']=='red-3')
+                target=next(r for r in frame['robots'] if r['id']=='blue-4')
+                frame=match.step({'red':{'3':{'aim':aim_at(shooter,target),'pitch':aim_pitch(shooter,target),'fire':True}}})
+                events.extend(frame['events'])
+            self.assertEqual(next(r['hp'] for r in frame['robots'] if r['id']=='blue-4'),initial)
+            self.assertTrue(any(e['type']=='shot' for e in events))
+            self.assertTrue(any(e['type']=='impact' for e in events))
+
     def test_query_mirror_preserves_visibility_and_armor_hits(self):
         with Match(physics_adapter=ShootingFixture(),battle_settings={'drones_enabled':False}) as match:
             for _ in range(120):frame=match.step({})
