@@ -10,6 +10,14 @@ import warp as wp
 
 @wp.func
 def segment_box(p: wp.vec2, d: wp.vec2, lo: wp.vec2, hi: wp.vec2):
+    # Float32 roundoff at a previous contact can put the start a fraction
+    # inside the slab. Snap only this tolerance to the boundary so tangential
+    # motion retains a contact normal and can slide on subsequent sweeps.
+    for axis in range(2):
+        if wp.abs(p[axis]-lo[axis])<1.e-5:
+            p[axis]=lo[axis]
+        elif wp.abs(p[axis]-hi[axis])<1.e-5:
+            p[axis]=hi[axis]
     enter = float(0.0)
     leave = float(1.0)
     normal = wp.vec2(0.0, 0.0)

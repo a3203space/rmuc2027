@@ -2,6 +2,7 @@
 import argparse
 from collections import Counter
 import json
+import hashlib
 from pathlib import Path
 import time
 
@@ -23,6 +24,9 @@ def main():
         parser.error('duration must be in (0, 420]')
     config = load_config(args.config)
     args.output.mkdir(parents=True, exist_ok=False)
+    sources = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+               for p in sorted(Path(__file__).parent.glob('*.py'))}
+    (args.output/'sources.json').write_text(json.dumps(sources, indent=2))
     settings = {key: config[key] for key in ('drones_enabled', 'timed_assembly')}
     # Compilation and initial CUDA context cost are reported separately.
     started = time.perf_counter()
@@ -57,7 +61,7 @@ def main():
                       warmup_seconds=warmup_seconds, setup_seconds=setup_seconds,
                       wall_seconds=elapsed, sim_seconds=battle.match.time,
                       realtime_factor=battle.match.time/elapsed, events=dict(counts),
-                      metadata=battle.metadata, result=battle.result(), diagnostics=battle.diagnostics)
+                      source_sha256=sources, metadata=battle.metadata, result=battle.result(), diagnostics=battle.diagnostics)
     (args.output/'summary.json').write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False))
     print(json.dumps({key: report[key] for key in ('kind','ppo_included','wall_seconds','sim_seconds','realtime_factor','result')}, ensure_ascii=False), flush=True)
 

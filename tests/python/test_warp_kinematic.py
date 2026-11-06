@@ -5,6 +5,16 @@ from rmuc2027_research.rl.warp_kinematic.motion import MotionBatch
 
 
 class CudaMotionTests(unittest.TestCase):
+    def test_float32_contact_keeps_tangential_motion(self):
+        radius=.38890877
+        # Just inside the expanded boundary after a float32 contact readback.
+        sim=MotionBatch([[2.79939866,6.65-radius+2.e-7]],[[3,10,radius]],
+                        [[1.461,6.65,3.361,8.35]])
+        for _ in range(20):sim.step([[1,1]])
+        p,v=sim.state()
+        self.assertGreater(p[0,0],3.4)
+        self.assertGreater(v[0,0],.1)
+
     def test_swept_collision_cannot_tunnel_through_thin_wall(self):
         sim = MotionBatch([[0,0]], [[30,1000,.2]], [[1,-2,1.01,2]])
         for _ in range(20): sim.step([[1,0]])

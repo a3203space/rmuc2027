@@ -79,7 +79,7 @@ def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
 
 class ArenaMotion:
     protocol='kinematic_frame'
-    def __init__(self,device='cuda:0',use_graph=True):
+    def __init__(self,device='cuda:0',use_graph=False):
         self.device=device;self.motion=None;self.next_sequence=0;self.closed=False
         self.use_graph=use_graph;self.graph=None
 
