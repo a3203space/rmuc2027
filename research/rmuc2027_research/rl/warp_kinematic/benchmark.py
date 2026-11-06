@@ -3,6 +3,7 @@ import argparse
 from collections import Counter
 import json
 import hashlib
+import cProfile
 from pathlib import Path
 import time
 
@@ -19,6 +20,7 @@ def main():
     parser.add_argument('--duration', type=float, default=420.)
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--profile', action='store_true', help='Record Python main-thread timing; affects throughput')
     args = parser.parse_args()
     if not 0 < args.duration <= 420:
         parser.error('duration must be in (0, 420]')
@@ -34,6 +36,7 @@ def main():
         for _ in range(20):
             warmup.step({})
     warmup_seconds = time.perf_counter()-started
+    print(json.dumps(dict(phase='warmup-complete',wall_seconds=warmup_seconds)),flush=True)
     started = time.perf_counter()
     with Battle(resource(config['friendly']), resource(config['opponent']), seed=args.seed,
                 duration=args.duration, map_name=config['map'], sandbox='trusted-local',
@@ -43,7 +46,11 @@ def main():
                 navigation_mode=config['navigation_mode'], side_lineups=config.get('lineups'),
                 battle_settings=settings) as battle:
         setup_seconds = time.perf_counter()-started
+        print(json.dumps(dict(phase='policies-ready',wall_seconds=setup_seconds)),flush=True)
         counts = Counter()
+        profiler = cProfile.Profile() if args.profile else None
+        if profiler is not None:
+            profiler.enable()
         started = time.perf_counter()
         with (args.output/'trajectory.jsonl').open('w') as trace:
             while battle.match.status != 'finished':
@@ -57,7 +64,11 @@ def main():
                 if battle.match.tick % 600 == 0:
                     print(json.dumps(dict(sim_seconds=frame['time'], wall_seconds=time.perf_counter()-started)), flush=True)
         elapsed = time.perf_counter()-started
+        if profiler is not None:
+            profiler.disable()
+            profiler.dump_stats(str(args.output/'profile.pstats'))
         report = dict(kind='fixed-policy-benchmark', backend='warp_kinematic', ppo_included=False,
+                      profiled=args.profile,
                       warmup_seconds=warmup_seconds, setup_seconds=setup_seconds,
                       wall_seconds=elapsed, sim_seconds=battle.match.time,
                       realtime_factor=battle.match.time/elapsed, events=dict(counts),

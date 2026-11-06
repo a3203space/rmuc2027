@@ -137,3 +137,10 @@
 - 运动 9 项、集成 20 项测试通过。实际策略 60 秒复测双方哨兵到达中央（50 秒时红约 10.858/7.698，蓝约 17.214/7.295），解除原先从 5.5 秒至结束的基地卡死。数据 `data/research/kinematic-contact-fix-60s`；该轮与其他 GPU 检查并行，耗时不能用于独占性能验收。
 - CUDA Graph 整局 digest 与逐次提交一致；该轮耗时 163.344 秒（2.571 倍），后段与其他 GPU 检查重叠，前段也未显示改善。恢复逐次提交为默认，Graph 保留显式可选；不能宣称 Graph 提速。
 - 基准新增启动时源码 SHA-256 记录。仍需修复后的完整多阵容对局及独占性能测量、PPO 吞吐与迁移检查。
+
+### GPU 提交命令复用
+
+- 基准增加 `--profile`，明确标记性能诊断运行；该模式耗时不可直接用于吞吐验收。30 秒诊断的主线程累计时间显示 GPU 内核提交及参数准备、重装固定装配前期路径可见性检查为主要开销，记录在 `data/research/kinematic-profile-contact-fixed/profile.pstats`。
+- 使用 Warp 预先准备的 Launch 对象复用同一帧的内核参数和设备缓冲地址，后续帧只更新缓冲内容。默认启用命令复用，保留 `ArenaMotion(reuse_commands=False)` 对照及可选 CUDA Graph。
+- 集成 20 项测试通过，覆盖正常、折叠、碰撞中断下落、导航；原逐次提交、命令复用和 Graph 三种方式的 40 帧跳跃逐采样结果完全一致。
+- 无 profiler 的完整 420 秒复测已启动，输出 `data/research/kinematic-reused-launch-full`。收益尚待完整测量；没有开始训练。

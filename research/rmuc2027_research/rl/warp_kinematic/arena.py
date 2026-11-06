@@ -79,9 +79,10 @@ def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
 
 class ArenaMotion:
     protocol='kinematic_frame'
-    def __init__(self,device='cuda:0',use_graph=False):
+    def __init__(self,device='cuda:0',use_graph=False,reuse_commands=True):
         self.device=device;self.motion=None;self.next_sequence=0;self.closed=False
         self.use_graph=use_graph;self.graph=None
+        self.reuse_commands=reuse_commands;self.launches=[];self.launch_index=0
 
     def initialize(self,request):
         robots=request['robots'];self.ids=tuple(r['id'] for r in robots)
@@ -164,25 +165,36 @@ class ArenaMotion:
         self.next_sequence+=1
         return reply
 
+    def _launch(self,*args,**kwargs):
+        if not self.reuse_commands:
+            return wp.launch(*args,**kwargs)
+        if self.launch_index==len(self.launches):
+            self.launches.append(wp.launch(*args,**kwargs,record_cmd=True))
+        command=self.launches[self.launch_index]
+        self.launch_index+=1
+        command.launch()
+
     def _simulate(self):
         m=self.motion
+        self.launch_index=0
         from .terrain import sample_heights
         for index in range(6):
-            wp.launch(sample_heights,m.count,inputs=[self.terrain.data,m.pos,m.heights],device=m.device)
-            wp.launch(controls,m.count,inputs=[m.pos,m.heights,self.heading,self.fold,self.requested,self.targets,self.flags,
+            self._launch(sample_heights,m.count,inputs=[self.terrain.data,m.pos,m.heights],device=m.device)
+            self._launch(controls,m.count,inputs=[m.pos,m.heights,self.heading,self.fold,self.requested,self.targets,self.flags,
                       self.params,self.legged,m.enabled,m.limits,m.boxes,m.angles,m.wall_z,m.wall_masks,m.height_offsets,m.commands],device=m.device)
             from .traversal import prepare_jump, finish_jump
-            wp.launch(prepare_jump,m.count,inputs=[self.terrain.data,m.pos,m.vel,self.heading,self.base,self.params,m.limits,m.enabled,
+            self._launch(prepare_jump,m.count,inputs=[self.terrain.data,m.pos,m.vel,self.heading,self.base,self.params,m.limits,m.enabled,
                 self.capable,self.jump_command,self.gates,self.destinations,m.boxes,m.angles,m.wall_z,m.wall_masks,m.worlds,
                 self.jump_start,self.jump_end,self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,
                 m.flight,m.flight_goal,m.flight_z,self.fall_speed,DT],device=m.device)
-            m._advance(DT)
-            wp.launch(finish_jump,m.count,inputs=[m.pos,m.vel,m.flight,m.flight_z,m.heights,self.base,self.jump_end,
+            m._advance(DT,launch=self._launch)
+            self._launch(finish_jump,m.count,inputs=[m.pos,m.vel,m.flight,m.flight_z,m.heights,self.base,self.jump_end,
                 self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,m.flight_goal,self.fall_speed],device=m.device)
-            wp.launch(record,m.count,inputs=[m.pos,m.vel,m.heights,m.height_offsets,self.heading,self.fold,self.last_z,
+            self._launch(record,m.count,inputs=[m.pos,m.vel,m.heights,m.height_offsets,self.heading,self.fold,self.last_z,
                       self.positions,self.velocities,self.angles,self.folds,m.flight,m.flight_z,self.grounded,index],device=m.device)
 
     def close(self):
         self.closed=True
         self.graph=None
+        self.launches.clear()
         self.motion=None

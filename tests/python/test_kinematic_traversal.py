@@ -31,7 +31,7 @@ def advance(adapter,command,frames=40):
 
 class TraversalTests(unittest.TestCase):
     def test_graph_matches_direct_launches_through_jump(self):
-        adapters=[ArenaMotion(use_graph=value) for value in (False,True)]
+        adapters=[ArenaMotion(reuse_commands=False),ArenaMotion(),ArenaMotion(use_graph=True)]
         commands=[launch_request(8.6,0.) for _ in adapters]
         for tick in range(40):
             frames=[]
@@ -41,8 +41,9 @@ class TraversalTests(unittest.TestCase):
                 command['robots'][0].update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],
                     heading=frame['headings'][-1][0],folded=frame['folded'][-1][0])
             for key in ('positions','velocities','headings','folded','grounded'):
-                np.testing.assert_array_equal(frames[0][key],frames[1][key])
-        self.assertIsNotNone(adapters[1].graph)
+                for frame in frames[1:]:
+                    np.testing.assert_array_equal(frames[0][key],frame[key])
+        self.assertIsNotNone(adapters[2].graph)
         for adapter in adapters:adapter.close()
 
     def test_mirrored_central_entry_lands_on_platform(self):

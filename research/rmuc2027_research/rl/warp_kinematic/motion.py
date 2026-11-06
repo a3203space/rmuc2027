@@ -150,28 +150,28 @@ class MotionBatch:
         self.commands.assign(values)
         self._advance(dt)
 
-    def _advance(self, dt):
+    def _advance(self, dt, launch=wp.launch):
         wp.copy(self.previous,self.pos)
         if self.terrain is not None:
             from .terrain import sample_heights, update_body_height
-            wp.launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
-            wp.launch(update_body_height,self.count,inputs=[self.heights,self.height_offsets,self.body_z],device=self.device)
+            launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
+            launch(update_body_height,self.count,inputs=[self.heights,self.height_offsets,self.body_z],device=self.device)
         from .traversal import jump_envelope
-        wp.launch(jump_envelope,self.count,inputs=[self.flight,self.flight_z,self.body_z],device=self.device)
-        wp.launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.limits,
+        launch(jump_envelope,self.count,inputs=[self.flight,self.flight_z,self.body_z],device=self.device)
+        launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.limits,
                   self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,self.wall_masks,self.drive,self.resistance,self.flight,self.flight_goal,float(dt),self.output],device=self.device)
 
         if self.terrain is not None:
             from .terrain import limit_terrain
-            wp.launch(limit_terrain,self.count,inputs=[self.terrain.data,self.previous,self.pos,
+            launch(limit_terrain,self.count,inputs=[self.terrain.data,self.previous,self.pos,
                       self.vel,self.limits,self.step_limits,self.heights,self.flight],device=self.device)
-        wp.launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
+        launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
                   self.worlds,self.body_z,self.resolved,self.resolved_velocity],device=self.device)
         wp.copy(self.pos,self.resolved)
         wp.copy(self.vel,self.resolved_velocity)
         if self.terrain is not None:
             from .terrain import sample_heights
-            wp.launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
+            launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
 
     def frame(self, commands):
         """Queue six 120 Hz samples; one readback per 50 ms rule frame."""
