@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, Future
 from pathlib import Path
 import json, time, threading, hashlib
 from rmuc2027_core.engine import Match, POLICY_INTERVAL, DT, SLOT_IDS, RULES_PROFILE, STATIC_FRAME_KEYS
@@ -180,6 +180,15 @@ class Battle:
     def policy_interval(self, policy):
         return self.learning_policy_interval if getattr(policy, "is_learning_controller", False) else (POLICY_INTERVAL if id(policy) in self.override_ids else self.fixed_policy_interval)
 
+    def fixed_assembly_controls_slot(self,team,slots):
+        if not self.timed_assembly or slots != [1]:
+            return False
+        robot=next(r for r in self._latest_frame['robots'] if r['team']==team and r['slot']==1)
+        completed=self._latest_frame['teams'][team].get('completed_difficulties',[])
+        return (robot.get('role')=='heavy' and robot.get('alive') and not robot.get('weak')
+                and robot.get('launcher') not in ('unlocked','installing','fitted','installed')
+                and any(d not in completed for d in (1,2,3)))
+
     def encoded_observations(self, policies):
         """The same observations as `observation`, fetched together and left encoded."""
         controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
@@ -216,7 +225,13 @@ class Battle:
         futures = []
         if deciding:
             for (team, slots, p), observation in zip(deciding, self.encoded_observations(deciding)):
-                futures.append((team, slots, p, self.pool.submit(p.decide, observation)))
+                if self.fixed_assembly_controls_slot(team,slots):
+                    # The fixed opening below owns the entire command. Avoid
+                    # executing a controller whose result would be discarded.
+                    future=Future();future.set_result(({'1':{}},None))
+                else:
+                    future=self.pool.submit(p.decide, observation)
+                futures.append((team, slots, p, future))
         commands, failures = ({"red": {}, "blue": {}} if policy_tick else self.held_commands), []
         outgoing = []
         for team, slots, p, future in futures:
