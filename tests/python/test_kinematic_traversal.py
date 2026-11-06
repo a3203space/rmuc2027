@@ -30,6 +30,19 @@ def advance(adapter,command,frames=40):
 
 
 class TraversalTests(unittest.TestCase):
+    def test_authoritative_teleport_cancels_old_jump(self):
+        adapter=ArenaMotion();command=launch_request(8.6,0.)
+        first=adapter.step(command)
+        self.assertFalse(first['grounded'][-1][0])
+        command['sequence']=1
+        command['robots'][0].update(pos=[4.,4.,terrain_height(_REFERENCE_ARENA,4.,4.)],
+                                    velocity=[0.,0.,0.],jump=0.)
+        frame=adapter.step(command)
+        np.testing.assert_allclose(np.asarray(frame['positions'])[:,:,0:2],[[[4.,4.]]]*6,atol=1e-6)
+        self.assertTrue(np.asarray(frame['grounded']).all())
+        self.assertEqual(adapter.jump_status.numpy()[0],0)
+        adapter.close()
+
     def test_graph_matches_direct_launches_through_jump(self):
         adapters=[ArenaMotion(reuse_commands=False,packed_readback=False),ArenaMotion(),ArenaMotion(use_graph=True)]
         commands=[launch_request(8.6,0.) for _ in adapters]

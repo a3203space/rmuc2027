@@ -62,6 +62,14 @@ def controls(pos: wp.array(dtype=wp.vec2), ground: wp.array(dtype=float),
 
 
 @wp.kernel
+def reset_traversal(mask: wp.array(dtype=wp.int32),status: wp.array(dtype=wp.int32),
+                    elapsed: wp.array(dtype=float),cooldown: wp.array(dtype=float),fall_speed: wp.array(dtype=float)):
+    i=wp.tid()
+    if mask[i]!=0:
+        status[i]=0;elapsed[i]=0.0;cooldown[i]=0.0;fall_speed[i]=0.0
+
+
+@wp.kernel
 def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
            ground: wp.array(dtype=float), offsets: wp.array(dtype=wp.vec2),
            headings: wp.array(dtype=float), folds: wp.array(dtype=float),
@@ -88,6 +96,7 @@ class ArenaMotion:
         self.use_graph=use_graph;self.graph=None
         self.packed_readback=packed_readback
         self.reuse_commands=reuse_commands;self.launches=[];self.launch_index=0
+        self.expected_positions=None
 
     def initialize(self,request):
         robots=request['robots'];self.ids=tuple(r['id'] for r in robots)
@@ -142,6 +151,13 @@ class ArenaMotion:
         if self.motion is None:self.initialize(request)
         if tuple(r['id'] for r in robots)!=self.ids:raise ValueError('Robot order changed')
         m=self.motion
+        authoritative=np.asarray([r['pos'] for r in robots],dtype=np.float64)
+        if self.expected_positions is not None:
+            changed=np.linalg.norm(authoritative-self.expected_positions,axis=1)>.05
+            if changed.any():
+                mask=wp.array(changed.astype(np.int32),dtype=wp.int32,device=m.device)
+                wp.launch(reset_traversal,m.count,inputs=[mask,self.jump_status,self.jump_elapsed,
+                          self.jump_cooldown,self.fall_speed],device=m.device)
         def assign(target,values):target.assign(np.asarray(values,dtype=np.float32))
         assign(m.pos,[r['pos'][:2] for r in robots]);assign(m.vel,[r['velocity'][:2] for r in robots])
         assign(self.heading,[r['heading'] for r in robots]);assign(self.fold,[r['folded'] for r in robots])
@@ -173,6 +189,7 @@ class ArenaMotion:
             frame=MotionFrame(self.ids,self.positions.numpy(),self.velocities.numpy(),self.angles.numpy(),self.folds.numpy(),
                               self.grounded.numpy().astype(bool))
         reply=frame.response(request['sequence'])
+        self.expected_positions=frame.positions[-1].copy()
         self.next_sequence+=1
         return reply
 
