@@ -1,4 +1,5 @@
 import unittest
+import json
 from rmuc2027_research.rl.session import load_config,resource
 from rmuc2027_research.strategies.battle import Battle
 
@@ -8,6 +9,17 @@ class FixedAssemblyDispatchTests(unittest.TestCase):
         config=load_config('configs/rl/sentry-mjwarp-hour.json')
         with Battle(resource(config['friendly']),resource(config['opponent']),duration=2,
                     sandbox='trusted-local',timeout=5,battle_settings={'timed_assembly':True,'drones_enabled':False}) as battle:
+            for mode in ('legacy','predictive'):
+                battle.navigation_mode=mode
+                for trace in (False,True):
+                    battle.motion_trace=trace
+                    encoded=battle.encoded_observations(battle.policies)
+                    for (team,slots,policy),item in zip(battle.policies,encoded):
+                        expected=battle.observation(team,slots)
+                        expected['policy_dt']=battle.policy_interval(policy)*.05
+                        if trace:expected['motion_trace']=True
+                        self.assertEqual(json.loads(item.payload),json.loads(json.dumps(expected)))
+            battle.navigation_mode='legacy';battle.motion_trace=False
             calls={}
             for team,slots,policy in battle.policies:
                 key=(team,tuple(slots or []));calls[key]=0;original=policy.decide

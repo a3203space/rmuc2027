@@ -194,18 +194,19 @@ class Battle:
         controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
         encoded = []
         for (team, _, policy), ids, line in zip(policies, controlled, lines):
+            additions={}
             if self.policy_interval(policy) != POLICY_INTERVAL or self.navigation_mode != "legacy" or self.motion_trace or self.timed_assembly:
                 value = json.loads(line)
                 if self.motion_trace:
                     value["motion_trace"] = True
                 self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
-                value["navigation_mode"] = self.navigation_mode
-                value["policy_dt"] = self.policy_interval(policy)*DT
-                line = json.dumps(value, allow_nan=False, separators=(",", ":")).encode()
+                additions.update(navigation_mode=self.navigation_mode,policy_dt=self.policy_interval(policy)*DT)
+                if self.motion_trace:additions['motion_trace']=True
             inboxes = {slot: self.communication.inboxes[team][slot] for slot in ids}
             messages = [message for inbox in inboxes.values() for message in inbox]
             # Append both keys last, in the order `observation` adds them.
-            tail = ',"message_inboxes":' + json.dumps(inboxes, allow_nan=False, separators=(",", ":")) + ',"messages":' + json.dumps(messages, allow_nan=False, separators=(",", ":"))
+            additions.update(message_inboxes=inboxes,messages=messages)
+            tail = ',' + json.dumps(additions,allow_nan=False,separators=(",", ":"))[1:-1]
             encoded.append(EncodedObservation(line.rstrip(b"\n")[:-1] + tail.encode() + b"}\n", ids, True))
         return encoded
 
