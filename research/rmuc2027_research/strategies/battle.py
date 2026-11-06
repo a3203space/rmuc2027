@@ -193,13 +193,15 @@ class Battle:
         """The same observations as `observation`, fetched together and left encoded."""
         controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
         encoded = []
-        for (team, _, policy), ids, line in zip(policies, controlled, lines):
+        for (team, slots, policy), ids, line in zip(policies, controlled, lines):
             additions={}
             if self.policy_interval(policy) != POLICY_INTERVAL or self.navigation_mode != "legacy" or self.motion_trace or self.timed_assembly:
-                value = json.loads(line)
-                if self.motion_trace:
-                    value["motion_trace"] = True
-                self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
+                if (self.navigation_mode != 'legacy' or self.motion_trace or
+                        self.timed_assembly and (slots is None or 1 in slots)):
+                    value = json.loads(line)
+                    if self.motion_trace:
+                        value["motion_trace"] = True
+                    self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
                 additions.update(navigation_mode=self.navigation_mode,policy_dt=self.policy_interval(policy)*DT)
                 if self.motion_trace:additions['motion_trace']=True
             inboxes = {slot: self.communication.inboxes[team][slot] for slot in ids}
@@ -252,10 +254,10 @@ class Battle:
                     robot = next(r for r in obs['robots'] if str(r['slot']) == slot and r['team'] == team)
                     state = self.navigation_states.setdefault((team, slot), {})
                     action = predictive_navigation(robot, action, obs, state)
-                if self.timed_assembly:
+                if self.timed_assembly and slot == '1':
                     from rmuc2027_core.sdk import timed_assembly_action
                     obs = self.navigation_observations[id(p)]
-                    robot = next(r for r in obs['robots'] if str(r['slot']) == slot)
+                    robot = next(r for r in obs['robots'] if str(r['slot']) == slot and r['team'] == team)
                     action = timed_assembly_action(robot, action, obs, self.assembly_states.setdefault((team, slot), {}))
                 commands[team][slot] = action
             if error:

@@ -23,11 +23,15 @@ def main():
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--profile', action='store_true', help='Record Python main-thread timing; affects throughput')
+    parser.add_argument('--fixed-policy-hz',type=int,choices=(5,10),help='Override only fixed strategy frequency for comparison')
     args = parser.parse_args()
     if not 0 < args.duration <= 420:
         parser.error('duration must be in (0, 420]')
     config = load_config(args.config)
+    if args.fixed_policy_hz is not None:
+        config['fixed_policy_hz']=args.fixed_policy_hz
     args.output.mkdir(parents=True, exist_ok=False)
+    (args.output/'resolved-config.json').write_text(json.dumps(config,ensure_ascii=False,indent=2))
     sources = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                for p in sorted(Path(__file__).parent.glob('*.py'))}
     sources['core/sdk.py']=hashlib.sha256(Path(sdk.__file__).read_bytes()).hexdigest()
