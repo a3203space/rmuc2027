@@ -1,8 +1,8 @@
 {
-  "recorded_utc": "2026-11-06T12:38:03.927730+00:00",
+  "recorded_utc": "2026-11-06T12:40:37.627856+00:00",
   "matrix": "data/research/kinematic-matrix-20261106",
   "progress": {
-    "completed": 3,
+    "completed": 5,
     "total": 9,
     "results": [
       {
@@ -33,6 +33,28 @@
         "exit_code": 0,
         "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-dual-tunnel-1001",
         "realtime_factor": 5.399467296771422,
+        "sim_seconds": 420.0,
+        "policy_errors": 0,
+        "motion_findings": [],
+        "basic_gates_pass": true
+      },
+      {
+        "config": "configs/rl/sentry-mjwarp-mixed.json",
+        "seed": 7,
+        "exit_code": 0,
+        "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-mixed-7",
+        "realtime_factor": 4.890967789339225,
+        "sim_seconds": 420.0,
+        "policy_errors": 0,
+        "motion_findings": [],
+        "basic_gates_pass": false
+      },
+      {
+        "config": "configs/rl/sentry-mjwarp-mixed.json",
+        "seed": 42,
+        "exit_code": 0,
+        "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-mixed-42",
+        "realtime_factor": 5.003206506506987,
         "sim_seconds": 420.0,
         "policy_errors": 0,
         "motion_findings": [],
@@ -602,6 +624,205 @@
         ]
       },
       "navigation_note": "Region entry only; no entry does not prove a failure without intended policy goal. Half-second sampling may omit transitions."
+    },
+    {
+      "config": "configs/rl/sentry-mjwarp-mixed.json",
+      "seed": 7,
+      "basic_gates_pass": false,
+      "kind": "fixed-policy-benchmark",
+      "backend": "warp_kinematic",
+      "ppo_included": false,
+      "wall_seconds": 85.87257534499986,
+      "sim_seconds": 420.0,
+      "realtime_factor": 4.890967789339225,
+      "source_sha256": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "c63e3793968455fdac36fa64d4a8979ce266c5a1583a0501b66409ac68d037f2",
+        "audit.py": "25503ececd47bb0448a8d9bf3b93e19303ceec835f49f0aeccb7d31e0f21a7ab",
+        "benchmark.py": "8821b10709d99b3e0356c5b79f6731ec11fcc4aeec031f0c8aea97769591b7f7",
+        "matrix.py": "ce240982ff7d2e743fef07169fb715e868dedad0f9f66bfdce6cf001cc0d2f48",
+        "motion.py": "6f0e9411381233757cae57401268a579ce33efb4aac113c93a7d5df6d65a9e6d",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "readback_benchmark.py": "eda67ca256efd4db195713a4b3066c1e6b96a2e57fd9affe429c4401e6391f7d",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "core/sdk.py": "58b842040eb9cb1716cce713d8b42b17cc6baf2040ccd43d5aa689014963366c",
+        "strategies/battle.py": "11666c19327d6ebe3bc875f60efc2321d31c47a9a884b09aaed242fed95b293c",
+        "config": "d686ce50c3ac545e8fe01e43866c6019913e83f02af72e3666c52469883f63bc"
+      },
+      "result": {
+        "winner": "blue",
+        "reason": "timeout",
+        "time": 420.0,
+        "teams": {
+          "blue": {
+            "attack_damage": 3254.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2,
+              3
+            ],
+            "control": 0.0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 11,
+            "launcher_unlock_s": 300.0,
+            "level_cap": 10,
+            "max_base_gap": 0.0,
+            "max_control_gap": 0.0,
+            "next_tech_income": 424.4,
+            "purchased_17": 950,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 2520.0,
+            "score": 3254.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.25,
+            "tech_income": 80.0,
+            "total_resources": 4360.0
+          },
+          "red": {
+            "attack_damage": 2460.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2
+            ],
+            "control": 0.0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 5,
+            "launcher_unlock_s": 300.0,
+            "level_cap": 7,
+            "max_base_gap": 0.0,
+            "max_control_gap": 0.0,
+            "next_tech_income": 421.6,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 1850.0,
+            "score": 2460.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.0,
+            "tech_income": 60.0,
+            "total_resources": 3760.0
+          }
+        },
+        "digest": "6417dc7931adc9b402ef5aad11aa3e9c88f7d4ab50c1ebf7e7ccb12101dcb1ab",
+        "policy_errors": 0
+      },
+      "audit": {
+        "samples": 840,
+        "findings": [],
+        "limitation": "Detects motion telemetry contradictions; does not prove navigation, visibility or combat correctness"
+      }
+    },
+    {
+      "config": "configs/rl/sentry-mjwarp-mixed.json",
+      "seed": 42,
+      "basic_gates_pass": true,
+      "kind": "fixed-policy-benchmark",
+      "backend": "warp_kinematic",
+      "ppo_included": false,
+      "wall_seconds": 83.94616521500029,
+      "sim_seconds": 420.0,
+      "realtime_factor": 5.003206506506987,
+      "source_sha256": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "c63e3793968455fdac36fa64d4a8979ce266c5a1583a0501b66409ac68d037f2",
+        "audit.py": "25503ececd47bb0448a8d9bf3b93e19303ceec835f49f0aeccb7d31e0f21a7ab",
+        "benchmark.py": "8821b10709d99b3e0356c5b79f6731ec11fcc4aeec031f0c8aea97769591b7f7",
+        "matrix.py": "ce240982ff7d2e743fef07169fb715e868dedad0f9f66bfdce6cf001cc0d2f48",
+        "motion.py": "6f0e9411381233757cae57401268a579ce33efb4aac113c93a7d5df6d65a9e6d",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "readback_benchmark.py": "eda67ca256efd4db195713a4b3066c1e6b96a2e57fd9affe429c4401e6391f7d",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "core/sdk.py": "58b842040eb9cb1716cce713d8b42b17cc6baf2040ccd43d5aa689014963366c",
+        "strategies/battle.py": "11666c19327d6ebe3bc875f60efc2321d31c47a9a884b09aaed242fed95b293c",
+        "config": "d686ce50c3ac545e8fe01e43866c6019913e83f02af72e3666c52469883f63bc"
+      },
+      "result": {
+        "winner": "red",
+        "reason": "timeout",
+        "time": 420.0,
+        "teams": {
+          "blue": {
+            "attack_damage": 4975.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2,
+              3
+            ],
+            "control": 0.0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 13,
+            "launcher_unlock_s": 233.76666666666898,
+            "level_cap": 10,
+            "max_base_gap": 0.0,
+            "max_control_gap": 99.3499999999965,
+            "next_tech_income": 420.15,
+            "purchased_17": 1000,
+            "purchased_42": 80,
+            "rebuild_credits": 0,
+            "resources": 990.0,
+            "score": 4975.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.25,
+            "tech_income": 80.0,
+            "total_resources": 4360.0
+          },
+          "red": {
+            "attack_damage": 3000.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2,
+              3
+            ],
+            "control": 99.3499999999965,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 8,
+            "launcher_unlock_s": 300.0,
+            "level_cap": 10,
+            "max_base_gap": 0.0,
+            "max_control_gap": 0.0,
+            "next_tech_income": 426.6,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 1570.0,
+            "score": 3000.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.25,
+            "tech_income": 80.0,
+            "total_resources": 4200.0
+          }
+        },
+        "digest": "faca89d14b1221489455f5a963fc9d41053ceea7d80b93d108e7f6d976e0eb5a",
+        "policy_errors": 0
+      },
+      "audit": {
+        "samples": 840,
+        "findings": [],
+        "limitation": "Detects motion telemetry contradictions; does not prove navigation, visibility or combat correctness"
+      }
     }
   ]
 }
