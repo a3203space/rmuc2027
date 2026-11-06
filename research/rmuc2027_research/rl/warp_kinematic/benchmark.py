@@ -11,6 +11,7 @@ from rmuc2027_core.engine import Match
 from ..session import load_config, resource
 from ...strategies.battle import Battle
 from .arena import ArenaMotion
+from .audit import audit
 
 
 def main():
@@ -74,6 +75,8 @@ def main():
                       realtime_factor=battle.match.time/elapsed, events=dict(counts),
                       source_sha256=sources, metadata=battle.metadata, result=battle.result(), diagnostics=battle.diagnostics)
     (args.output/'summary.json').write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False))
+    trajectory=[json.loads(line) for line in (args.output/'trajectory.jsonl').read_text().splitlines()]
+    (args.output/'motion-audit.json').write_text(json.dumps(audit(trajectory),ensure_ascii=False,indent=2))
     print(json.dumps({key: report[key] for key in ('kind','ppo_included','wall_seconds','sim_seconds','realtime_factor','result')}, ensure_ascii=False), flush=True)
 
 
