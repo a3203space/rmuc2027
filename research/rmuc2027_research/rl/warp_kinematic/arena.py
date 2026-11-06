@@ -6,7 +6,7 @@ import math
 import numpy as np
 import warp as wp
 from .motion import MotionBatch
-from .terrain import Terrain
+from .terrain import Terrain, TerrainData, surface_height
 from .protocol import MotionFrame, DT
 
 
@@ -59,6 +59,19 @@ def controls(pos: wp.array(dtype=wp.vec2), ground: wp.array(dtype=float),
             command=forward*wp.dot(command,forward)
     else:command=wp.vec2(0.0,0.0)
     commands[i]=command
+
+
+@wp.kernel
+def sync_passive(scene: TerrainData,positions: wp.array(dtype=wp.vec2),z: wp.array(dtype=float),
+                 vz: wp.array(dtype=float),base: wp.array(dtype=float),enabled: wp.array(dtype=wp.int32),
+                 worlds: wp.array(dtype=wp.int32),status: wp.array(dtype=wp.int32),
+                 altitude: wp.array(dtype=float),fall_speed: wp.array(dtype=float)):
+    i=wp.tid()
+    if enabled[i]==0 and worlds[i]==0:
+        if z[i]>surface_height(scene,positions[i])+base[i]+.005:
+            if status[i]!=4:fall_speed[i]=wp.min(0.0,vz[i])
+            status[i]=4;altitude[i]=z[i]
+        else:status[i]=0
 
 
 @wp.kernel
@@ -133,6 +146,7 @@ class ArenaMotion:
         self.jump_elapsed=wp.zeros(n,dtype=float,device=m.device);self.jump_duration=wp.zeros(n,dtype=float,device=m.device)
         self.jump_cooldown=wp.zeros(n,dtype=float,device=m.device);self.jump_status=wp.zeros(n,dtype=wp.int32,device=m.device)
         self.fall_speed=wp.zeros(n,dtype=float,device=m.device)
+        self.passive_vz=wp.zeros(n,dtype=float,device=m.device)
         self.grounded=wp.empty((6,n),dtype=wp.int32,device=m.device)
         self.legged=array([int(d.get('chassis_type')=='wheel_legged') for d in self.designs],wp.int32)
         self.heading=wp.zeros(n,dtype=float,device=m.device);self.fold=wp.zeros(n,dtype=float,device=m.device)
@@ -166,6 +180,10 @@ class ArenaMotion:
         assign(self.targets,[[r.get('heading_goal') or 0.,r.get('yaw_rate') or 0.] for r in robots])
         self.flags.assign(np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
         m.enabled.assign(np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
+        if any(not r['enabled'] and r['role']!='aerial' for r in robots):
+            assign(self.passive_vz,[r['velocity'][2] for r in robots])
+            wp.launch(sync_passive,m.count,inputs=[self.terrain.data,m.pos,self.last_z,self.passive_vz,self.base,
+                      m.enabled,m.worlds,self.jump_status,m.flight_z,self.fall_speed],device=m.device)
         assign(m.drive,[[d.get('mass_kg',25),max(.1,d.get('drive_efficiency',.75)),r.get('motor_budget',r['power_limit'])] for r,d in zip(robots,self.designs)])
         masks=[]
         for r in robots:

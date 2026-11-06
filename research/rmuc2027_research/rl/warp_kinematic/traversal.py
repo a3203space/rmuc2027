@@ -28,7 +28,7 @@ def prepare_jump(scene: TerrainData, positions: wp.array(dtype=wp.vec2),
                  fall_speed: wp.array(dtype=float), dt: float):
     i=wp.tid();p=positions[i];flight[i]=0
     cooldown[i]=wp.max(0.0,cooldown[i]-dt)
-    if enabled[i]==0:
+    if enabled[i]==0 and status[i]!=4:
         status[i]=0
     if status[i]!=1 and status[i]!=4 and capable[i]!=0 and enabled[i]!=0 and commands[i]>0.0 and cooldown[i]<=0.0:
         selected=int(-1)

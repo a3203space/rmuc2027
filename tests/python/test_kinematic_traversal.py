@@ -30,6 +30,22 @@ def advance(adapter,command,frames=40):
 
 
 class TraversalTests(unittest.TestCase):
+    def test_dead_airborne_robot_settles_without_horizontal_jump(self):
+        adapter=ArenaMotion();command=launch_request(8.6,0.)
+        frame=adapter.step(command)
+        robot=command['robots'][0]
+        robot.update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],alive=False,enabled=False)
+        initial=np.asarray(robot['pos']).copy();zs=[initial[2]]
+        for tick in range(1,25):
+            command['sequence']=tick;frame=adapter.step(command)
+            zs.extend(np.asarray(frame['positions'])[:,0,2])
+            np.testing.assert_allclose(np.asarray(frame['positions'])[:,0,:2],np.tile(initial[:2],(6,1)),atol=1e-6)
+            robot.update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0])
+        self.assertTrue(np.asarray(frame['grounded']).all())
+        self.assertTrue((np.diff(zs)<=1e-6).all())
+        self.assertAlmostEqual(zs[-1],terrain_height(_REFERENCE_ARENA,*initial[:2]),places=4)
+        adapter.close()
+
     def test_authoritative_teleport_cancels_old_jump(self):
         adapter=ArenaMotion();command=launch_request(8.6,0.)
         first=adapter.step(command)

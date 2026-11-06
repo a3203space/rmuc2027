@@ -13,6 +13,8 @@ pub(crate) struct MotionFrame {
     pub headings: Vec<Vec<f64>>,
     pub folded: Vec<Vec<f64>>,
     pub grounded: Vec<Vec<bool>>,
+    #[serde(skip)]
+    passive_at_start: Vec<bool>,
 }
 
 impl MotionFrame {
@@ -69,8 +71,10 @@ impl PhysicsWorld {
         let mut line=String::new();
         std::io::stdin().lock().read_line(&mut line).expect("kinematic frame read");
         let value=serde_json::from_str(&line).expect("kinematic frame JSON");
-        MotionFrame::parse(value,sequence,&robots.iter().map(|r|r.id.clone()).collect::<Vec<_>>())
-            .expect("invalid kinematic frame")
+        let mut frame=MotionFrame::parse(value,sequence,&robots.iter().map(|r|r.id.clone()).collect::<Vec<_>>())
+            .expect("invalid kinematic frame");
+        frame.passive_at_start=robots.iter().map(|r|!r.alive || now<r.power_cutoff_until || r.battery_remaining_wh<=0.0).collect();
+        frame
     }
 
     pub(crate) fn apply_motion_sample(&mut self, robots: &mut [Robot], actions: &[Action],
@@ -92,6 +96,13 @@ impl PhysicsWorld {
                 }
             } else {
                 r.vx=0.0;r.vy=0.0;r.vz=0.0;
+                // Only a wreck/powerless body present at the frame boundary
+                // may settle. A new death still cancels this frame's prediction.
+                if !r.deployed && r.role!="aerial" && frame.passive_at_start.get(i)==Some(&true) {
+                    r.z=r.z.min(frame.positions[sample][i][2]);
+                    r.vz=frame.velocities[sample][i][2].min(0.);
+                    r.grounded=frame.grounded[sample][i];
+                }
             }
             let heading_rate=((r.heading-previous_heading+std::f64::consts::PI)
                 .rem_euclid(std::f64::consts::TAU)-std::f64::consts::PI)/PHYSICS_DT;
@@ -169,6 +180,21 @@ mod tests {
         world.apply_motion_sample(&mut engine.robots,&actions,&frame,1,PHYSICS_DT,&engine.arena);
         assert_eq!([engine.robots[index].x,engine.robots[index].y,engine.robots[index].z],position);
         assert_eq!(engine.robots[index].vx,0.);
+        // The next frame starts with an existing wreck. Apply only downward
+        // settling, keeping its horizontal position even for a bad prediction.
+        frame.passive_at_start=vec![false;count];frame.passive_at_start[index]=true;
+        frame.positions[0][index]=[position[0]+9.,position[1]+9.,position[2]-0.01];
+        frame.velocities[0][index]=[5.,5.,-1.];
+        frame.grounded[0][index]=false;
+        world.apply_motion_sample(&mut engine.robots,&actions,&frame,0,0.05,&engine.arena);
+        assert_eq!([engine.robots[index].x,engine.robots[index].y],[position[0],position[1]]);
+        assert!((engine.robots[index].z-(position[2]-0.01)).abs()<1e-12);
+        assert_eq!(engine.robots[index].vz,-1.);
+        engine.robots[index].alive=true;
+        engine.robots[index].power_cutoff_until=1.;
+        frame.positions[0][index][2]=position[2]-0.02;
+        world.apply_motion_sample(&mut engine.robots,&actions,&frame,0,0.1,&engine.arena);
+        assert!((engine.robots[index].z-(position[2]-0.02)).abs()<1e-12);
     }
 
     #[test]
