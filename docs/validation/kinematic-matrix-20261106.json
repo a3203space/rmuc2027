@@ -1,8 +1,8 @@
 {
-  "recorded_utc": "2026-11-06T12:35:31.874247+00:00",
+  "recorded_utc": "2026-11-06T12:38:03.927730+00:00",
   "matrix": "data/research/kinematic-matrix-20261106",
   "progress": {
-    "completed": 1,
+    "completed": 3,
     "total": 9,
     "results": [
       {
@@ -11,6 +11,28 @@
         "exit_code": 0,
         "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-dual-tunnel-7",
         "realtime_factor": 5.533266838430339,
+        "sim_seconds": 420.0,
+        "policy_errors": 0,
+        "motion_findings": [],
+        "basic_gates_pass": true
+      },
+      {
+        "config": "configs/rl/sentry-mjwarp-dual-tunnel.json",
+        "seed": 42,
+        "exit_code": 0,
+        "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-dual-tunnel-42",
+        "realtime_factor": 5.528762987216926,
+        "sim_seconds": 420.0,
+        "policy_errors": 0,
+        "motion_findings": [],
+        "basic_gates_pass": true
+      },
+      {
+        "config": "configs/rl/sentry-mjwarp-dual-tunnel.json",
+        "seed": 1001,
+        "exit_code": 0,
+        "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-dual-tunnel-1001",
+        "realtime_factor": 5.399467296771422,
         "sim_seconds": 420.0,
         "policy_errors": 0,
         "motion_findings": [],
@@ -115,8 +137,6 @@
         "limitation": "Detects motion telemetry contradictions; does not prove navigation, visibility or combat correctness"
       },
       "first_central_region_seconds": {
-        "red-6": 0.5,
-        "blue-6": 0.5,
         "red-4": 12.0,
         "blue-4": 12.0,
         "red-1": 13.0,
@@ -126,7 +146,462 @@
         "red-7": 19.5,
         "blue-7": 19.5
       },
-      "navigation_note": "Region entry only; does not prove ability use, trajectory correctness or all post-respawn behavior"
+      "sampled_life_intervals": {
+        "red-1": [
+          {
+            "start": 0.5,
+            "first_central": 13.0,
+            "end": 53.5
+          },
+          {
+            "start": 54.0,
+            "first_central": 54.0,
+            "end": 87.5
+          },
+          {
+            "start": 126.5,
+            "first_central": 126.5,
+            "end": 180.5
+          },
+          {
+            "start": 228.5,
+            "first_central": 228.5
+          }
+        ],
+        "red-3": [
+          {
+            "start": 0.5,
+            "first_central": 16.0
+          }
+        ],
+        "red-4": [
+          {
+            "start": 0.5,
+            "first_central": 12.0,
+            "end": 23.0
+          },
+          {
+            "start": 23.5,
+            "first_central": 23.5,
+            "end": 30.0
+          },
+          {
+            "start": 83.0,
+            "first_central": 83.0
+          }
+        ],
+        "red-7": [
+          {
+            "start": 0.5,
+            "first_central": 19.5
+          }
+        ],
+        "blue-1": [
+          {
+            "start": 0.5,
+            "first_central": 13.0,
+            "end": 213.0
+          },
+          {
+            "start": 264.0,
+            "first_central": 264.0
+          }
+        ],
+        "blue-3": [
+          {
+            "start": 0.5,
+            "first_central": 16.0
+          }
+        ],
+        "blue-4": [
+          {
+            "start": 0.5,
+            "first_central": 12.0
+          }
+        ],
+        "blue-7": [
+          {
+            "start": 0.5,
+            "first_central": 19.5
+          }
+        ]
+      },
+      "navigation_note": "Region entry only; no entry does not prove a failure without intended policy goal. Half-second sampling may omit transitions."
+    },
+    {
+      "config": "configs/rl/sentry-mjwarp-dual-tunnel.json",
+      "seed": 42,
+      "basic_gates_pass": true,
+      "kind": "fixed-policy-benchmark",
+      "backend": "warp_kinematic",
+      "ppo_included": false,
+      "wall_seconds": 75.96636010099974,
+      "sim_seconds": 420.0,
+      "realtime_factor": 5.528762987216926,
+      "source_sha256": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "c63e3793968455fdac36fa64d4a8979ce266c5a1583a0501b66409ac68d037f2",
+        "audit.py": "25503ececd47bb0448a8d9bf3b93e19303ceec835f49f0aeccb7d31e0f21a7ab",
+        "benchmark.py": "8821b10709d99b3e0356c5b79f6731ec11fcc4aeec031f0c8aea97769591b7f7",
+        "matrix.py": "ce240982ff7d2e743fef07169fb715e868dedad0f9f66bfdce6cf001cc0d2f48",
+        "motion.py": "6f0e9411381233757cae57401268a579ce33efb4aac113c93a7d5df6d65a9e6d",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "readback_benchmark.py": "eda67ca256efd4db195713a4b3066c1e6b96a2e57fd9affe429c4401e6391f7d",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "core/sdk.py": "58b842040eb9cb1716cce713d8b42b17cc6baf2040ccd43d5aa689014963366c",
+        "strategies/battle.py": "11666c19327d6ebe3bc875f60efc2321d31c47a9a884b09aaed242fed95b293c",
+        "config": "4026bc42b4a23defe11b7bfa1fe8ba55de11b1ec71acd21e90dc429943725264"
+      },
+      "result": {
+        "winner": "red",
+        "reason": "timeout",
+        "time": 420.0,
+        "teams": {
+          "blue": {
+            "attack_damage": 3140.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [],
+            "control": 0.0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 7,
+            "launcher_unlock_s": 291.6333333333333,
+            "level_cap": 5,
+            "max_base_gap": 0.0,
+            "max_control_gap": 12.550000000000043,
+            "next_tech_income": 0.0,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 150.0,
+            "score": 3140.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.0,
+            "tech_income": 0.0,
+            "total_resources": 1600.0
+          },
+          "red": {
+            "attack_damage": 1620.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2
+            ],
+            "control": 12.550000000000043,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 3,
+            "launcher_unlock_s": 300.0,
+            "level_cap": 7,
+            "max_base_gap": 0.0,
+            "max_control_gap": 0.0,
+            "next_tech_income": 426.6,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 2090.0,
+            "score": 1620.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.0,
+            "tech_income": 60.0,
+            "total_resources": 3860.0
+          }
+        },
+        "digest": "8144fc6d37223d094720a9581d7a75a255394164202370bdae6a2a5241393e5d",
+        "policy_errors": 0
+      },
+      "audit": {
+        "samples": 840,
+        "findings": [],
+        "limitation": "Detects motion telemetry contradictions; does not prove navigation, visibility or combat correctness"
+      },
+      "first_central_region_seconds": {
+        "red-4": 12.0,
+        "blue-4": 12.0,
+        "red-1": 13.0,
+        "blue-1": 13.0,
+        "red-3": 16.0,
+        "blue-3": 16.0,
+        "red-7": 19.5,
+        "blue-7": 19.5
+      },
+      "sampled_life_intervals": {
+        "red-1": [
+          {
+            "start": 0.5,
+            "first_central": 13.0,
+            "end": 80.5
+          },
+          {
+            "start": 118.5,
+            "first_central": 118.5,
+            "end": 172.5
+          },
+          {
+            "start": 219.5,
+            "first_central": 219.5,
+            "end": 368.0
+          }
+        ],
+        "red-3": [
+          {
+            "start": 0.5,
+            "first_central": 16.0
+          }
+        ],
+        "red-4": [
+          {
+            "start": 0.5,
+            "first_central": 12.0,
+            "end": 30.5
+          },
+          {
+            "start": 83.5,
+            "first_central": 83.5
+          }
+        ],
+        "red-7": [
+          {
+            "start": 0.5,
+            "first_central": 19.5
+          }
+        ],
+        "blue-1": [
+          {
+            "start": 0.5,
+            "first_central": 13.0,
+            "end": 188.5
+          },
+          {
+            "start": 237.5,
+            "first_central": 237.5
+          }
+        ],
+        "blue-3": [
+          {
+            "start": 0.5,
+            "first_central": 16.0
+          }
+        ],
+        "blue-4": [
+          {
+            "start": 0.5,
+            "first_central": 12.0
+          }
+        ],
+        "blue-7": [
+          {
+            "start": 0.5,
+            "first_central": 19.5,
+            "end": 183.0
+          },
+          {
+            "start": 211.0,
+            "first_central": 211.0
+          }
+        ]
+      },
+      "navigation_note": "Region entry only; no entry does not prove a failure without intended policy goal. Half-second sampling may omit transitions."
+    },
+    {
+      "config": "configs/rl/sentry-mjwarp-dual-tunnel.json",
+      "seed": 1001,
+      "basic_gates_pass": true,
+      "kind": "fixed-policy-benchmark",
+      "backend": "warp_kinematic",
+      "ppo_included": false,
+      "wall_seconds": 77.78545121499974,
+      "sim_seconds": 420.0,
+      "realtime_factor": 5.399467296771422,
+      "source_sha256": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "c63e3793968455fdac36fa64d4a8979ce266c5a1583a0501b66409ac68d037f2",
+        "audit.py": "25503ececd47bb0448a8d9bf3b93e19303ceec835f49f0aeccb7d31e0f21a7ab",
+        "benchmark.py": "8821b10709d99b3e0356c5b79f6731ec11fcc4aeec031f0c8aea97769591b7f7",
+        "matrix.py": "ce240982ff7d2e743fef07169fb715e868dedad0f9f66bfdce6cf001cc0d2f48",
+        "motion.py": "6f0e9411381233757cae57401268a579ce33efb4aac113c93a7d5df6d65a9e6d",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "readback_benchmark.py": "eda67ca256efd4db195713a4b3066c1e6b96a2e57fd9affe429c4401e6391f7d",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "core/sdk.py": "58b842040eb9cb1716cce713d8b42b17cc6baf2040ccd43d5aa689014963366c",
+        "strategies/battle.py": "11666c19327d6ebe3bc875f60efc2321d31c47a9a884b09aaed242fed95b293c",
+        "config": "4026bc42b4a23defe11b7bfa1fe8ba55de11b1ec71acd21e90dc429943725264"
+      },
+      "result": {
+        "winner": "red",
+        "reason": "timeout",
+        "time": 420.0,
+        "teams": {
+          "blue": {
+            "attack_damage": 3741.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [],
+            "control": 0.0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 7,
+            "launcher_unlock_s": 268.63333333333367,
+            "level_cap": 5,
+            "max_base_gap": 0.0,
+            "max_control_gap": 47.049999999999464,
+            "next_tech_income": 0.0,
+            "purchased_17": 900,
+            "purchased_42": 20,
+            "rebuild_credits": 0,
+            "resources": 100.0,
+            "score": 3741.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.0,
+            "tech_income": 0.0,
+            "total_resources": 1600.0
+          },
+          "red": {
+            "attack_damage": 1840.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2,
+              3
+            ],
+            "control": 47.049999999999464,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 3,
+            "launcher_unlock_s": 300.0,
+            "level_cap": 10,
+            "max_base_gap": 0.0,
+            "max_control_gap": 0.0,
+            "next_tech_income": 426.6,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 2370.0,
+            "score": 1840.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.25,
+            "tech_income": 80.0,
+            "total_resources": 4140.0
+          }
+        },
+        "digest": "1d848de03035ffe5c711377d92e6b4197143103dede03def93b1667ba665816f",
+        "policy_errors": 0
+      },
+      "audit": {
+        "samples": 840,
+        "findings": [],
+        "limitation": "Detects motion telemetry contradictions; does not prove navigation, visibility or combat correctness"
+      },
+      "first_central_region_seconds": {
+        "red-4": 12.0,
+        "blue-4": 12.0,
+        "red-1": 13.0,
+        "blue-1": 13.0,
+        "red-3": 16.0,
+        "blue-3": 16.0,
+        "red-7": 19.5,
+        "blue-7": 19.5
+      },
+      "sampled_life_intervals": {
+        "red-1": [
+          {
+            "start": 0.5,
+            "first_central": 13.0,
+            "end": 78.5
+          },
+          {
+            "start": 116.5,
+            "first_central": 116.5,
+            "end": 191.0
+          },
+          {
+            "start": 240.0,
+            "first_central": 240.0,
+            "end": 386.5
+          }
+        ],
+        "red-3": [
+          {
+            "start": 0.5,
+            "first_central": 16.0
+          }
+        ],
+        "red-4": [
+          {
+            "start": 0.5,
+            "first_central": 12.0,
+            "end": 18.0
+          },
+          {
+            "start": 18.5,
+            "first_central": 18.5,
+            "end": 23.5
+          },
+          {
+            "start": 24.0,
+            "first_central": 24.0,
+            "end": 30.0
+          },
+          {
+            "start": 83.0,
+            "first_central": 83.0
+          }
+        ],
+        "red-7": [
+          {
+            "start": 0.5,
+            "first_central": 19.5
+          }
+        ],
+        "blue-1": [
+          {
+            "start": 0.5,
+            "first_central": 13.0,
+            "end": 70.0
+          },
+          {
+            "start": 107.0,
+            "first_central": 107.0,
+            "end": 149.0
+          },
+          {
+            "start": 194.0,
+            "first_central": 194.0
+          }
+        ],
+        "blue-3": [
+          {
+            "start": 0.5,
+            "first_central": 16.0
+          }
+        ],
+        "blue-4": [
+          {
+            "start": 0.5,
+            "first_central": 12.0
+          }
+        ],
+        "blue-7": [
+          {
+            "start": 0.5,
+            "first_central": 19.5
+          }
+        ]
+      },
+      "navigation_note": "Region entry only; no entry does not prove a failure without intended policy goal. Half-second sampling may omit transitions."
     }
   ]
 }
