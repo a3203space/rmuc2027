@@ -6,6 +6,7 @@ only your own controlled_ids slot is accepted. State is private and JSON seriali
 """
 import math
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
@@ -534,6 +535,7 @@ def _prepare_chapter4(arena,team,folded=True,clearance=.36):
     for t in arena['terrain']:
         for x in range(math.floor(t['x']),math.ceil(t['x']+t['w'])+1):
             for y in range(math.floor(t['y']),math.ceil(t['y']+t['h'])+1):tiles.setdefault((x,y),[]).append(t)
+    @lru_cache(maxsize=32768)
     def height(x,y):
         h=0
         for t in tiles.get((math.floor(x),math.floor(y)),[]):
