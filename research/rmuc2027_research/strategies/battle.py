@@ -77,6 +77,15 @@ class Battle:
             from ..rl.warp_kinematic.arena import ArenaMotion
             adapter = ArenaMotion(sim_device)
         self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False
+        if self.timed_assembly:
+            # Fixed opening navigation executes in this process. Build its
+            # static clearance graph before timed policy decisions begin.
+            from rmuc2027_core.sdk import _prepare_chapter4
+            for team in ('red','blue'):
+                observation=self.match.observation(team,[1])
+                if observation['arena'].get('layout_revision')=='chapter4-2027-v1':
+                    heavy=next(r for r in observation['robots'] if r['slot']==1 and r['team']==team)
+                    _prepare_chapter4(observation['arena'],team,False,heavy.get('radius',.28)+.04)
         self.deck_mode = decks is not None
         self.deadline, self.stop_event = deadline, stop_event
         self.pool = ThreadPoolExecutor(max_workers=24 if self.deck_mode else 12)
