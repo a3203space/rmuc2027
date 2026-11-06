@@ -14,6 +14,12 @@ class FixedAssemblyDispatchTests(unittest.TestCase):
                 for trace in (False,True):
                     battle.motion_trace=trace
                     encoded=battle.encoded_observations(battle.policies)
+                    if mode=='legacy' and not trace:
+                        for team,slots,policy in battle.policies:
+                            if slots is not None and 1 not in slots:
+                                self.assertNotIn(id(policy),battle.navigation_observations)
+                            else:
+                                self.assertIn(id(policy),battle.navigation_observations)
                     for (team,slots,policy),item in zip(battle.policies,encoded):
                         expected=battle.observation(team,slots)
                         expected['policy_dt']=battle.policy_interval(policy)*.05
