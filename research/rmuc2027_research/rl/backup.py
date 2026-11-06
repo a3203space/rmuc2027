@@ -1,9 +1,11 @@
-"""Immutable recovery bundles and asynchronous GitHub Release uploads."""
+"""Immutable recovery bundles with asynchronous GitHub/SSH uploads."""
 import hashlib
 import json
 import queue
+import re
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 import uuid
@@ -28,15 +30,50 @@ def bundle(run, checkpoint, progress):
     return target
 
 
+def _upload_git_archive(archive, remote, tag):
+    if not re.fullmatch(r'[A-Za-z0-9_-]+',tag):
+        raise ValueError('Invalid checkpoint backup tag')
+    archive=Path(archive)
+    if archive.stat().st_size>95*1024*1024:
+        raise ValueError('Checkpoint bundle exceeds the SSH Git transport size limit')
+    ref='refs/heads/backup/rl-checkpoints/'+tag
+    with tempfile.TemporaryDirectory(prefix='rmuc-checkpoint-git-') as directory:
+        subprocess.run(['git','init','--bare','--quiet',directory],capture_output=True,check=True,timeout=60)
+        def git(*args,payload=None):
+            return subprocess.run(['git','--git-dir',directory,*args],input=payload,
+                                  capture_output=True,check=True,timeout=60).stdout.strip()
+        old=git('ls-remote',remote,ref).split()
+        parent=[]
+        if old:
+            git('fetch','--quiet','--depth=1',remote,ref)
+            parent=['-p',old[0].decode()]
+        data=archive.read_bytes();digest=hashlib.sha256(data).hexdigest()
+        blob=git('hash-object','-w','--stdin',payload=data).decode()
+        metadata=json.dumps({'archive':archive.name,'sha256':digest,'transport':'ssh-git'}).encode()
+        meta=git('hash-object','-w','--stdin',payload=metadata).decode()
+        tree=git('mktree',payload=f'100644 blob {meta}\tlatest.json\n100644 blob {blob}\tlatest.zip\n'.encode()).decode()
+        commit=git('-c','user.name=RMUC RL Backup','-c','user.email=rmuc2027-backup@users.noreply.github.com',
+                   'commit-tree',tree,*parent,'-m','RL recovery checkpoint '+digest[:12]).decode()
+        # A concurrent update is rejected rather than overwriting remote work.
+        git('push','--quiet',remote,commit+':'+ref)
+        verified=git('ls-remote',remote,ref).split()
+        if not verified or verified[0].decode()!=commit:
+            raise RuntimeError('Checkpoint ref could not be verified after push')
+    return {'transport':'ssh-git','ref':ref,'commit':commit,'sha256':digest}
+
+
 def upload(archive, repository, tag):
     if not shutil.which('gh'):
-        raise RuntimeError('GitHub CLI missing; install gh and run gh auth login locally')
+        if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):
+            raise ValueError('Invalid backup repository')
+        return _upload_git_archive(archive,'git@github.com:'+repository+'.git',tag)
     def gh(*args, check=True):
         return subprocess.run(['gh',*args,'--repo',repository],capture_output=True,text=True,timeout=60,check=check)
     if gh('release','view',tag,check=False).returncode:
         gh('release','create',tag,'--target','backup/mjwarp-progress','--prerelease',
            '--title',tag,'--notes','RL recovery checkpoints; development run, not a validated release.')
     gh('release','upload',tag,str(archive),'--clobber')
+    return {'transport':'github-release'}
 
 
 class ReleaseBackup:
@@ -59,8 +96,9 @@ class ReleaseBackup:
         self.jobs.put(archive)
         return archive
 
-    def status(self, archive, state, detail=''):
+    def status(self, archive, state, detail='', receipt=None):
         value={'archive':str(archive),'repository':self.repository,'tag':self.tag,'status':state,'detail':detail}
+        if isinstance(receipt,dict):value.update(receipt)
         path=archive.with_suffix('.status.json')
         path.with_suffix('.tmp').write_text(json.dumps(value,indent=2))
         path.with_suffix('.tmp').replace(path)
@@ -75,8 +113,8 @@ class ReleaseBackup:
             self.status(archive,'pending')
             while True:
                 try:
-                    upload(archive,self.repository,self.tag)
-                    self.status(archive,'uploaded')
+                    receipt=upload(archive,self.repository,self.tag)
+                    self.status(archive,'uploaded',receipt=receipt)
                     break
                 except Exception as error:
                     # Never print subprocess output, which may contain credentials.

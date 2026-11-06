@@ -2,12 +2,28 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 import zipfile
-from rmuc2027_research.rl.backup import bundle, ReleaseBackup
+from rmuc2027_research.rl.backup import bundle, ReleaseBackup, _upload_git_archive
 
 class BackupTests(unittest.TestCase):
+    def test_git_backup_restores_latest_and_preserves_previous_generation(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d);remote=p/'remote.git'
+            subprocess.run(['git','init','--bare','--quiet',str(remote)],check=True)
+            archive=p/'bundle.zip';archive.write_bytes(b'first generation')
+            first=_upload_git_archive(archive,str(remote),'test-run')
+            archive.write_bytes(b'second generation')
+            second=_upload_git_archive(archive,str(remote),'test-run')
+            def read(revision,path):
+                return subprocess.check_output(['git','--git-dir',str(remote),'show',revision+':'+path])
+            self.assertEqual(read(second['ref'],'latest.zip'),b'second generation')
+            self.assertEqual(read(first['commit'],'latest.zip'),b'first generation')
+            self.assertEqual(json.loads(read(second['ref'],'latest.json'))['sha256'],
+                             hashlib.sha256(b'second generation').hexdigest())
+
     def test_archive_failure_does_not_abort_training(self):
         with tempfile.TemporaryDirectory() as d, patch(
                 'rmuc2027_research.rl.backup.bundle', side_effect=OSError('disk full')):
