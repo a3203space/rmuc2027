@@ -251,3 +251,4 @@
 - 使用 `rl check --config configs/rl/sentry-mjwarp-hour.json --sim-backend warp_kinematic --engine-only --steps 2 --reset-cycles 2` 实测通过：同种子/动作重置可复现、无残留进程、强制杀引擎后清理成功。来源验证单测通过。
 - 新增 `warp_kinematic.matrix --output <新目录>`，串行运行双过洞、混合、全向三阵容 × 种子 7/42/1001，固定策略 10 Hz，逐项记录完整对局速度、错误及坐标审计。进度原子写入 `progress.json`；这些基础门槛不替代导航/迁移/PPO 验收。
 - 当前矩阵已启动：`data/research/kinematic-matrix-20261106`，进行固定策略验证，不训练权重。复杂接触、机构/能耗校准、GPU 多世界批处理、PPO 总吞吐及真实物理迁移仍未完成。
+- 首项双过洞阵容种子 7 完成：5.53327 倍实时，420 秒，策略报错 0、840 个采样无速度矛盾。结果及源码哈希、结算、中央区域首次进入时间备份到 `docs/validation/kinematic-matrix-20261106.json`，不包含大体积坐标日志或权重。其余 8 项仍在串行验证中。

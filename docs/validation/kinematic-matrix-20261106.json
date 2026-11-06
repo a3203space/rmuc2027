@@ -1,0 +1,132 @@
+{
+  "recorded_utc": "2026-11-06T12:35:31.874247+00:00",
+  "matrix": "data/research/kinematic-matrix-20261106",
+  "progress": {
+    "completed": 1,
+    "total": 9,
+    "results": [
+      {
+        "config": "configs/rl/sentry-mjwarp-dual-tunnel.json",
+        "seed": 7,
+        "exit_code": 0,
+        "output": "data/research/kinematic-matrix-20261106/sentry-mjwarp-dual-tunnel-7",
+        "realtime_factor": 5.533266838430339,
+        "sim_seconds": 420.0,
+        "policy_errors": 0,
+        "motion_findings": [],
+        "basic_gates_pass": true
+      }
+    ],
+    "limitation": "Fixed-policy speed and telemetry only; does not prove transfer, all navigation or PPO throughput"
+  },
+  "cases": [
+    {
+      "config": "configs/rl/sentry-mjwarp-dual-tunnel.json",
+      "seed": 7,
+      "basic_gates_pass": true,
+      "kind": "fixed-policy-benchmark",
+      "backend": "warp_kinematic",
+      "ppo_included": false,
+      "wall_seconds": 75.90452661400013,
+      "sim_seconds": 420.0,
+      "realtime_factor": 5.533266838430339,
+      "source_sha256": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "c63e3793968455fdac36fa64d4a8979ce266c5a1583a0501b66409ac68d037f2",
+        "audit.py": "25503ececd47bb0448a8d9bf3b93e19303ceec835f49f0aeccb7d31e0f21a7ab",
+        "benchmark.py": "8821b10709d99b3e0356c5b79f6731ec11fcc4aeec031f0c8aea97769591b7f7",
+        "matrix.py": "ce240982ff7d2e743fef07169fb715e868dedad0f9f66bfdce6cf001cc0d2f48",
+        "motion.py": "6f0e9411381233757cae57401268a579ce33efb4aac113c93a7d5df6d65a9e6d",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "readback_benchmark.py": "eda67ca256efd4db195713a4b3066c1e6b96a2e57fd9affe429c4401e6391f7d",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "core/sdk.py": "58b842040eb9cb1716cce713d8b42b17cc6baf2040ccd43d5aa689014963366c",
+        "strategies/battle.py": "b07ed1ffa5d7053700fd83490fa1b66e1c6b083ea00bf39d9e2aaba8cf83ed82",
+        "config": "4026bc42b4a23defe11b7bfa1fe8ba55de11b1ec71acd21e90dc429943725264"
+      },
+      "result": {
+        "winner": "red",
+        "reason": "timeout",
+        "time": 420.0,
+        "teams": {
+          "blue": {
+            "attack_damage": 3040.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [],
+            "control": 0.0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 6,
+            "launcher_unlock_s": 292.43333333333334,
+            "level_cap": 5,
+            "max_base_gap": 0.0,
+            "max_control_gap": 11.350000000000026,
+            "next_tech_income": 0.0,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 150.0,
+            "score": 3040.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.0,
+            "tech_income": 0.0,
+            "total_resources": 1600.0
+          },
+          "red": {
+            "attack_damage": 1375.0,
+            "base_loss_total": 0.0,
+            "base_lowest_hp": 10000.0,
+            "captured_seconds": 0.0,
+            "completed_difficulties": [
+              1,
+              2
+            ],
+            "control": 11.350000000000026,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 2,
+            "launcher_unlock_s": 300.0,
+            "level_cap": 7,
+            "max_base_gap": 0.0,
+            "max_control_gap": 0.0,
+            "next_tech_income": 421.6,
+            "purchased_17": 1000,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 1990.0,
+            "score": 1375.0,
+            "small_bonus_xp": 0.0,
+            "tech_defense": 0.0,
+            "tech_income": 60.0,
+            "total_resources": 3760.0
+          }
+        },
+        "digest": "a3945a819773962474ab5680afc78963e72e350fa7f52da0f121d62a967331cc",
+        "policy_errors": 0
+      },
+      "audit": {
+        "samples": 840,
+        "findings": [],
+        "limitation": "Detects motion telemetry contradictions; does not prove navigation, visibility or combat correctness"
+      },
+      "first_central_region_seconds": {
+        "red-6": 0.5,
+        "blue-6": 0.5,
+        "red-4": 12.0,
+        "blue-4": 12.0,
+        "red-1": 13.0,
+        "blue-1": 13.0,
+        "red-3": 16.0,
+        "blue-3": 16.0,
+        "red-7": 19.5,
+        "blue-7": 19.5
+      },
+      "navigation_note": "Region entry only; does not prove ability use, trajectory correctness or all post-respawn behavior"
+    }
+  ]
+}
