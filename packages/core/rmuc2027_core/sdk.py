@@ -513,13 +513,13 @@ def terrain_height(arena,x,y):
 _NAV_GRAPHS={}
 
 
-def _prepare_chapter4(arena,team,folded=True):
+def _prepare_chapter4(arena,team,folded=True,clearance=.36):
     # Roofs are overhead and do not block the route, except that in 2027 only a folded robot
     # fits under the 250-260 mm tunnel roofs; others route around the tunnels.
     under=folded or arena.get('season')!='2027'
-    key=(arena['layout_revision'],team,under)
+    margin=max(.36,round(clearance,3))
+    key=(arena['layout_revision'],team,under,margin)
     if key in _NAV_GRAPHS:return _NAV_GRAPHS[key]
-    margin=.36
     walls=[w for w in arena['obstacles'] if 'roof' not in w.get('id','') or (not under and '_tunnel_roof' in w['id'])]
     # The highway no-go area behind a fly slope is entered only by flying the ramp (R58).
     walls += [w for w in arena['forbidden'] if w['kind'] in ('base','pad','highway','dart_station') or w.get('owner') not in (None,team)]
@@ -606,7 +606,8 @@ def _physical_toward(robot,point):
 
 
 def _chapter4_navigate(robot,point,arena):
-    graph=_prepare_chapter4(arena,robot['team'],robot.get('transform_progress',0.0)>=.99);nodes,_,clear,inside=graph
+    graph=_prepare_chapter4(arena,robot['team'],robot.get('transform_progress',0.0)>=.99,
+                            robot.get('radius',.28)+.04);nodes,_,clear,inside=graph
     start=(robot['x'],robot['y']);goal=tuple(point)
     # A goal inside the safety margin may relax that margin, never remove the
     # physical obstacle: the final segment must approach its reachable side.
@@ -1001,7 +1002,7 @@ def _stationary_teammate_detour(robot, point, fields, observation, state):
         state.pop('teammate_wait_since',None)
         return fields
     start=(robot['x'],robot['y']);radius=robot.get('radius',.28)
-    _,_,clear,inside=_prepare_chapter4(observation['arena'],robot['team'],robot.get('transform_progress',0)>=.99)
+    _,_,clear,inside=_prepare_chapter4(observation['arena'],robot['team'],robot.get('transform_progress',0)>=.99,radius+.04)
     near=inside(start,True)
     def safe(target):
         if not clear(start,target,near):return False
