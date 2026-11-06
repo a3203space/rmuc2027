@@ -89,7 +89,7 @@ class Match:
                     if self.external_physics is None:
                         raise RuntimeError('Unexpected external physics request')
                     result = self.external_physics.step(value)
-                    self.process.stdin.write(json.dumps(result, allow_nan=False).encode()+b'\n')
+                    self.process.stdin.write(json.dumps(result, allow_nan=False,separators=(",", ":")).encode()+b'\n')
                     self.process.stdin.flush()
                     line = self._read_line()
                     value = json.loads(line)
