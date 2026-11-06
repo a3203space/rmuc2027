@@ -51,7 +51,7 @@ class TimedPPO(PPO):
 
 
 class TraceCallback(BaseCallback):
-    def __init__(self, path, deadline=None, detailed=True):
+    def __init__(self, path, deadline=None, detailed=True, backup_seconds=300.):
         super().__init__()
         self.detailed = detailed
         self.path = Path(path)
@@ -61,6 +61,7 @@ class TraceCallback(BaseCallback):
         self.last_checkpoint = time.perf_counter()
         self.last_backup = self.last_checkpoint
         self.backup = None
+        self.backup_seconds = backup_seconds
         self.timed_out = False
         self.last_progress = time.perf_counter()
         self.progress_started = self.last_progress
@@ -101,7 +102,7 @@ class TraceCallback(BaseCallback):
             save_checkpoint(self.model, self.path.parent/'latest.zip')
             self.stream.flush()
             self.last_checkpoint = now
-            if self.backup is not None and now-self.last_backup >= 1800:
+            if self.backup is not None and now-self.last_backup >= self.backup_seconds:
                 self.backup.submit(self.path.parent/'latest.zip', {'total_steps':self.num_timesteps,
                     'gradient_epochs':self.model._n_updates,'elapsed_seconds':now-self.progress_started})
                 self.last_backup = now
@@ -152,7 +153,8 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
     if wall_seconds is not None:
         runtime_config['_training_deadline'] = time.monotonic()+wall_seconds
     vec = vector_env(runtime_config, num_envs)
-    callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None, detailed=config.get('action_trace', False))
+    callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None,
+                             detailed=config.get('action_trace', False),backup_seconds=config.get('github_backup_seconds',300.))
     model = None
     if config.get('github_backup_repo'):
         from .backup import ReleaseBackup

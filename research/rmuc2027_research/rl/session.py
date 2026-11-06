@@ -46,6 +46,10 @@ def load_config(source=None):
         raise ValueError('learning_control_hz must be 2, 5 or 10')
     config.setdefault('training_summary', True)
     config.setdefault('action_trace', False)
+    config.setdefault('github_backup_seconds',300.)
+    interval=config['github_backup_seconds']
+    if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not math.isfinite(interval) or interval<=0:
+        raise ValueError('github_backup_seconds must be finite and positive')
     if config['fixed_policy_hz'] not in (5, 10):
         raise ValueError('fixed_policy_hz must be 5 or 10')
     timeout = config['policy_timeout_s']
