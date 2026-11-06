@@ -197,7 +197,8 @@ class Battle:
             additions={}
             if self.policy_interval(policy) != POLICY_INTERVAL or self.navigation_mode != "legacy" or self.motion_trace or self.timed_assembly:
                 if (self.navigation_mode != 'legacy' or self.motion_trace or
-                        self.timed_assembly and (slots is None or 1 in slots)):
+                        self.timed_assembly and (slots is None or 1 in slots)
+                        and self.fixed_assembly_controls_slot(team,[1])):
                     value = json.loads(line)
                     if self.motion_trace:
                         value["motion_trace"] = True
@@ -254,7 +255,7 @@ class Battle:
                     robot = next(r for r in obs['robots'] if str(r['slot']) == slot and r['team'] == team)
                     state = self.navigation_states.setdefault((team, slot), {})
                     action = predictive_navigation(robot, action, obs, state)
-                if self.timed_assembly and slot == '1':
+                if self.timed_assembly and slot == '1' and self.fixed_assembly_controls_slot(team,[1]):
                     from rmuc2027_core.sdk import timed_assembly_action
                     obs = self.navigation_observations[id(p)]
                     robot = next(r for r in obs['robots'] if str(r['slot']) == slot and r['team'] == team)

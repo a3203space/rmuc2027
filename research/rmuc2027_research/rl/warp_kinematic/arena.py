@@ -180,7 +180,7 @@ class ArenaMotion:
         assign(self.targets,[[r.get('heading_goal') or 0.,r.get('yaw_rate') or 0.] for r in robots])
         self.flags.assign(np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
         m.enabled.assign(np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
-        if any(not r['enabled'] and r['role']!='aerial' for r in robots):
+        if any(not r['enabled'] and not r.get('grounded',True) and r['role']!='aerial' for r in robots):
             assign(self.passive_vz,[r['velocity'][2] for r in robots])
             wp.launch(sync_passive,m.count,inputs=[self.terrain.data,m.pos,self.last_z,self.passive_vz,self.base,
                       m.enabled,m.worlds,self.jump_status,m.flight_z,self.fall_speed],device=m.device)
