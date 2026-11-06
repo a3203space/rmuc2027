@@ -14,6 +14,11 @@ except ImportError:
     _response_json = json
 RESPONSE_JSON_DECODER = _response_json.__name__
 
+
+def decode_response_json(payload):
+    """Decode trusted engine JSON with the available, tested response decoder."""
+    return _response_json.loads(payload)
+
 from .paths import ROOT
 DT = 0.05
 POLICY_INTERVAL = 2

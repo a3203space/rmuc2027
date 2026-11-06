@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, Future
 from pathlib import Path
 import json, time, threading, hashlib
-from rmuc2027_core.engine import Match, POLICY_INTERVAL, DT, SLOT_IDS, RULES_PROFILE, STATIC_FRAME_KEYS
+from rmuc2027_core.engine import Match, POLICY_INTERVAL, DT, SLOT_IDS, RULES_PROFILE, STATIC_FRAME_KEYS, decode_response_json
 from rmuc2027_core.policy import FrameLog, Policy, EncodedObservation, POLICY_TIMEOUT_LIMIT
 from rmuc2027_core.referee import validate_referee
 from rmuc2027_core.submissions import load_submission
@@ -198,7 +198,7 @@ class Battle:
                 if (self.navigation_mode != 'legacy' or self.motion_trace or
                         self.timed_assembly and (slots is None or 1 in slots)
                         and self.fixed_assembly_controls_slot(team,[1])):
-                    value = json.loads(line)
+                    value = decode_response_json(line)
                     if self.motion_trace:
                         value["motion_trace"] = True
                     self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)

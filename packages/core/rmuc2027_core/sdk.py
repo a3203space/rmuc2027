@@ -530,6 +530,11 @@ def _prepare_chapter4(arena,team,folded=True,clearance=.36):
     # RMUC 2027 outposts stand on the central deck beside its kerb: route around their pedestals.
     if arena.get('season')=='2027':
         for x,y in arena['outposts'].values():boxes.append((x,y,.34+margin,.34+margin,1.0,0.0))
+    bounded_boxes=[]
+    for box in boxes:
+        cx,cy,hw,hh,c,s=box
+        ex,ey=abs(c)*hw+abs(s)*hh,abs(s)*hw+abs(c)*hh
+        bounded_boxes.append((*box,cx-ex-1e-9,cx+ex+1e-9,cy-ey-1e-9,cy+ey+1e-9))
     # A small spatial index keeps height checks bounded during decision calls.
     tiles={}
     for t in arena['terrain']:
@@ -558,15 +563,14 @@ def _prepare_chapter4(arena,team,folded=True,clearance=.36):
         dx,dy=b[0]-a[0],b[1]-a[1]
         xmin,xmax=min(a[0],b[0]),max(a[0],b[0])
         ymin,ymax=min(a[1],b[1]),max(a[1],b[1])
-        for k,(cx,cy,hw,hh,c,s) in enumerate(boxes):
+        for k,(cx,cy,hw,hh,c,s,bx0,bx1,by0,by1) in enumerate(bounded_boxes):
             if k in ignore:
                 kept=ignore[k] if isinstance(ignore,dict) else None
                 if kept is None:continue
                 hw,hh=hw-margin+kept,hh-margin+kept
-            # Conservative world-space bounds skip distant rotated obstacles.
-            # The exact slab and terrain checks below still decide visibility.
-            ex,ey=abs(c)*hw+abs(s)*hh,abs(s)*hw+abs(c)*hh
-            if xmax<cx-ex-1e-9 or xmin>cx+ex+1e-9 or ymax<cy-ey-1e-9 or ymin>cy+ey+1e-9:
+                ex,ey=abs(c)*hw+abs(s)*hh,abs(s)*hw+abs(c)*hh
+                bx0,bx1,by0,by1=cx-ex-1e-9,cx+ex+1e-9,cy-ey-1e-9,cy+ey+1e-9
+            if xmax<bx0 or xmin>bx1 or ymax<by0 or ymin>by1:
                 continue
             ax,ay=(a[0]-cx)*c+(a[1]-cy)*s,-(a[0]-cx)*s+(a[1]-cy)*c
             vx,vy=dx*c+dy*s,-dx*s+dy*c;lo,hi=0,1
