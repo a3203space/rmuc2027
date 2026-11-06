@@ -1,1 +1,1 @@
-"""GPU rule-based locomotion primitives (not yet a selectable match backend)."""
+"""Experimental GPU rule-based locomotion; acceptance checks remain incomplete."""

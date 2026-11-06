@@ -174,7 +174,7 @@ def main():
     for command in ('check', 'random', 'train', 'benchmark'):
         p = sub.add_parser(command)
         p.add_argument('--config', type=Path, default=DEFAULT_CONFIG)
-        p.add_argument('--sim-backend', choices=('rapier', 'mjwarp'), default=None)
+        p.add_argument('--sim-backend', choices=('rapier', 'mjwarp', 'warp_kinematic'), default=None)
         p.add_argument('--sim-device', default=None)
         p.add_argument('--run-dir', type=Path, default=Path('data/research')/command)
         if command == 'check':

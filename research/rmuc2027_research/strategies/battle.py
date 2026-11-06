@@ -72,8 +72,7 @@ class Battle:
             from ..rl.mjwarp.arena import ArenaPhysics
             adapter = ArenaPhysics(sim_device)
         elif physics_backend == 'warp_kinematic':
-            # Development/benchmark entry only. RL config validation continues
-            # to reject this backend until full-match and transfer checks pass.
+            # Explicit experimental selection; full acceptance is still pending.
             from ..rl.warp_kinematic.arena import ArenaMotion
             adapter = ArenaMotion(sim_device)
         self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False

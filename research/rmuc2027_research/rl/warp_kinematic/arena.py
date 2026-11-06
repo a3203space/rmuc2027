@@ -1,6 +1,6 @@
 """Development Arena adapter: GPU planar motion, terrain and folding.
 
-Not exposed as a training backend until traversal, energy and transfer gates pass.
+Experimental RL integration; full traversal, energy and transfer gates remain incomplete.
 """
 import math
 import numpy as np

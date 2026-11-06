@@ -76,7 +76,7 @@ def load_config(source=None):
             raise ValueError('Controller keys must be canonical team:slot identifiers')
         if spec['kind'] not in ('learning', 'script', 'frozen') or (spec['kind'] != 'learning' and 'submission' not in spec):
             raise ValueError('Invalid controller assignment')
-    if config.get('sim_backend', 'rapier') not in ('rapier', 'mjwarp'):
+    if config.get('sim_backend', 'rapier') not in ('rapier', 'mjwarp', 'warp_kinematic'):
         raise ValueError('Unknown simulation backend')
     return config
 
@@ -122,6 +122,14 @@ def provenance(config):
         result['simulation'] = {'backend': 'mjwarp', 'device': config.get('sim_device', 'cuda:0'),
             'dt': 1/120, 'files': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in folder.glob('*.py')},
             'dependencies': {n: version(n) for n in ('mujoco', 'mujoco-warp', 'warp-lang')}}
+    elif config.get('sim_backend') == 'warp_kinematic':
+        from importlib.metadata import version
+        folder=Path(__file__).with_name('warp_kinematic')
+        result['simulation']={'backend':'warp_kinematic','device':config.get('sim_device','cuda:0'),
+            'dt':1/120,'experimental':True,
+            'files':{name:hashlib.sha256((folder/name).read_bytes()).hexdigest()
+                     for name in ('__init__.py','arena.py','motion.py','terrain.py','traversal.py','protocol.py')},
+            'dependencies':{'warp-lang':version('warp-lang')}}
     else:
         result['simulation'] = {'backend': 'rapier', 'dt': 1/120}
     return result
