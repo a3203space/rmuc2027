@@ -554,11 +554,18 @@ def _prepare_chapter4(arena,team,folded=True,clearance=.36):
         return found if keep else set(found)
     def clear(a,b,ignore=(),strict=True):
         dx,dy=b[0]-a[0],b[1]-a[1]
+        xmin,xmax=min(a[0],b[0]),max(a[0],b[0])
+        ymin,ymax=min(a[1],b[1]),max(a[1],b[1])
         for k,(cx,cy,hw,hh,c,s) in enumerate(boxes):
             if k in ignore:
                 kept=ignore[k] if isinstance(ignore,dict) else None
                 if kept is None:continue
                 hw,hh=hw-margin+kept,hh-margin+kept
+            # Conservative world-space bounds skip distant rotated obstacles.
+            # The exact slab and terrain checks below still decide visibility.
+            ex,ey=abs(c)*hw+abs(s)*hh,abs(s)*hw+abs(c)*hh
+            if xmax<cx-ex-1e-9 or xmin>cx+ex+1e-9 or ymax<cy-ey-1e-9 or ymin>cy+ey+1e-9:
+                continue
             ax,ay=(a[0]-cx)*c+(a[1]-cy)*s,-(a[0]-cx)*s+(a[1]-cy)*c
             vx,vy=dx*c+dy*s,-dx*s+dy*c;lo,hi=0,1
             for p,d,half in ((ax,vx,hw),(ay,vy,hh)):
