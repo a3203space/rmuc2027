@@ -668,8 +668,25 @@ def _navigate_action_legacy(robot, point, observation, state):
             heading = -math.pi/2 if flip else math.pi/2
             if entry['phase'] == 'approach':
                 target = local((9.32, 11.7))
-                if math.dist((robot['x'], robot['y']), target) > .12:
-                    return {'move': navigate(robot, target, arena)}
+                gap=math.dist((robot['x'],robot['y']),target)
+                speed=math.hypot(robot.get('vx',0.),robot.get('vy',0.))
+                decel=max(.3,min(design.get('brake_force_max_n',100.)/max(1.,robot.get('mass_kg',25.)),
+                                 design.get('tire_friction',.5)*9.81)*.5)
+                if gap>.12:
+                    move=navigate(robot,target,arena)
+                    if gap<max(2.,speed*speed/(2*decel)+.5):
+                        safe_speed=min(1.2,max(.12,gap*1.2))
+                        if speed>safe_speed+.15:
+                            return {'move':(0.,0.),'brake':True}
+                        norm=math.hypot(*move)
+                        if norm>1e-8:
+                            scale=min(norm,safe_speed/max(.1,robot.get('speed_reference_mps',3.9)))
+                            fields={'move':(move[0]/norm*scale,move[1]/norm*scale)}
+                            if getattr(move,'heading',None) is not None:fields['heading']=move.heading
+                            return fields
+                    return {'move':move}
+                if speed>.2:
+                    return {'move':(0.,0.),'brake':True}
                 entry['phase'] = 'fold'
             error = abs((robot['heading']-heading+math.pi) % math.tau-math.pi)
             if robot.get('transform_progress', 0) < .99 or (entry['phase'] == 'fold' and error > .08):
@@ -966,6 +983,73 @@ def hostile_plates(observation, kind):
     return plates
 
 
+def _stationary_teammate_detour(robot, point, fields, observation, state):
+    """A local waypoint around observed parked teammates; never changes the goal.
+
+    Terrain manoeuvres own the controls once alignment/folding/jumping starts.
+    This is shared by real-physics deployments and simplified training.
+    """
+    peers = [r for r in observation.get('robots', [])
+             if r.get('id') != robot.get('id') and r.get('team') == robot.get('team')
+             and r.get('role') != 'aerial' and math.hypot(r.get('vx',0.),r.get('vy',0.)) < .15]
+    move = fields.get('move',(0.,0.))
+    if (not peers or not robot.get('alive',True) or not robot.get('grounded',True)
+            or robot.get('role') == 'aerial' or any(fields.get(k) for k in ('jump','brake','transform'))
+            or any(state.get(k,{}).get('phase','approach')!='approach' for k in ('entry','tunnel'))
+            or math.hypot(*move)<.05 or observation.get('arena',{}).get('layout_revision')!='chapter4-2027-v1'):
+        state.pop('teammate_detour',None)
+        state.pop('teammate_wait_since',None)
+        return fields
+    start=(robot['x'],robot['y']);radius=robot.get('radius',.28)
+    _,_,clear,inside=_prepare_chapter4(observation['arena'],robot['team'],robot.get('transform_progress',0)>=.99)
+    near=inside(start,True)
+    def safe(target):
+        if not clear(start,target,near):return False
+        dx,dy=target[0]-start[0],target[1]-start[1];length=dx*dx+dy*dy
+        for peer in peers:
+            px,py=peer['x'],peer['y'];gap=radius+peer.get('radius',.28)+.04
+            t=max(0.,min(1.,((px-start[0])*dx+(py-start[1])*dy)/max(1e-9,length)))
+            closest=math.hypot(start[0]+t*dx-px,start[1]+t*dy-py)
+            initial=math.hypot(start[0]-px,start[1]-py)
+            if closest<min(gap,initial)-1e-6:return False
+        return True
+    now=observation.get('time',0.)
+    detour=state.get('teammate_detour')
+    if detour and (detour['goal']!=list(point) or now-detour['since']>4.
+                   or math.dist(start,detour['point'])<.12 or not safe(detour['point'])):
+        state.pop('teammate_detour',None);detour=None
+    if detour is None:
+        if math.hypot(robot.get('vx',0.),robot.get('vy',0.))>.12:
+            state.pop('teammate_wait_since',None)
+            return fields
+        state.setdefault('teammate_wait_since',now)
+        if now-state['teammate_wait_since']<.6:
+            return fields
+        norm=math.hypot(*move);direction=(move[0]/norm,move[1]/norm)
+        blockers=[]
+        lookahead=.15
+        for peer in peers:
+            dx,dy=peer['x']-start[0],peer['y']-start[1]
+            forward=dx*direction[0]+dy*direction[1]
+            lateral=abs(dx*direction[1]-dy*direction[0]);gap=radius+peer.get('radius',.28)+.12
+            if 0<forward<gap+lookahead and lateral<gap:
+                blockers.append((forward,gap,peer))
+        if not blockers:return fields
+        _,gap,_=min(blockers,key=lambda v:v[0])
+        candidates=[]
+        for sign in (1.,-1.):
+            target=(start[0]-direction[0]*.1-direction[1]*gap*sign,
+                    start[1]-direction[1]*.1+direction[0]*gap*sign)
+            if safe(target):candidates.append(target)
+        if not candidates:return fields
+        target=min(candidates,key=lambda p:math.dist(p,point))
+        detour=state['teammate_detour']={'point':target,'goal':list(point),'since':now}
+    result=dict(fields);result['move']=_physical_toward(robot,detour['point'])
+    if 'heading' in result:
+        result['heading']=math.atan2(detour['point'][1]-start[1],detour['point'][0]-start[0])
+    return result
+
+
 def navigate_action(robot, point, observation, state):
     """Opt-in sampled local avoidance using only the controller's observation."""
     fields = _navigate_action_legacy(robot, point, observation, state)
@@ -974,6 +1058,7 @@ def navigate_action(robot, point, observation, state):
             not any(fields.get(k) for k in ('jump', 'brake', 'transform')) and
             robot.get('grounded', True) and robot.get('role') != 'aerial'):
         fields.update(_trajectory_move(robot, point, observation, state))
+    fields = _stationary_teammate_detour(robot, point, fields, observation, state)
     return predictive_navigation(robot, fields, observation, state)
 
 
