@@ -65,12 +65,17 @@ class Battle:
                        for team, value in normalized.items()}
         from rmuc2027_core.battle_settings import normalize
         battle_settings = normalize(battle_settings or {}, season)
-        if physics_backend not in ('rapier', 'mjwarp'):
+        if physics_backend not in ('rapier', 'mjwarp', 'warp_kinematic'):
             raise ValueError('Unknown physics backend')
         adapter = None
         if physics_backend == 'mjwarp':
             from ..rl.mjwarp.arena import ArenaPhysics
             adapter = ArenaPhysics(sim_device)
+        elif physics_backend == 'warp_kinematic':
+            # Development/benchmark entry only. RL config validation continues
+            # to reject this backend until full-match and transfer checks pass.
+            from ..rl.warp_kinematic.arena import ArenaMotion
+            adapter = ArenaMotion(sim_device)
         self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False
         self.deck_mode = decks is not None
         self.deadline, self.stop_event = deadline, stop_event
@@ -81,7 +86,7 @@ class Battle:
         self.metadata['navigation_mode'] = navigation_mode
         self.metadata['fixed_policy_hz'] = fixed_policy_hz
         self.metadata['learning_control_hz'] = learning_control_hz
-        if physics_backend == 'mjwarp':
+        if physics_backend in ('mjwarp', 'warp_kinematic'):
             self.metadata['sim_device'] = sim_device
         if battle_settings:
             self.metadata.update({"battle_settings": battle_settings, "test_match": True})

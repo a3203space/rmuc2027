@@ -79,8 +79,9 @@ def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
 
 class ArenaMotion:
     protocol='kinematic_frame'
-    def __init__(self,device='cuda:0'):
+    def __init__(self,device='cuda:0',use_graph=True):
         self.device=device;self.motion=None;self.next_sequence=0;self.closed=False
+        self.use_graph=use_graph;self.graph=None
 
     def initialize(self,request):
         robots=request['robots'];self.ids=tuple(r['id'] for r in robots)
@@ -116,6 +117,7 @@ class ArenaMotion:
         self.jump_start=wp.zeros(n,dtype=wp.vec3,device=m.device);self.jump_end=wp.zeros(n,dtype=wp.vec3,device=m.device)
         self.jump_elapsed=wp.zeros(n,dtype=float,device=m.device);self.jump_duration=wp.zeros(n,dtype=float,device=m.device)
         self.jump_cooldown=wp.zeros(n,dtype=float,device=m.device);self.jump_status=wp.zeros(n,dtype=wp.int32,device=m.device)
+        self.fall_speed=wp.zeros(n,dtype=float,device=m.device)
         self.grounded=wp.empty((6,n),dtype=wp.int32,device=m.device)
         self.legged=array([int(d.get('chassis_type')=='wheel_legged') for d in self.designs],wp.int32)
         self.heading=wp.zeros(n,dtype=float,device=m.device);self.fold=wp.zeros(n,dtype=float,device=m.device)
@@ -147,6 +149,23 @@ class ArenaMotion:
             masks.append([1]*self.physical_count+[int(z['kind'] in ('base','dart_station','pad') or
                 z['kind']=='highway' and r.get('fly_pass',0)<2 or z.get('owner') not in (None,r['team'])) for z in self.forbidden])
         m.wall_masks.assign(np.asarray(masks,dtype=np.int32))
+        if self.use_graph and self.next_sequence>0:
+            if self.graph is None:
+                # The first frame loads all kernels before capture. All arrays
+                # retain their addresses; subsequent requests update contents.
+                with wp.ScopedCapture(device=m.device) as capture:
+                    self._simulate()
+                self.graph=capture.graph
+            wp.capture_launch(self.graph)
+        else:
+            self._simulate()
+        reply=MotionFrame(self.ids,self.positions.numpy(),self.velocities.numpy(),self.angles.numpy(),self.folds.numpy(),
+                          self.grounded.numpy().astype(bool)).response(request['sequence'])
+        self.next_sequence+=1
+        return reply
+
+    def _simulate(self):
+        m=self.motion
         from .terrain import sample_heights
         for index in range(6):
             wp.launch(sample_heights,m.count,inputs=[self.terrain.data,m.pos,m.heights],device=m.device)
@@ -156,17 +175,14 @@ class ArenaMotion:
             wp.launch(prepare_jump,m.count,inputs=[self.terrain.data,m.pos,m.vel,self.heading,self.base,self.params,m.limits,m.enabled,
                 self.capable,self.jump_command,self.gates,self.destinations,m.boxes,m.angles,m.wall_z,m.wall_masks,m.worlds,
                 self.jump_start,self.jump_end,self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,
-                m.flight,m.flight_goal,m.flight_z,DT],device=m.device)
+                m.flight,m.flight_goal,m.flight_z,self.fall_speed,DT],device=m.device)
             m._advance(DT)
             wp.launch(finish_jump,m.count,inputs=[m.pos,m.vel,m.flight,m.flight_z,m.heights,self.base,self.jump_end,
-                self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status],device=m.device)
+                self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,m.flight_goal,self.fall_speed],device=m.device)
             wp.launch(record,m.count,inputs=[m.pos,m.vel,m.heights,m.height_offsets,self.heading,self.fold,self.last_z,
                       self.positions,self.velocities,self.angles,self.folds,m.flight,m.flight_z,self.grounded,index],device=m.device)
-        reply=MotionFrame(self.ids,self.positions.numpy(),self.velocities.numpy(),self.angles.numpy(),self.folds.numpy(),
-                          self.grounded.numpy().astype(bool)).response(request['sequence'])
-        self.next_sequence+=1
-        return reply
 
     def close(self):
         self.closed=True
+        self.graph=None
         self.motion=None

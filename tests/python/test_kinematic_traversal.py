@@ -30,6 +30,21 @@ def advance(adapter,command,frames=40):
 
 
 class TraversalTests(unittest.TestCase):
+    def test_graph_matches_direct_launches_through_jump(self):
+        adapters=[ArenaMotion(use_graph=value) for value in (False,True)]
+        commands=[launch_request(8.6,0.) for _ in adapters]
+        for tick in range(40):
+            frames=[]
+            for adapter,command in zip(adapters,commands):
+                command['sequence']=tick
+                frame=adapter.step(command);frames.append(frame)
+                command['robots'][0].update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],
+                    heading=frame['headings'][-1][0],folded=frame['folded'][-1][0])
+            for key in ('positions','velocities','headings','folded','grounded'):
+                np.testing.assert_array_equal(frames[0][key],frames[1][key])
+        self.assertIsNotNone(adapters[1].graph)
+        for adapter in adapters:adapter.close()
+
     def test_mirrored_central_entry_lands_on_platform(self):
         for x,heading,target in [(8.6,0.,10.85),(19.4,math.pi,17.15)]:
             with self.subTest(start=x):
@@ -63,4 +78,57 @@ class TraversalTests(unittest.TestCase):
         frame=adapter.step(command)
         self.assertTrue(np.asarray(frame['grounded']).all())
         self.assertEqual(adapter.jump_status.numpy()[0],3)
+        adapter.close()
+
+    def test_new_obstruction_aborts_arc_without_ground_teleport(self):
+        adapter=ArenaMotion();command=launch_request(8.6,0.)
+        # Move an initially distant obstacle into the route after takeoff.
+        # This exercises collision feedback, not just preflight rejection.
+        command['arena']['obstacles'].append(dict(x=24.,y=1.,w=.1,h=1.,bottom=0.,height=3.))
+        samples=[];states=[]
+        for tick in range(45):
+            command['sequence']=tick
+            if tick==3:
+                boxes=adapter.motion.boxes.numpy()
+                boxes[adapter.physical_count-1]=[9.4,7.,9.5,8.]
+                adapter.motion.boxes.assign(boxes)
+                command['robots'][0]['jump']=0.
+            frame=adapter.step(command)
+            samples.extend(np.asarray(frame['positions'])[:,0,:].tolist())
+            states.append(int(adapter.jump_status.numpy()[0]))
+            command['robots'][0].update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],
+                heading=frame['headings'][-1][0],folded=frame['folded'][-1][0])
+        samples=np.asarray(samples)
+        self.assertIn(4,states,'Blocked flight must enter falling state')
+        self.assertEqual(states[-1],3,'Landing after an interrupted jump is a failure')
+        self.assertLessEqual(samples[:,0].max(),9.15+.001)
+        self.assertLess(np.abs(np.diff(samples[:,2])).max(),.08,'No instantaneous ground snap')
+        self.assertAlmostEqual(samples[-1,2],terrain_height(_REFERENCE_ARENA,*samples[-1,:2]),places=4)
+        self.assertTrue(frame['grounded'][-1][0])
+        adapter.close()
+
+    def test_robot_entering_jump_route_does_not_get_crossed(self):
+        adapter=ArenaMotion();command=launch_request(8.6,0.)
+        blocker=copy.deepcopy(command['robots'][0])
+        blocker.update(id='blue-4',team='blue',jump=0.,pos=[24.,1.,terrain_height(_REFERENCE_ARENA,24.,1.)])
+        # Tall test hull ensures overlap throughout flight; isolated from the
+        # real roster's design values so the test covers collision feedback.
+        blocker['design']['muzzle_z_m']=2.
+        command['robots'].append(blocker)
+        states=[];path=[]
+        for tick in range(45):
+            command['sequence']=tick
+            if tick==3:
+                blocker['pos']=[9.8,7.5,terrain_height(_REFERENCE_ARENA,9.8,7.5)]
+                command['robots'][0]['jump']=0.
+            frame=adapter.step(command)
+            states.append(int(adapter.jump_status.numpy()[0]))
+            path.extend(np.asarray(frame['positions'])[:,0,:].tolist())
+            for index,robot in enumerate(command['robots']):
+                robot.update(pos=frame['positions'][-1][index],velocity=frame['velocities'][-1][index],
+                    heading=frame['headings'][-1][index],folded=frame['folded'][-1][index])
+        self.assertIn(4,states)
+        self.assertEqual(states[-1],3)
+        self.assertLessEqual(np.asarray(path)[:,0].max(),9.3+.001)
+        self.assertLess(np.abs(np.diff(np.asarray(path)[:,2])).max(),.08)
         adapter.close()

@@ -24,12 +24,13 @@ def prepare_jump(scene: TerrainData, positions: wp.array(dtype=wp.vec2),
                  starts: wp.array(dtype=wp.vec3), ends: wp.array(dtype=wp.vec3),
                  elapsed: wp.array(dtype=float), durations: wp.array(dtype=float), cooldown: wp.array(dtype=float),
                  status: wp.array(dtype=wp.int32), flight: wp.array(dtype=wp.int32),
-                 goal: wp.array(dtype=wp.vec2), altitude: wp.array(dtype=float), dt: float):
+                 goal: wp.array(dtype=wp.vec2), altitude: wp.array(dtype=float),
+                 fall_speed: wp.array(dtype=float), dt: float):
     i=wp.tid();p=positions[i];flight[i]=0
     cooldown[i]=wp.max(0.0,cooldown[i]-dt)
     if enabled[i]==0:
         status[i]=0
-    if status[i]!=1 and capable[i]!=0 and enabled[i]!=0 and commands[i]>0.0 and cooldown[i]<=0.0:
+    if status[i]!=1 and status[i]!=4 and capable[i]!=0 and enabled[i]!=0 and commands[i]>0.0 and cooldown[i]<=0.0:
         selected=int(-1)
         for j in range(gates.shape[0]):
             g=gates[j];target=destinations[j]
@@ -71,6 +72,12 @@ def prepare_jump(scene: TerrainData, positions: wp.array(dtype=wp.vec2),
         elapsed[i]=wp.min(durations[i],elapsed[i]+dt)
         value=arc_position(starts[i],ends[i],elapsed[i]/durations[i],.8)
         flight[i]=1;goal[i]=wp.vec2(value[0],value[1]);altitude[i]=value[2]
+    elif status[i]==4:
+        # A blocked traversal stops horizontal travel and falls at its actual
+        # position. Never catch up with the planned arc or teleport to its end.
+        fall_speed[i]=fall_speed[i]-9.81*dt
+        altitude[i]=altitude[i]+fall_speed[i]*dt
+        flight[i]=1;goal[i]=p
 
 
 @wp.kernel
@@ -86,9 +93,17 @@ def jump_envelope(flight: wp.array(dtype=wp.int32), altitude: wp.array(dtype=flo
 def finish_jump(positions: wp.array(dtype=wp.vec2), velocities: wp.array(dtype=wp.vec2),
                 flight: wp.array(dtype=wp.int32), altitude: wp.array(dtype=float), ground: wp.array(dtype=float),
                 base: wp.array(dtype=float), ends: wp.array(dtype=wp.vec3), elapsed: wp.array(dtype=float),
-                durations: wp.array(dtype=float), cooldown: wp.array(dtype=float), status: wp.array(dtype=wp.int32)):
+                durations: wp.array(dtype=float), cooldown: wp.array(dtype=float), status: wp.array(dtype=wp.int32),
+                goal: wp.array(dtype=wp.vec2), fall_speed: wp.array(dtype=float)):
     i=wp.tid()
-    if flight[i]!=0 and elapsed[i]>=durations[i]:
+    if flight[i]!=0 and status[i]==1 and wp.length(positions[i]-goal[i])>.002:
+        status[i]=4;fall_speed[i]=0.0
+        velocities[i]=wp.vec2(0.0,0.0)
+    if flight[i]!=0 and status[i]==4:
+        if altitude[i]<=ground[i]+base[i]:
+            status[i]=3;flight[i]=0;altitude[i]=ground[i]+base[i];cooldown[i]=1.0
+        velocities[i]=wp.vec2(0.0,0.0)
+    elif flight[i]!=0 and elapsed[i]>=durations[i]:
         target=wp.vec2(ends[i][0],ends[i][1])
         status[i]=2
         if wp.length(positions[i]-target)>.1:status[i]=3
