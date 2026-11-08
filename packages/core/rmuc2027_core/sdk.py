@@ -487,6 +487,15 @@ def point_in_polygon(x, y, points):
     return inside
 
 
+def _point_in_prepared_polygon(x,y,edges):
+    inside=False
+    for ax,ay,by,dx,dy,x0,x1,y0,y1 in edges:
+        cross=(x-ax)*dy-(y-ay)*dx
+        if abs(cross)<1e-8 and x0<=x<=x1 and y0<=y<=y1:return True
+        if (ay>y)!=(by>y) and x<dx*(y-ay)/dy+ax:inside=not inside
+    return inside
+
+
 def _terrain_surface(t,x,y):
     if t['kind']=='ramp' and t.get('ramp_start'):
         a,b=t['ramp_start'],t['ramp_end'];dx,dy=b[0]-a[0],b[1]-a[1]
@@ -538,14 +547,24 @@ def _prepare_chapter4(arena,team,folded=True,clearance=.36):
     # A small spatial index keeps height checks bounded during decision calls.
     tiles={}
     for t in arena['terrain']:
+        x0,y0=t['x'],t['y'];x1,y1=x0+t['w'],y0+t['h'];polygon=t['polygon']
+        rectangular=(len(polygon)==4 and set(map(tuple,polygon))=={(x0,y0),(x0,y1),(x1,y0),(x1,y1)}
+                     and all(a[0]==b[0] or a[1]==b[1] for a,b in zip(polygon,polygon[1:]+polygon[:1])))
+        edges=tuple((a[0],a[1],b[1],b[0]-a[0],b[1]-a[1],min(a[0],b[0])-1e-8,
+                     max(a[0],b[0])+1e-8,min(a[1],b[1])-1e-8,max(a[1],b[1])+1e-8)
+                    for a,b in zip(polygon,polygon[1:]+polygon[:1]))
+        entry=(t,x0,y0,x1,y1,rectangular,edges)
         for x in range(math.floor(t['x']),math.ceil(t['x']+t['w'])+1):
-            for y in range(math.floor(t['y']),math.ceil(t['y']+t['h'])+1):tiles.setdefault((x,y),[]).append(t)
+            for y in range(math.floor(t['y']),math.ceil(t['y']+t['h'])+1):tiles.setdefault((x,y),[]).append(entry)
+    floor_slope=math.tan(math.radians(1.5))
     @lru_cache(maxsize=32768)
     def height(x,y):
         h=0
-        for t in tiles.get((math.floor(x),math.floor(y)),[]):
-            if t['x']-1e-8<=x<=t['x']+t['w']+1e-8 and t['y']-1e-8<=y<=t['y']+t['h']+1e-8 and point_in_polygon(x,y,t['polygon']):h=max(h,_terrain_surface(t,x,y))
-        return h+min(y,15-y)*math.tan(math.radians(1.5))
+        for t,x0,y0,x1,y1,rectangular,edges in tiles.get((math.floor(x),math.floor(y)),[]):
+            if x0-1e-8<=x<=x1+1e-8 and y0-1e-8<=y<=y1+1e-8:
+                if (rectangular and x0<=x<=x1 and y0<=y<=y1) or _point_in_prepared_polygon(x,y,edges):
+                    h=max(h,_terrain_surface(t,x,y))
+        return h+min(y,15-y)*floor_slope
     def inside(point,keep=False):
         """Inflated boxes containing a point; a robot pushed into one must still be able to leave.
 
