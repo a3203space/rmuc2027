@@ -131,8 +131,10 @@ class SdkNavigator(NavigationBackend):
                     for other,_ in edges[node]:
                         if components[other]<0:
                             components[other]=index;pending.append(other)
-            self.graph_components[graph_key]=components
-        components=self.graph_components[graph_key]
+            groups={}
+            for index,component in enumerate(components):groups.setdefault(component,[]).append(nodes[index])
+            self.graph_components[graph_key]=sorted(groups.items(),key=lambda item:-len(item[1]))
+        groups=self.graph_components[graph_key]
         start_components={}
         points = sorted(self.grids[key], key=lambda p: ((p[0]-proposed[0])**2+(p[1]-proposed[1])**2, p))
         for goal in points:
@@ -141,15 +143,17 @@ class SdkNavigator(NavigationBackend):
             for strict in (True, False):
                 if clear(start,goal,near,strict):
                     return list(goal)
-                if strict not in start_components:
-                    start_components[strict]=frozenset(components[i] for i,p in enumerate(graph[0]) if clear(start,p,near,strict))
-                visible=start_components[strict]
-                reach_key=(graph_key,goal,strict,visible)
-                if reach_key not in self.reachability:
-                    reachable=any(clear(p,goal,(),strict) for i,p in enumerate(graph[0]) if components[i] in visible)
-                    if len(self.reachability)>=4096:self.reachability.pop(next(iter(self.reachability)))
-                    self.reachability[reach_key]=reachable
-                if self.reachability[reach_key]:return list(goal)
+                for component,nodes in groups:
+                    start_key=(strict,component)
+                    if start_key not in start_components:
+                        start_components[start_key]=any(clear(start,p,near,strict) for p in nodes)
+                    if not start_components[start_key]:continue
+                    reach_key=(graph_key,goal,strict,component)
+                    if reach_key not in self.reachability:
+                        reachable=any(clear(p,goal,(),strict) for p in nodes)
+                        if len(self.reachability)>=4096:self.reachability.pop(next(iter(self.reachability)))
+                        self.reachability[reach_key]=reachable
+                    if self.reachability[reach_key]:return list(goal)
         return None
 
     def command(self, robot, goal, observation):
