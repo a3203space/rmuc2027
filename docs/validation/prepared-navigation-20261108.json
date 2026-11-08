@@ -204,7 +204,7 @@
       "seconds": 26.936
     }
   },
-  "status": "Short sampler meets 5x per environment; 840 steps including serial resets fail (4.86549x). Parallel reset implementation is under long-sequence validation. Physical calibration, contact coverage, migration and PPO gates remain incomplete.",
+  "status": "840-step sampling including parallel resets narrowly passes at 5.00507x per environment; no PPO. Serial reset failure retained. More margin, other lineups, physics/contact/calibration, migration and PPO gates remain.",
   "kinematic-prepared-goals-128-20261108_sources": {
     "experiment_sha256": "9fb77a03fe2f3ea28e5b6d42e58e858d29a68d10b0e8b0e45139d872bc2204aa",
     "simulation": {
@@ -249,6 +249,83 @@
         "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
         "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
         "vector.py": "08fbad56255b021f80d1ac2ddd96989f4e768975ea89b11244e1389a5c13b458"
+      },
+      "dependencies": {
+        "warp-lang": "1.19.0"
+      }
+    },
+    "sdk_hash": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+    "navigation": {
+      "precompute": true,
+      "preparation_sha256": "dbda4ab0c0f5ae11f36fa82d4a9f9db2940076e61c13e02e61bf40d9012c1699"
+    }
+  },
+  "sampling_840_parallel_reset": {
+    "results": [
+      {
+        "num_envs": 2,
+        "steps_per_env": 840,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 2.526122174000193,
+        "warmup_seconds": 4.1183792909996555,
+        "sampling_seconds": 83.91484894500081,
+        "per_env_simulated_seconds": [
+          420.0,
+          420.0
+        ],
+        "per_env_completed_episodes": [
+          1,
+          1
+        ],
+        "navigation_precompute": true,
+        "warmup_navigation_preparation_seconds": [
+          3.4001044820006427,
+          0.0
+        ],
+        "per_env_simulation_seconds_per_second": 5.005073658361406,
+        "real_seconds_per_simulation_second_per_env": 0.19979725939285908,
+        "rl_steps_per_second": 20.020294633445623,
+        "simulation_seconds_per_second": 10.010147316722811,
+        "parent_rss_kib": 961376,
+        "worker_pids": [],
+        "physics_batches": 8400,
+        "physics_world_substeps": 16800,
+        "physics_rule_frames": 16800,
+        "physics_substeps_120hz": 100800,
+        "physics_counter_note": "physics_world_substeps is a legacy name counting 50ms rule requests; use physics_rule_frames or physics_substeps_120hz.",
+        "max_physics_batch": 2,
+        "physics_handler_seconds": 21.589454308033964,
+        "physics_phase_host_seconds": {},
+        "physics_batch_histogram": {
+          "2": 8400
+        },
+        "profile_note": "Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.",
+        "sim_backend": "warp_kinematic"
+      }
+    ],
+    "minimum_per_env_realtime_factor": 5.0,
+    "recommended_num_envs": 2,
+    "fastest_measured_num_envs": 2
+  },
+  "parallel_reset_sources": {
+    "experiment_sha256": "b6a09b8363b9dfb456d75c6778a759bf2a57f750f4a7d72757fd1d4b2252fadd",
+    "simulation": {
+      "backend": "warp_kinematic",
+      "device": "cuda:0",
+      "dt": 0.008333333333333333,
+      "experimental": true,
+      "files": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "80b7294130282744ad90b5267e1d23ce4429f42eeb950e881783868c4c38e8dc",
+        "motion.py": "c39bbacd50a88a78f01ff7ec2bd3c15d172e393de03346140a5d5da8b525763f",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
+        "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
       },
       "dependencies": {
         "warp-lang": "1.19.0"
