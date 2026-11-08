@@ -602,14 +602,22 @@ def _prepare_chapter4(arena,team,folded=True,clearance=.36):
         length=math.hypot(dx,dy);count=max(1,math.ceil(length/.2))
         # Strict checks also sample both sides of the footprint, so a route never
         # runs one side of the chassis off a ramp edge or platform cliff.
-        side=(-dy/length*margin,dx/length*margin) if strict and length>1e-9 else (0,0)
-        lines=((0,0),side,(-side[0],-side[1])) if strict else ((0,0),)
-        old=[height(a[0]+ox,a[1]+oy) for ox,oy in lines]
-        for i in range(1,count+1):
-            px,py=a[0]+dx*i/count,a[1]+dy*i/count
-            now=[height(px+ox,py+oy) for ox,oy in lines]
-            if max(abs(h-o) for h,o in zip(now,old))>.13 or max(now)-min(now)>.13:return False
-            old=now
+        old_center=height(a[0],a[1])
+        if strict and length>1e-9:
+            sx,sy=-dy/length*margin,dx/length*margin
+            old_left=height(a[0]+sx,a[1]+sy);old_right=height(a[0]-sx,a[1]-sy)
+            for i in range(1,count+1):
+                px,py=a[0]+dx*i/count,a[1]+dy*i/count
+                center=height(px,py)
+                if abs(center-old_center)>.13:return False
+                left=height(px+sx,py+sy);right=height(px-sx,py-sy)
+                if abs(left-old_left)>.13 or abs(right-old_right)>.13 or max(center,left,right)-min(center,left,right)>.13:return False
+                old_center,old_left,old_right=center,left,right
+        else:
+            for i in range(1,count+1):
+                center=height(a[0]+dx*i/count,a[1]+dy*i/count)
+                if abs(center-old_center)>.13:return False
+                old_center=center
         return True
     nodes=[tuple(p) for p in arena['navigation']['nodes']]
     # Only short wall-end detours are needed in addition to the public ramp nodes.

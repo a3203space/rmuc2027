@@ -22,6 +22,8 @@ def export_layers(layers, metadata, output):
     if metadata.get('obs_version', portable.OBS_VERSION) != portable.OBS_VERSION:
         raise ValueError('Observation version mismatch')
     current = provenance(config)
+    if current['navigation']!=metadata.get('navigation'):
+        raise ValueError('Training runtime changed: navigation')
     if current['sources'] != metadata['sources'] or current['sdk_hash'] != metadata['sdk_hash']:
         raise ValueError('Fixed strategy or SDK changed since training; export refused')
     for key in ('runtime_hash', 'engine_binary_sha256', 'rules_sha256'):

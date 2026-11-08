@@ -147,6 +147,8 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
         for key in ('config', 'sources', 'sdk_hash', 'obs_version', 'obs_size', 'simulation'):
             if metadata[key] != previous[key]:
                 raise ValueError(f'Resume incompatibility: {key}')
+        if metadata['navigation']!=previous.get('navigation'):
+            raise ValueError('Resume incompatibility: navigation')
         for key in ('runtime_hash', 'engine_binary_sha256', 'rules_sha256'):
             if previous.get(key, metadata[key]) != metadata[key]:
                 raise ValueError(f'Resume incompatibility: {key}')
@@ -246,6 +248,8 @@ def evaluate(model_path, output, seeds, sides, duration=420, device='cpu'):
     output.mkdir(parents=True, exist_ok=False)
     metadata = json.loads((model_path.parent/'experiment.json').read_text())
     current = experiment(metadata['config'])
+    if current['navigation']!=metadata.get('navigation'):
+        raise ValueError('Training runtime changed: navigation')
     for key in ('sources', 'sdk_hash', 'obs_version', 'obs_size'):
         if current[key] != metadata[key]:
             raise ValueError(f'Evaluation incompatibility: {key}')

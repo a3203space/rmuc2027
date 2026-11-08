@@ -1,0 +1,264 @@
+{
+  "date": "2026-11-08",
+  "scope": "Static navigation preparation; no PPO or gradient updates",
+  "scalar_clearance_comparison": {
+    "comparison_cases": 27432,
+    "reference_source_sha256": "5c1baa71dda930246032f311fb93350107b8a58cd8ca45cda5ad76d8cef49298",
+    "results": [
+      {
+        "variant": "old",
+        "wall_seconds": 1.3738054690002173,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      },
+      {
+        "variant": "new",
+        "wall_seconds": 1.2232188029997815,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      },
+      {
+        "variant": "new",
+        "wall_seconds": 1.1314724350004326,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      },
+      {
+        "variant": "old",
+        "wall_seconds": 1.316508662999695,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      }
+    ],
+    "limitation": "Goal-query replay only; not a full training throughput gate"
+  },
+  "rejected_node_ordering": {
+    "reference_source_sha256": "fc27ad8d5cfa600567342d137fe8e609758947e2c82db839c14a57a5e96d1af0",
+    "results": [
+      {
+        "variant": "old",
+        "wall_seconds": 1.1019857969999975,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      },
+      {
+        "variant": "new",
+        "wall_seconds": 1.1142719950003084,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      },
+      {
+        "variant": "new",
+        "wall_seconds": 1.1413935290001973,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      },
+      {
+        "variant": "old",
+        "wall_seconds": 1.1356173059998582,
+        "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265"
+      }
+    ],
+    "limitation": "Goal-query replay only; not training throughput"
+  },
+  "preparation_probe": {
+    "kind": "static-largest-component-precompute-probe",
+    "grid_points": 4341,
+    "nodes": 109,
+    "preparation_seconds": 3.403849232000084,
+    "goal_replay_seconds": 0.05952418599963494,
+    "query_count": 33,
+    "cache_entries": 8682,
+    "digest": "0f02d161f13b0f542e20ece21c34e557bb78f365597c6c733a07d2d5d399d265",
+    "limitation": "CPU static navigation preparation, not a training throughput test"
+  },
+  "sampling_128": {
+    "results": [
+      {
+        "num_envs": 1,
+        "steps_per_env": 128,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 2.384370219999255,
+        "warmup_seconds": 4.183999083000344,
+        "sampling_seconds": 9.224909450000268,
+        "per_env_simulated_seconds": [
+          64.0
+        ],
+        "per_env_completed_episodes": [
+          0
+        ],
+        "navigation_precompute": true,
+        "warmup_navigation_preparation_seconds": [
+          3.5244565300008617
+        ],
+        "per_env_simulation_seconds_per_second": 6.937737475569274,
+        "real_seconds_per_simulation_second_per_env": 0.1441392101562542,
+        "rl_steps_per_second": 13.875474951138548,
+        "simulation_seconds_per_second": 6.937737475569274,
+        "parent_rss_kib": 912416,
+        "worker_pids": [],
+        "sim_backend": "warp_kinematic"
+      },
+      {
+        "num_envs": 2,
+        "steps_per_env": 128,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 4.128580587000215,
+        "warmup_seconds": 0.3798154510004679,
+        "sampling_seconds": 12.407112005999807,
+        "per_env_simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "per_env_completed_episodes": [
+          0,
+          0
+        ],
+        "navigation_precompute": true,
+        "warmup_navigation_preparation_seconds": [
+          0.0,
+          0.0
+        ],
+        "per_env_simulation_seconds_per_second": 5.158331767219559,
+        "real_seconds_per_simulation_second_per_env": 0.19386112509374698,
+        "rl_steps_per_second": 20.633327068878238,
+        "simulation_seconds_per_second": 10.316663534439119,
+        "parent_rss_kib": 938956,
+        "worker_pids": [],
+        "physics_batches": 1280,
+        "physics_world_substeps": 2560,
+        "physics_rule_frames": 2560,
+        "physics_substeps_120hz": 15360,
+        "physics_counter_note": "physics_world_substeps is a legacy name counting 50ms rule requests; use physics_rule_frames or physics_substeps_120hz.",
+        "max_physics_batch": 2,
+        "physics_handler_seconds": 3.142441003008571,
+        "physics_phase_host_seconds": {},
+        "physics_batch_histogram": {
+          "2": 1280
+        },
+        "profile_note": "Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.",
+        "sim_backend": "warp_kinematic"
+      }
+    ],
+    "minimum_per_env_realtime_factor": 5.0,
+    "recommended_num_envs": 2,
+    "fastest_measured_num_envs": 2
+  },
+  "sampling_840_serial_reset": {
+    "results": [
+      {
+        "num_envs": 2,
+        "steps_per_env": 840,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 4.353936393999902,
+        "warmup_seconds": 4.153979346000597,
+        "sampling_seconds": 86.32216258399967,
+        "per_env_simulated_seconds": [
+          420.0,
+          420.0
+        ],
+        "per_env_completed_episodes": [
+          1,
+          1
+        ],
+        "navigation_precompute": true,
+        "warmup_navigation_preparation_seconds": [
+          3.42921593400024,
+          0.0
+        ],
+        "per_env_simulation_seconds_per_second": 4.86549441565832,
+        "real_seconds_per_simulation_second_per_env": 0.20552895853333256,
+        "rl_steps_per_second": 19.46197766263328,
+        "simulation_seconds_per_second": 9.73098883131664,
+        "parent_rss_kib": 961168,
+        "worker_pids": [],
+        "physics_batches": 8400,
+        "physics_world_substeps": 16800,
+        "physics_rule_frames": 16800,
+        "physics_substeps_120hz": 100800,
+        "physics_counter_note": "physics_world_substeps is a legacy name counting 50ms rule requests; use physics_rule_frames or physics_substeps_120hz.",
+        "max_physics_batch": 2,
+        "physics_handler_seconds": 21.44284516094922,
+        "physics_phase_host_seconds": {},
+        "physics_batch_histogram": {
+          "2": 8400
+        },
+        "profile_note": "Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.",
+        "sim_backend": "warp_kinematic"
+      }
+    ],
+    "minimum_per_env_realtime_factor": 5.0,
+    "recommended_num_envs": null,
+    "fastest_measured_num_envs": 2
+  },
+  "tests": {
+    "preparation": {
+      "passed": 4,
+      "seconds": 18.278
+    },
+    "related_integration": {
+      "passed": 14,
+      "seconds": 48.504
+    },
+    "parallel_reset_parity": {
+      "passed": 1,
+      "seconds": 26.936
+    }
+  },
+  "status": "Short sampler meets 5x per environment; 840 steps including serial resets fail (4.86549x). Parallel reset implementation is under long-sequence validation. Physical calibration, contact coverage, migration and PPO gates remain incomplete.",
+  "kinematic-prepared-goals-128-20261108_sources": {
+    "experiment_sha256": "9fb77a03fe2f3ea28e5b6d42e58e858d29a68d10b0e8b0e45139d872bc2204aa",
+    "simulation": {
+      "backend": "warp_kinematic",
+      "device": "cuda:0",
+      "dt": 0.008333333333333333,
+      "experimental": true,
+      "files": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "80b7294130282744ad90b5267e1d23ce4429f42eeb950e881783868c4c38e8dc",
+        "motion.py": "c39bbacd50a88a78f01ff7ec2bd3c15d172e393de03346140a5d5da8b525763f",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
+        "vector.py": "08fbad56255b021f80d1ac2ddd96989f4e768975ea89b11244e1389a5c13b458"
+      },
+      "dependencies": {
+        "warp-lang": "1.19.0"
+      }
+    },
+    "sdk_hash": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+    "navigation": {
+      "precompute": true,
+      "preparation_sha256": "dbda4ab0c0f5ae11f36fa82d4a9f9db2940076e61c13e02e61bf40d9012c1699"
+    }
+  },
+  "kinematic-prepared-goals-840-20261108_sources": {
+    "experiment_sha256": "9fb77a03fe2f3ea28e5b6d42e58e858d29a68d10b0e8b0e45139d872bc2204aa",
+    "simulation": {
+      "backend": "warp_kinematic",
+      "device": "cuda:0",
+      "dt": 0.008333333333333333,
+      "experimental": true,
+      "files": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "80b7294130282744ad90b5267e1d23ce4429f42eeb950e881783868c4c38e8dc",
+        "motion.py": "c39bbacd50a88a78f01ff7ec2bd3c15d172e393de03346140a5d5da8b525763f",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+        "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
+        "vector.py": "08fbad56255b021f80d1ac2ddd96989f4e768975ea89b11244e1389a5c13b458"
+      },
+      "dependencies": {
+        "warp-lang": "1.19.0"
+      }
+    },
+    "sdk_hash": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+    "navigation": {
+      "precompute": true,
+      "preparation_sha256": "dbda4ab0c0f5ae11f36fa82d4a9f9db2940076e61c13e02e61bf40d9012c1699"
+    }
+  }
+}

@@ -103,6 +103,7 @@ class SdkNavigator(NavigationBackend):
         self.grids = {}
         self.graph_components = {}
         self.reachability = {}
+        self.precomputed_reachability = {}
 
     def resolve_goal(self, robot, proposed, arena):
         folded = robot.get('transform_progress', 0) >= .99
@@ -152,6 +153,9 @@ class SdkNavigator(NavigationBackend):
                         start_components[start_key]=any(clear(start,p,near,strict) for p in nodes)
                     if not start_components[start_key]:continue
                     reach_key=(graph_key,goal,strict,component)
+                    if reach_key in self.precomputed_reachability:
+                        if self.precomputed_reachability[reach_key]:return list(goal)
+                        continue
                     if reach_key not in self.reachability:
                         reachable=any(clear(p,goal,(),strict) for p in nodes)
                         if len(self.reachability)>=4096:self.reachability.pop(next(iter(self.reachability)))

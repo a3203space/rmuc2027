@@ -128,7 +128,8 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
     output = Path(output)
     if not math.isfinite(min_realtime) or min_realtime<=0:raise ValueError('min realtime factor must be positive and finite')
     output.mkdir(parents=True, exist_ok=False)
-    write_json(output/'experiment.json',provenance(config))
+    manifest=provenance(config)
+    write_json(output/'experiment.json',manifest)
     results = []
     for count in counts:
         started = time.perf_counter()
@@ -141,6 +142,9 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
             warmup_begin = time.perf_counter()
             vec.step(actions)  # exclude lazy model conversion and kernel compilation
             warmup_seconds = time.perf_counter()-warmup_begin
+            preparation=None
+            if hasattr(vec,'envs'):
+                preparation=[getattr(env.session.controller.navigator,'preparation_seconds',0.) for env in vec.envs]
             if hasattr(vec, 'physics'):
                 vec.physics.reset_metrics()
             profiler=None
@@ -149,12 +153,14 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
                 profiler=cProfile.Profile();profiler.enable()
             begin = time.perf_counter()
             simulated=np.zeros(count,dtype=np.float64)
+            completed=np.zeros(count,dtype=np.int64)
             for _ in range(steps):
                 if action_pattern=='uniform-random':
                     actions=rng.uniform(-1,1,(count,2)).astype(np.float32)
-                _, rewards, _, infos = vec.step(actions)
+                _, rewards, dones, infos = vec.step(actions)
                 assert np.isfinite(rewards).all()
                 simulated+=np.asarray([info['sampled_simulation_seconds'] for info in infos])
+                completed+=np.asarray(dones,dtype=np.int64)
             elapsed = time.perf_counter()-begin
             if profiler is not None:
                 profiler.disable();profiler.dump_stats(str(output/f'profile-{count}.pstats'))
@@ -166,6 +172,9 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
                 'action_pattern':action_pattern,'ppo_included':False,'profiled':profile,
                 'initialization_seconds': initialization, 'warmup_seconds': warmup_seconds, 'sampling_seconds': elapsed,
                 'per_env_simulated_seconds':simulated.tolist(),
+                'per_env_completed_episodes':completed.tolist(),
+                'navigation_precompute':manifest['navigation']['precompute'],
+                'warmup_navigation_preparation_seconds':preparation,
                 'per_env_simulation_seconds_per_second':float(simulated.min())/elapsed,
                 'real_seconds_per_simulation_second_per_env':elapsed/float(simulated.min()) if simulated.min()>0 else None,
                 'rl_steps_per_second': steps*count/elapsed,

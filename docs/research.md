@@ -167,6 +167,10 @@ research/.venv/bin/python -m rmuc2027_research.rl benchmark \
 `fastest_measured_num_envs` 仅表示合计采样吞吐最高，不代表逐环境达标。
 `--action-pattern uniform-random` 用于频繁切换目标的采样压力测试；这些基准均不包含 PPO 更新。
 
+实验性 `warp_kinematic` 训练环境默认准备静态导航关系，首次耗时计入 `warmup_seconds`，各环境的实际建表耗时另记为 `warmup_navigation_preparation_seconds`。
+配置 `navigation_precompute: null` 表示按后端自动选择，`true`/`false` 可显式开启/关闭；其余后端默认按需计算。只读表跨回合复用公共地图数据，动态起点仍实时判断，导出策略保持按需计算。
+准备模式和源码哈希写入 `experiment.json`，恢复、评估和导出会核对。长序列基准同时记录各环境实际推进秒数和完成回合数，自动重置开销包含在采样耗时中。
+
 模型保存为 `model.zip`，支持 `--resume`；续训严格检查配置、规则、策略、仿真源码及依赖版本。更换后端需新实验，不能把旧优化器断点当成同一实验继续。
 
 训练后在原 Rapier 比赛环境评估与导出：

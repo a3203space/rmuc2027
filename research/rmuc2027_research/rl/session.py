@@ -46,6 +46,9 @@ def load_config(source=None):
         raise ValueError('learning_control_hz must be 2, 5 or 10')
     config.setdefault('training_summary', True)
     config.setdefault('action_trace', False)
+    config.setdefault('navigation_precompute',None)
+    if config['navigation_precompute'] is not None and not isinstance(config['navigation_precompute'],bool):
+        raise ValueError('navigation_precompute must be boolean or null (automatic)')
     config.setdefault('github_backup_seconds',300.)
     interval=config['github_backup_seconds']
     if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not math.isfinite(interval) or interval<=0:
@@ -118,6 +121,8 @@ def provenance(config):
             'hashes': {slot: hashlib.sha256(path.read_bytes()).hexdigest() for slot, path in entries.items()}}
     result['sdk_hash'] = hashlib.sha256((Path(__file__).resolve().parents[3]/'packages/core/rmuc2027_core/sdk.py').read_bytes()).hexdigest()
     result['runtime_hash'] = hashlib.sha256(Path(__file__).with_name('portable.py').read_bytes()).hexdigest()
+    result['navigation']={'precompute':config.get('navigation_precompute') if config.get('navigation_precompute') is not None else config.get('sim_backend')=='warp_kinematic',
+        'preparation_sha256':hashlib.sha256(Path(__file__).with_name('navigation.py').read_bytes()).hexdigest()}
     result['engine_binary_sha256'] = hashlib.sha256(binary_path().read_bytes()).hexdigest()
     result['rules_sha256'] = hashlib.sha256((ROOT/'configs/rules.json').read_bytes()).hexdigest()
     if config.get('sim_backend', 'rapier') == 'mjwarp':
@@ -144,7 +149,12 @@ class GoalController:
     def __init__(self, config):
         self.config = config
         self.is_learning_controller = True
-        self.navigator = SdkNavigator(config['grid_m'])
+        precompute=config.get('navigation_precompute')
+        if precompute is None:precompute=config.get('sim_backend')=='warp_kinematic'
+        if precompute:
+            from .navigation import PreparedNavigator
+            self.navigator=PreparedNavigator(config['grid_m'])
+        else:self.navigator = SdkNavigator(config['grid_m'])
         self.baseline = baseline_module(config)
         self.state, self.logs = {}, []
         self.disabled, self.calls, self.errors, self.consecutive_timeouts = False, 0, 0, 0
