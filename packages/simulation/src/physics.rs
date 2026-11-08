@@ -78,6 +78,15 @@ if r.alive {
 r.cooldown = (r.cooldown - PHYSICS_DT).max(0.0);
 }
 
+/// Shared drive budget, including automatic supercap support on road bumps.
+fn drive_motor_budget(r: &Robot, a: &Action, d: &Value, on_humps: bool, disabled: bool) -> f64 {
+    if disabled { return 0.0; }
+    let extra=n(d,"voltage_v")*n(d,"supercap_max_current_a");
+    let default=r.power_limit+if on_humps && r.supercap_energy_j>100.0 {extra} else {0.0};
+    a.power.unwrap_or(default).clamp(0.0,200.0).min(r.power_limit+
+        if r.supercap_energy_j>0.0 {extra} else {0.0})
+}
+
 /// Common battery/supercapacitor accounting for both motion models.
 fn account_drive_energy(r: &mut Robot, d: &Value, disabled: bool, leg_power: f64) {
     let limit=r.power_limit;
@@ -1471,7 +1480,6 @@ impl PhysicsWorld {
                         .clone(),
                 );
             }
-            let limit = r.power_limit;
             // Robots carry their effective power limit set by the 2027 engine.
             {}
             {}
@@ -1483,24 +1491,7 @@ impl PhysicsWorld {
                     && pose.translation.y > h[1]
                     && pose.translation.y < h[3]
             });
-            let default_budget = if on_humps && r.supercap_energy_j > 100.0 {
-                limit + n(d, "voltage_v") * n(d, "supercap_max_current_a")
-            } else {
-                limit
-            };
-            let budget = if disabled {
-                0.0
-            } else {
-                a.power.unwrap_or(default_budget).clamp(0.0, 200.0)
-            };
-            let motor_budget = budget.min(
-                limit
-                    + if r.supercap_energy_j > 0.0 {
-                        n(d, "voltage_v") * n(d, "supercap_max_current_a")
-                    } else {
-                        0.0
-                    },
-            );
+            let motor_budget = drive_motor_budget(r,a,d,on_humps,disabled);
             let speed = n(d, "speed_reference_mps") * if r.crouched { 0.5 } else { 1.0 };
             let mut desired = if disabled || righting {
                 Vector::zeros()

@@ -1,0 +1,1117 @@
+{
+  "date": "2026-11-08",
+  "scope": "2Hz SDK locomotion calibration; no trained policy or gradient updates",
+  "cuda_graph_comparison": {
+    "kind": "two-world-random-sampler-cuda-graph-paired",
+    "ppo_included": false,
+    "results": [
+      {
+        "cuda_graph": false,
+        "simulation_seconds": [
+          64.0,
+          64.0
+        ],
+        "wall_seconds": 12.429752662999817,
+        "per_env_realtime_factor": 5.148935922957789,
+        "digest": "d5c2c44d2ff41aa2151f9911987f66e10182a019c4af607f0e2ee78cfb613b8a",
+        "batches": 1280,
+        "max_batch": 2
+      },
+      {
+        "cuda_graph": true,
+        "simulation_seconds": [
+          64.0,
+          64.0
+        ],
+        "wall_seconds": 12.61531130200001,
+        "per_env_realtime_factor": 5.073200214239149,
+        "digest": "d5c2c44d2ff41aa2151f9911987f66e10182a019c4af607f0e2ee78cfb613b8a",
+        "batches": 1280,
+        "max_batch": 2
+      },
+      {
+        "cuda_graph": true,
+        "simulation_seconds": [
+          64.0,
+          64.0
+        ],
+        "wall_seconds": 12.781266402000256,
+        "per_env_realtime_factor": 5.007328537490156,
+        "digest": "d5c2c44d2ff41aa2151f9911987f66e10182a019c4af607f0e2ee78cfb613b8a",
+        "batches": 1280,
+        "max_batch": 2
+      },
+      {
+        "cuda_graph": false,
+        "simulation_seconds": [
+          64.0,
+          64.0
+        ],
+        "wall_seconds": 12.857595656999365,
+        "per_env_realtime_factor": 4.977602477735403,
+        "digest": "d5c2c44d2ff41aa2151f9911987f66e10182a019c4af607f0e2ee78cfb613b8a",
+        "batches": 1280,
+        "max_batch": 2
+      }
+    ],
+    "median_seconds": {
+      "False": 12.643674159999591,
+      "True": 12.698288852000132
+    }
+  },
+  "calibration": {
+    "completed": 10,
+    "total": 10,
+    "results": [
+      {
+        "model": 2731,
+        "seed": 42,
+        "backend": "rapier",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 16.3,
+        "ability": "jump",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 11.0,
+            "settled_at": 13.25,
+            "settled_since": 12.95,
+            "ability_enter": 9.7,
+            "ability_exit": 10.45,
+            "folded": false,
+            "jump_commands": 1,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 11.947585021018575,
+              "y": 7.359454215225795,
+              "z": 0.4122858438435853,
+              "grounded": true,
+              "upright": 0.9998329404898177,
+              "tipped": false,
+              "public_ground_z": 0.4927140908719248
+            },
+            "state": {
+              "time": 13.0,
+              "goal": [
+                12.1,
+                7.4
+              ]
+            },
+            "ability_seconds": 0.75
+          },
+          "blue": {
+            "reached_at": 12.5,
+            "settled_at": 16.3,
+            "settled_since": 16.0,
+            "ability_enter": 11.2,
+            "ability_exit": 11.95,
+            "folded": false,
+            "jump_commands": 1,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.839267465043934,
+              "y": 7.605677933041281,
+              "z": 0.41854875232821365,
+              "grounded": true,
+              "upright": 0.9995912685044659,
+              "tipped": false,
+              "public_ground_z": 0.4936271377026892
+            },
+            "state": {
+              "time": 16.0,
+              "goal": [
+                15.9,
+                7.6
+              ]
+            },
+            "ability_seconds": 0.75
+          }
+        },
+        "wall_seconds": 0.5657659009993949,
+        "trace": "data/research/ability-calibration-settled-20261108/2731-42-rapier.jsonl"
+      },
+      {
+        "model": 2731,
+        "seed": 42,
+        "backend": "warp_kinematic",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 9.35,
+        "ability": "jump",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 8.0,
+            "settled_at": 9.35,
+            "settled_since": 9.05,
+            "ability_enter": 5.55,
+            "ability_exit": 6.45,
+            "folded": false,
+            "jump_commands": 1,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.137965202331543,
+              "y": 7.394537925720215,
+              "z": 0.49363279342651367,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49363279016328776
+            },
+            "state": {
+              "time": 9.0,
+              "goal": [
+                12.1,
+                7.4
+              ]
+            },
+            "ability_seconds": 0.9000000000000004
+          },
+          "blue": {
+            "reached_at": 8.0,
+            "settled_at": 9.35,
+            "settled_since": 9.05,
+            "ability_enter": 5.55,
+            "ability_exit": 6.45,
+            "folded": false,
+            "jump_commands": 1,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.86203670501709,
+              "y": 7.605462074279785,
+              "z": 0.49363279342651367,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49363279016328776
+            },
+            "state": {
+              "time": 9.0,
+              "goal": [
+                15.9,
+                7.6
+              ]
+            },
+            "ability_seconds": 0.9000000000000004
+          }
+        },
+        "wall_seconds": 1.1294623339999816,
+        "trace": "data/research/ability-calibration-settled-20261108/2731-42-warp_kinematic.jsonl"
+      },
+      {
+        "model": 2732,
+        "seed": 42,
+        "backend": "rapier",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 26.4,
+        "ability": "tunnel",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 21.35,
+            "settled_at": 23.45,
+            "settled_since": 23.15,
+            "ability_enter": 12.2,
+            "ability_exit": 13.6,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.089094069211436,
+              "y": 7.501910173881768,
+              "z": 0.4175954057974059,
+              "grounded": true,
+              "upright": 0.9996846717037764,
+              "tipped": false,
+              "public_ground_z": 0.49634439210545045
+            },
+            "state": {
+              "time": 23.0,
+              "goal": [
+                12.1,
+                7.4
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 1.4000000000000004
+          },
+          "blue": {
+            "reached_at": 21.45,
+            "settled_at": 26.4,
+            "settled_since": 26.1,
+            "ability_enter": 12.2,
+            "ability_exit": 13.6,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.904092563400816,
+              "y": 7.665486667534134,
+              "z": 0.42597055152006635,
+              "grounded": true,
+              "upright": 0.9998813043003009,
+              "tipped": false,
+              "public_ground_z": 0.49206099087210703
+            },
+            "state": {
+              "time": 26.0,
+              "goal": [
+                15.9,
+                7.6
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 1.4000000000000004
+          }
+        },
+        "wall_seconds": 1.8522856950003188,
+        "trace": "data/research/ability-calibration-settled-20261108/2732-42-rapier.jsonl"
+      },
+      {
+        "model": 2732,
+        "seed": 42,
+        "backend": "warp_kinematic",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 20.35,
+        "ability": "tunnel",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 18.4,
+            "settled_at": 20.35,
+            "settled_since": 20.05,
+            "ability_enter": 13.15,
+            "ability_exit": 14.0,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.099628448486328,
+              "y": 7.448474884033203,
+              "z": 0.49504518508911133,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49504517912335216
+            },
+            "state": {
+              "time": 20.0,
+              "goal": [
+                12.1,
+                7.4
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 0.8499999999999996
+          },
+          "blue": {
+            "reached_at": 18.4,
+            "settled_at": 20.35,
+            "settled_since": 20.05,
+            "ability_enter": 13.15,
+            "ability_exit": 14.0,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.900371551513672,
+              "y": 7.551506519317627,
+              "z": 0.4950456917285919,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.4950456660937488
+            },
+            "state": {
+              "time": 20.0,
+              "goal": [
+                15.9,
+                7.6
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 0.8499999999999996
+          }
+        },
+        "wall_seconds": 1.71781071300029,
+        "trace": "data/research/ability-calibration-settled-20261108/2732-42-warp_kinematic.jsonl"
+      },
+      {
+        "model": 2773,
+        "seed": 42,
+        "backend": "rapier",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 21.05,
+        "ability": "tunnel",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 16.15,
+            "settled_at": 21.0,
+            "settled_since": 20.7,
+            "ability_enter": 10.2,
+            "ability_exit": 11.6,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.090727875028257,
+              "y": 7.284864763935643,
+              "z": 0.4220947026498797,
+              "grounded": true,
+              "upright": 0.9996943343857911,
+              "tipped": false,
+              "public_ground_z": 0.4907608973505522
+            },
+            "state": {
+              "time": 20.5,
+              "goal": [
+                12.1,
+                7.4
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 1.4000000000000004
+          },
+          "blue": {
+            "reached_at": 16.15,
+            "settled_at": 21.05,
+            "settled_since": 20.75,
+            "ability_enter": 10.2,
+            "ability_exit": 11.6,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.908114238150056,
+              "y": 7.699839539189011,
+              "z": 0.4264018023266515,
+              "grounded": true,
+              "upright": 0.9999316088347984,
+              "tipped": false,
+              "public_ground_z": 0.4911614292692761
+            },
+            "state": {
+              "time": 21.0,
+              "goal": [
+                15.9,
+                7.6
+              ],
+              "tunnel_done": true,
+              "teammate_wait_since": 21.0
+            },
+            "ability_seconds": 1.4000000000000004
+          }
+        },
+        "wall_seconds": 1.107946050999999,
+        "trace": "data/research/ability-calibration-settled-20261108/2773-42-rapier.jsonl"
+      },
+      {
+        "model": 2773,
+        "seed": 42,
+        "backend": "warp_kinematic",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 23.5,
+        "ability": "tunnel",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 21.4,
+            "settled_at": 23.5,
+            "settled_since": 23.2,
+            "ability_enter": 17.1,
+            "ability_exit": 17.95,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.098860740661621,
+              "y": 7.55482816696167,
+              "z": 0.49495869874954224,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49495868568906143
+            },
+            "state": {
+              "time": 23.0,
+              "goal": [
+                12.1,
+                7.4
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 0.8499999999999979
+          },
+          "blue": {
+            "reached_at": 21.4,
+            "settled_at": 23.5,
+            "settled_since": 23.2,
+            "ability_enter": 17.1,
+            "ability_exit": 17.95,
+            "folded": true,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.901139259338379,
+              "y": 7.445167541503906,
+              "z": 0.4949585795402527,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49495857331127757
+            },
+            "state": {
+              "time": 23.0,
+              "goal": [
+                15.9,
+                7.6
+              ],
+              "tunnel_done": true
+            },
+            "ability_seconds": 0.8499999999999979
+          }
+        },
+        "wall_seconds": 1.9956678150001608,
+        "trace": "data/research/ability-calibration-settled-20261108/2773-42-warp_kinematic.jsonl"
+      },
+      {
+        "model": 2714,
+        "seed": 42,
+        "backend": "rapier",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 40.0,
+        "ability": "jump",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": null,
+            "settled_at": null,
+            "settled_since": null,
+            "ability_enter": null,
+            "ability_exit": null,
+            "folded": false,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": false,
+            "final": {
+              "x": 5.771061520365183,
+              "y": 7.5037698632048615,
+              "z": 0.3158258124204056,
+              "grounded": false,
+              "upright": 0.6971742884809125,
+              "tipped": false,
+              "public_ground_z": 0.28858454039490333
+            },
+            "state": {
+              "time": 39.5,
+              "goal": [
+                12.1,
+                7.4
+              ],
+              "failed": true
+            },
+            "ability_seconds": null
+          },
+          "blue": {
+            "reached_at": null,
+            "settled_at": null,
+            "settled_since": null,
+            "ability_enter": null,
+            "ability_exit": null,
+            "folded": false,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": false,
+            "final": {
+              "x": 22.231557139878202,
+              "y": 7.50001350949101,
+              "z": 0.3148236081619886,
+              "grounded": false,
+              "upright": 0.696750636062979,
+              "tipped": false,
+              "public_ground_z": 0.28772978959639095
+            },
+            "state": {
+              "time": 39.5,
+              "goal": [
+                15.9,
+                7.6
+              ],
+              "failed": true
+            },
+            "ability_seconds": null
+          }
+        },
+        "wall_seconds": 1.7444027100000312,
+        "trace": "data/research/ability-calibration-settled-20261108/2714-42-rapier.jsonl"
+      },
+      {
+        "model": 2714,
+        "seed": 42,
+        "backend": "warp_kinematic",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 6.95,
+        "ability": "jump",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 6.1,
+            "settled_at": 6.95,
+            "settled_since": 6.65,
+            "ability_enter": 3.55,
+            "ability_exit": 4.35,
+            "folded": false,
+            "jump_commands": 1,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.188178062438965,
+              "y": 7.388490676879883,
+              "z": 0.49347445368766785,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49347443737944546
+            },
+            "state": {
+              "time": 6.5,
+              "goal": [
+                12.1,
+                7.4
+              ]
+            },
+            "ability_seconds": 0.7999999999999998
+          },
+          "blue": {
+            "reached_at": 6.1,
+            "settled_at": 6.95,
+            "settled_since": 6.65,
+            "ability_enter": 3.55,
+            "ability_exit": 4.35,
+            "folded": false,
+            "jump_commands": 1,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.811820030212402,
+              "y": 7.611508846282959,
+              "z": 0.49347445368766785,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.49347444986586586
+            },
+            "state": {
+              "time": 6.5,
+              "goal": [
+                15.9,
+                7.6
+              ]
+            },
+            "ability_seconds": 0.7999999999999998
+          }
+        },
+        "wall_seconds": 0.5705982179997591,
+        "trace": "data/research/ability-calibration-settled-20261108/2714-42-warp_kinematic.jsonl"
+      },
+      {
+        "model": 303,
+        "seed": 42,
+        "backend": "rapier",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 31.1,
+        "ability": "bumps",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 25.55,
+            "settled_at": 30.45,
+            "settled_since": 30.15,
+            "ability_enter": 12.5,
+            "ability_exit": 17.95,
+            "folded": false,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.09028877765707,
+              "y": 7.359721010842827,
+              "z": 0.4205428156669112,
+              "grounded": true,
+              "upright": 0.9996562879087436,
+              "tipped": false,
+              "public_ground_z": 0.4927210771610274
+            },
+            "state": {
+              "time": 30.0,
+              "goal": [
+                12.1,
+                7.4
+              ]
+            },
+            "ability_seconds": 5.449999999999999
+          },
+          "blue": {
+            "reached_at": 28.3,
+            "settled_at": 31.1,
+            "settled_since": 30.8,
+            "ability_enter": 12.5,
+            "ability_exit": 18.05,
+            "folded": false,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.886215375228446,
+              "y": 7.467989542489547,
+              "z": 0.4234214410653321,
+              "grounded": true,
+              "upright": 0.9996086756730838,
+              "tipped": false,
+              "public_ground_z": 0.49555618843913946
+            },
+            "state": {
+              "time": 31.0,
+              "goal": [
+                15.9,
+                7.6
+              ],
+              "teammate_wait_since": 31.0
+            },
+            "ability_seconds": 5.550000000000001
+          }
+        },
+        "wall_seconds": 8.188549381000485,
+        "trace": "data/research/ability-calibration-settled-20261108/303-42-rapier.jsonl"
+      },
+      {
+        "model": 303,
+        "seed": 42,
+        "backend": "warp_kinematic",
+        "control_hz": 2,
+        "horizon_seconds": 40.0,
+        "simulation_seconds": 14.85,
+        "ability": "bumps",
+        "goals": {
+          "red": [
+            12.1,
+            7.4
+          ],
+          "blue": [
+            15.9,
+            7.6
+          ]
+        },
+        "metrics": {
+          "red": {
+            "reached_at": 13.0,
+            "settled_at": 14.85,
+            "settled_since": 14.55,
+            "ability_enter": 8.0,
+            "ability_exit": 8.9,
+            "folded": false,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 12.098445892333984,
+              "y": 7.431859016418457,
+              "z": 0.49461010098457336,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.4946100773171884
+            },
+            "state": {
+              "time": 14.5,
+              "goal": [
+                12.1,
+                7.4
+              ]
+            },
+            "ability_seconds": 0.9000000000000004
+          },
+          "blue": {
+            "reached_at": 13.0,
+            "settled_at": 14.85,
+            "settled_since": 14.55,
+            "ability_enter": 8.0,
+            "ability_exit": 8.9,
+            "folded": false,
+            "jump_commands": 0,
+            "tipped": false,
+            "success": true,
+            "final": {
+              "x": 15.901554107666016,
+              "y": 7.568142414093018,
+              "z": 0.494610071182251,
+              "grounded": true,
+              "upright": 1.0,
+              "tipped": false,
+              "public_ground_z": 0.4946100398579272
+            },
+            "state": {
+              "time": 14.5,
+              "goal": [
+                15.9,
+                7.6
+              ]
+            },
+            "ability_seconds": 0.9000000000000004
+          }
+        },
+        "wall_seconds": 1.3195861479998712,
+        "trace": "data/research/ability-calibration-settled-20261108/303-42-warp_kinematic.jsonl"
+      }
+    ],
+    "comparisons": [
+      {
+        "model": 2731,
+        "seed": 42,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2727272727272727,
+          "settled_at": 0.2943396226415095,
+          "ability_seconds": 0.20000000000000048
+        },
+        "final_origin_offset_difference_m": 0.08042825029156542,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 42,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.36,
+          "settled_at": 0.42638036809815955,
+          "ability_seconds": 0.20000000000000048
+        },
+        "final_origin_offset_difference_m": 0.07507838863770144,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 42,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.13817330210772846,
+          "settled_at": 0.13219616204690823,
+          "ability_seconds": 0.39285714285714324
+        },
+        "final_origin_offset_difference_m": 0.07874899227380372,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 42,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.14219114219114223,
+          "settled_at": 0.22916666666666657,
+          "ability_seconds": 0.39285714285714324
+        },
+        "final_origin_offset_difference_m": 0.06609046498688381,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 42,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.325077399380805,
+          "settled_at": 0.11904761904761904,
+          "ability_seconds": 0.3928571428571445
+        },
+        "final_origin_offset_difference_m": 0.06866620776115334,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 42,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.325077399380805,
+          "settled_at": 0.11638954869358666,
+          "ability_seconds": 0.3928571428571445
+        },
+        "final_origin_offset_difference_m": 0.06475963317159972,
+        "pass_gate": false
+      },
+      {
+        "model": 2714,
+        "seed": 42,
+        "team": "red",
+        "reference_success": false,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": null,
+          "settled_at": null,
+          "ability_seconds": null
+        },
+        "final_origin_offset_difference_m": 0.027241255717279866,
+        "pass_gate": false
+      },
+      {
+        "model": 2714,
+        "seed": 42,
+        "team": "blue",
+        "reference_success": false,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": null,
+          "settled_at": null,
+          "ability_seconds": null
+        },
+        "final_origin_offset_difference_m": 0.027093814743795686,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 42,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.49119373776908026,
+          "settled_at": 0.5123152709359606,
+          "ability_seconds": 0.8348623853211008
+        },
+        "final_origin_offset_difference_m": 0.07217828516150115,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 42,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.5406360424028269,
+          "settled_at": 0.522508038585209,
+          "ability_seconds": 0.8378378378378378
+        },
+        "final_origin_offset_difference_m": 0.07213477869813117,
+        "pass_gate": false
+      }
+    ],
+    "ability_summary": {
+      "2731": {
+        "paired_attempts": 2,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "2732": {
+        "paired_attempts": 2,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "2773": {
+        "paired_attempts": 2,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "2714": {
+        "paired_attempts": 2,
+        "minimum_attempts": 20,
+        "reference_success_rate": 0.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "303": {
+        "paired_attempts": 2,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      }
+    },
+    "ppo_included": false
+  },
+  "calibration_sources": {
+    "experiment_sha256": "52475d4888c20cd3f1b61320fbd8d354f27edd4d27ecd7165ee5fd52b95479a9",
+    "driver_sha256": "428ca1fb3fc98bdcfaf6c5f9594ddf8ec2741c98f57a87d2431570350e59f1ed",
+    "control_hz": 2,
+    "backends": {
+      "rapier": {
+        "sdk_hash": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+        "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+        "engine_binary_sha256": "38f20cc3cc1df9a1c12abedaf8393b4e96fa8656293a1b724307ae64d54390a8",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "rapier",
+          "dt": 0.008333333333333333
+        }
+      },
+      "warp_kinematic": {
+        "sdk_hash": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+        "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+        "engine_binary_sha256": "38f20cc3cc1df9a1c12abedaf8393b4e96fa8656293a1b724307ae64d54390a8",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "warp_kinematic",
+          "device": "cuda:0",
+          "dt": 0.008333333333333333,
+          "experimental": true,
+          "files": {
+            "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+            "arena.py": "d0b6e6fe1c8c6074e7608a3b27b4c1a34be0b4f2d85ad70d044e3dfa9ec7fa7d",
+            "motion.py": "c39bbacd50a88a78f01ff7ec2bd3c15d172e393de03346140a5d5da8b525763f",
+            "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+            "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+            "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+            "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
+            "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+          },
+          "dependencies": {
+            "warp-lang": "1.19.0"
+          }
+        }
+      }
+    }
+  },
+  "tests": {
+    "rust": {
+      "passed": 63,
+      "seconds": 11.57
+    },
+    "adapter": {
+      "passed": 6,
+      "seconds": 2.065
+    },
+    "kinematic_integration": {
+      "passed": 38,
+      "seconds": 41.939
+    },
+    "calibration_gates": 3
+  },
+  "changes": [
+    "Fully folded speed request is halved, matching original controller",
+    "Both physics paths share automatic supercap road boost and budget caps"
+  ],
+  "status": "All five model ability gates fail: only two paired attempts/model, timing discrepancies and a real-physics wheel-leg heavy stall. Do not infer training readiness from throughput before these rule corrections. Geometry/drive/contact calibration remains necessary."
+}

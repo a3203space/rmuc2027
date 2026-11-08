@@ -48,13 +48,14 @@ impl PhysicsWorld {
                                       sequence: u64, now: f64) -> MotionFrame {
         use std::io::{BufRead, Write};
         let entries: Vec<Value> = robots.iter().zip(actions).enumerate().map(|(i,(r,a))| {
+            let on_humps=arena.terrain.iter().any(|t|t.kind=="bumps" && r.x>t.x && r.x<t.x+t.w && r.y>t.y && r.y<t.y+t.h);
+            let disabled=!r.alive || now<r.power_cutoff_until || r.battery_remaining_wh<=0.0 || r.deployed;
             json!({"id":r.id,"model":r.model_slot,"team":r.team,"role":r.role,
                 "pos":[r.x,r.y,r.z],"velocity":[r.vx,r.vy,r.vz],"heading":r.heading,
                 "folded":r.transform_progress,"grounded":r.grounded,
                 "enabled":r.alive && now>=r.power_cutoff_until && r.battery_remaining_wh>0.0 && !r.deployed,
                 "alive":r.alive,"radius":r.radius,"power_limit":r.power_limit,
-                "motor_budget":a.power.unwrap_or(r.power_limit).clamp(0.,200.).min(r.power_limit+
-                    if r.supercap_energy_j>0. {n(&self.designs[i],"voltage_v")*n(&self.designs[i],"supercap_max_current_a")} else {0.}),
+                "motor_budget":drive_motor_budget(r,a,&self.designs[i],on_humps,disabled),
                 "fly_pass":r.fly_pass,
                 "move":a.mv,"heading_goal":a.heading,"yaw_rate":a.yaw_rate,
                 "transform":a.transform.unwrap_or(a.crouch),"jump":a.jump,
@@ -117,8 +118,8 @@ impl PhysicsWorld {
             r.upright=1.0;r.tipped=false;r.self_righting=false;
             advance_weapon_clock(r,a,d,&pose);
             let disabled=!r.powered || r.deployed || r.role=="aerial";
-            let budget=a.power.unwrap_or(r.power_limit).clamp(0.,200.).min(r.power_limit+
-                if r.supercap_energy_j>0. {n(d,"voltage_v")*n(d,"supercap_max_current_a")} else {0.});
+            let on_humps=arena.terrain.iter().any(|t|t.kind=="bumps" && r.x>t.x && r.x<t.x+t.w && r.y>t.y && r.y<t.y+t.h);
+            let budget=drive_motor_budget(r,a,d,on_humps,disabled);
             let speed=r.vx.hypot(r.vy);
             let kinetic=0.5*r.mass_kg*(speed*speed-previous_speed*previous_speed).max(0.)/PHYSICS_DT;
             let drag=(n(d,"rolling_resistance")*r.mass_kg*9.81+0.5*1.225*n(d,"drag_area_m2")*speed*speed)*speed;
@@ -195,6 +196,26 @@ mod tests {
         frame.positions[0][index][2]=position[2]-0.02;
         world.apply_motion_sample(&mut engine.robots,&actions,&frame,0,0.1,&engine.arena);
         assert!((engine.robots[index].z-(position[2]-0.02)).abs()<1e-12);
+    }
+
+    #[test]
+    fn drive_budget_preserves_road_boost_explicit_power_and_cap_threshold() {
+        let mut engine=Engine::new(42,420.0,"rmuc2027").unwrap();
+        let i=engine.robots.iter().position(|r|r.id=="red-3").unwrap();
+        let d=engine.physics.as_ref().unwrap().design(i).clone();
+        let r=&mut engine.robots[i];r.power_limit=50.;r.supercap_energy_j=101.;
+        let mut action=Action::default();
+        assert_eq!(drive_motor_budget(r,&action,&d,false,false),50.);
+        let boosted=drive_motor_budget(r,&action,&d,true,false);
+        assert!(boosted>50. && boosted<=200.);
+        action.power=Some(20.);
+        assert_eq!(drive_motor_budget(r,&action,&d,true,false),20.);
+        action.power=None;r.supercap_energy_j=100.;
+        assert_eq!(drive_motor_budget(r,&action,&d,true,false),50.);
+        r.supercap_energy_j=101.;
+        assert_eq!(drive_motor_budget(r,&action,&d,true,true),0.);
+        r.supercap_energy_j=0.;action.power=Some(200.);
+        assert_eq!(drive_motor_budget(r,&action,&d,true,false),50.);
     }
 
     #[test]

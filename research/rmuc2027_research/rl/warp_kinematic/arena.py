@@ -26,6 +26,7 @@ def controls(pos: wp.array(dtype=wp.vec2), ground: wp.array(dtype=float),
              offsets: wp.array(dtype=wp.vec2), commands: wp.array(dtype=wp.vec2)):
     i=wp.tid();a=heading[i];spec=params[i];command=requested[i]
     if enabled[i]!=0:
+        was_folded=fold[i]>.999
         goal=a
         if wp.length(command)>.01:
             goal=wp.atan2(command[1],command[0])
@@ -54,6 +55,9 @@ def controls(pos: wp.array(dtype=wp.vec2), ground: wp.array(dtype=float),
             if clear!=0:progress=candidate
         fold[i]=progress
         offsets[i]=wp.vec2(offsets[i][0],offsets[i][0]+spec[0]+(spec[1]-spec[0])*progress)
+        # Match the existing physical controller: a fully folded chassis has
+        # half its normal requested speed, using the pre-substep fold state.
+        if was_folded:command=command*.5
         if legged[i]!=0:
             forward=wp.vec2(wp.cos(a),wp.sin(a))
             command=forward*wp.dot(command,forward)

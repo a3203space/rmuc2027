@@ -171,6 +171,14 @@ research/.venv/bin/python -m rmuc2027_research.rl benchmark \
 配置 `navigation_precompute: null` 表示按后端自动选择，`true`/`false` 可显式开启/关闭；其余后端默认按需计算。只读表跨回合复用公共地图数据，动态起点仍实时判断，导出策略保持按需计算。
 准备模式和源码哈希写入 `experiment.json`，恢复、评估和导出会核对。长序列基准同时记录各环境实际推进秒数和完成回合数，自动重置开销包含在采样耗时中。
 
+简化运动与原物理的能力对照可运行下面的诊断；它不训练模型。默认控制频率 2 Hz，记录首次到达、持续低速站稳、实际登阶/过洞/起伏跨越、坐标和公共地面高度。默认十个种子、每型号二十个双向配对尝试；先用单种子定位问题，再运行完整数量。`progress.json` 保留失败项及最低样本门槛，此诊断不能代替已训练模型的比赛胜率迁移验证。
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.warp_kinematic.calibration \
+  --models 2731 2732 2773 2714 303 --seeds 42 --control-hz 2 \
+  --output data/research/ability-probe
+```
+
 模型保存为 `model.zip`，支持 `--resume`；续训严格检查配置、规则、策略、仿真源码及依赖版本。更换后端需新实验，不能把旧优化器断点当成同一实验继续。
 
 训练后在原 Rapier 比赛环境评估与导出：

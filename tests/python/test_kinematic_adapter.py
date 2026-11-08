@@ -15,6 +15,21 @@ def request(model=2732,fold=0.,roof=False):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_fully_folded_drive_uses_original_half_speed_rule(self):
+        speeds=[]
+        for folded in (False,True):
+            adapter=ArenaMotion();command=request(fold=float(folded))
+            robot=command['robots'][0];robot.update(move=[.2,0.],transform=folded)
+            try:
+                for tick in range(20):
+                    command['sequence']=tick;frame=adapter.step(command)
+                    robot.update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],
+                        heading=frame['headings'][-1][0],folded=frame['folded'][-1][0])
+                speeds.append(robot['velocity'][0])
+            finally:adapter.close()
+        self.assertGreater(speeds[0],.7)
+        self.assertAlmostEqual(speeds[1],speeds[0]*.5,places=6)
+
     def test_real_engine_gpu_frame_updates_position_and_fold(self):
         adapter=ArenaMotion()
         with Match(physics_adapter=adapter,battle_settings={'drones_enabled':False,'timed_assembly':True}) as match:
