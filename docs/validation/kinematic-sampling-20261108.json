@@ -1,0 +1,96 @@
+{
+  "date": "2026-11-08",
+  "scope": "sampling only; no PPO or gradient updates",
+  "vector_measurement": {
+    "results": [
+      {
+        "num_envs": 1,
+        "steps_per_env": 128,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 2.4909958520001965,
+        "warmup_seconds": 0.6809959080001136,
+        "sampling_seconds": 12.604297890999987,
+        "per_env_simulated_seconds": [
+          64.0
+        ],
+        "per_env_simulation_seconds_per_second": 5.0776330862267836,
+        "real_seconds_per_simulation_second_per_env": 0.1969421545468748,
+        "rl_steps_per_second": 10.155266172453567,
+        "simulation_seconds_per_second": 5.0776330862267836,
+        "parent_rss_kib": 912936,
+        "worker_pids": [],
+        "sim_backend": "warp_kinematic"
+      },
+      {
+        "num_envs": 2,
+        "steps_per_env": 128,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 3.8550583240000833,
+        "warmup_seconds": 0.9022436509999352,
+        "sampling_seconds": 17.169171498999958,
+        "per_env_simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "per_env_simulation_seconds_per_second": 3.727611434467165,
+        "real_seconds_per_simulation_second_per_env": 0.26826830467187435,
+        "rl_steps_per_second": 14.91044573786866,
+        "simulation_seconds_per_second": 7.45522286893433,
+        "parent_rss_kib": 912796,
+        "worker_pids": [
+          43455,
+          43456
+        ],
+        "sim_backend": "warp_kinematic"
+      }
+    ],
+    "recommended_num_envs": 2
+  },
+  "raw_sha256": "278a38cf7175b167a6d0544732e9248a60702ecf867755fd8c989fc2fd63a27b",
+  "corrected_recommendation": 1,
+  "annotation": "Original recommendation of 2 used aggregate throughput. Only 1 environment passes the per-environment 5x gate. Multiworld GPU batching is not implemented. Action streams differ across environment counts.",
+  "upload_experiment": {
+    "kind": "single-environment-random-sampler-upload",
+    "ppo_included": false,
+    "results": [
+      {
+        "packed_upload": false,
+        "simulation_seconds": 64.0,
+        "wall_seconds": 12.555643452999902,
+        "realtime_factor": 5.097309448103878,
+        "digest": "2496b80f6b0034698681e2a84f1330827b57d1d47b21b81cb66a2ea134ab0edf"
+      },
+      {
+        "packed_upload": true,
+        "simulation_seconds": 64.0,
+        "wall_seconds": 12.161613626000417,
+        "realtime_factor": 5.26245956894847,
+        "digest": "2496b80f6b0034698681e2a84f1330827b57d1d47b21b81cb66a2ea134ab0edf"
+      },
+      {
+        "packed_upload": true,
+        "simulation_seconds": 64.0,
+        "wall_seconds": 12.266572286000155,
+        "realtime_factor": 5.217431447662297,
+        "digest": "2496b80f6b0034698681e2a84f1330827b57d1d47b21b81cb66a2ea134ab0edf"
+      },
+      {
+        "packed_upload": false,
+        "simulation_seconds": 64.0,
+        "wall_seconds": 12.00511300800008,
+        "realtime_factor": 5.331061853174649,
+        "digest": "2496b80f6b0034698681e2a84f1330827b57d1d47b21b81cb66a2ea134ab0edf"
+      }
+    ],
+    "median_seconds": {
+      "False": 12.280378230499991,
+      "True": 12.214092956000286
+    }
+  },
+  "upload_disposition": "reverted: end-to-end median improvement about 0.5 percent",
+  "goal_clearance": "RL goal validation now uses the same radius+0.04 (minimum 0.36) as SDK execution; reference path and large-hull tests passed"
+}

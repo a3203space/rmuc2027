@@ -268,12 +268,14 @@ class ArenaSession:
         self.controller.select(self.obs, action)
         team, other = cfg['team'], 'blue' if cfg['team'] == 'red' else 'red'
         terms = dict.fromkeys(cfg['rewards'], 0.0)
+        sampled_seconds=0.0
         for _ in range(round(cfg['rl_seconds']/DT)):
             before = battle.match._frame
             previous = next(r for r in before['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
             frame = battle.step()
             robot = next(r for r in frame['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
             dt = frame['time']-before['time']
+            sampled_seconds+=dt
             delta = ((frame['teams'][team]['control']-frame['teams'][other]['control'])
                 -(before['teams'][team]['control']-before['teams'][other]['control']))
             terms['control'] += cfg['rewards']['control']*delta
@@ -308,7 +310,9 @@ class ArenaSession:
         reward = sum(terms.values())
         if not math.isfinite(reward):
             raise ValueError('Non-finite reward')
-        return self.features(), reward, terminated, truncated, self.info(terms)
+        info=self.info(terms)
+        info['sampled_simulation_seconds']=sampled_seconds
+        return self.features(), reward, terminated, truncated, info
 
     def info(self, terms):
         battle, cfg = self.battle, self.config

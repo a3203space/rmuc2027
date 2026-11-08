@@ -116,10 +116,17 @@ def check(config, cycles, steps, output, engine_only=False):
     return report
 
 
-def benchmark(config, counts, steps, output, action_pattern='constant-zero', profile=False):
+def recommend_envs(results,min_realtime=5.):
+    eligible=[r for r in results if not r.get('profiled',False)
+              and r['per_env_simulation_seconds_per_second']>=min_realtime]
+    return max(eligible,key=lambda r:r['rl_steps_per_second'])['num_envs'] if eligible else None
+
+
+def benchmark(config, counts, steps, output, action_pattern='constant-zero', profile=False,min_realtime=5.):
     from .learning import vector_env
     import numpy as np
     output = Path(output)
+    if not math.isfinite(min_realtime) or min_realtime<=0:raise ValueError('min realtime factor must be positive and finite')
     output.mkdir(parents=True, exist_ok=False)
     results = []
     for count in counts:
@@ -140,11 +147,13 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
                 import cProfile
                 profiler=cProfile.Profile();profiler.enable()
             begin = time.perf_counter()
+            simulated=np.zeros(count,dtype=np.float64)
             for _ in range(steps):
                 if action_pattern=='uniform-random':
                     actions=rng.uniform(-1,1,(count,2)).astype(np.float32)
                 _, rewards, _, infos = vec.step(actions)
                 assert np.isfinite(rewards).all()
+                simulated+=np.asarray([info['sampled_simulation_seconds'] for info in infos])
             elapsed = time.perf_counter()-begin
             if profiler is not None:
                 profiler.disable();profiler.dump_stats(str(output/f'profile-{count}.pstats'))
@@ -155,10 +164,11 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
             record = {'num_envs': count, 'steps_per_env': steps,
                 'action_pattern':action_pattern,'ppo_included':False,'profiled':profile,
                 'initialization_seconds': initialization, 'warmup_seconds': warmup_seconds, 'sampling_seconds': elapsed,
-                'per_env_simulation_seconds_per_second': steps*config['rl_seconds']/elapsed,
-                'real_seconds_per_simulation_second_per_env': elapsed/(steps*config['rl_seconds']),
+                'per_env_simulated_seconds':simulated.tolist(),
+                'per_env_simulation_seconds_per_second':float(simulated.min())/elapsed,
+                'real_seconds_per_simulation_second_per_env':elapsed/float(simulated.min()) if simulated.min()>0 else None,
                 'rl_steps_per_second': steps*count/elapsed,
-                'simulation_seconds_per_second': steps*count*config['rl_seconds']/elapsed,
+                'simulation_seconds_per_second':float(simulated.sum())/elapsed,
                 'parent_rss_kib': rss_kib(), 'worker_pids': descendants}
             if hasattr(vec, 'physics'):
                 service = vec.physics
@@ -174,7 +184,9 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
             print(json.dumps(record), flush=True)
         finally:
             vec.close()
-    report = {'results': results, 'recommended_num_envs': max(results, key=lambda r: r['rl_steps_per_second'])['num_envs']}
+    report = {'results': results, 'minimum_per_env_realtime_factor':min_realtime,
+              'recommended_num_envs':recommend_envs(results,min_realtime),
+              'fastest_measured_num_envs':max(results,key=lambda r:r['rl_steps_per_second'])['num_envs']}
     write_json(output/'benchmark.json', report)
 
 
@@ -205,6 +217,7 @@ def main():
             p.add_argument('--steps', type=int, default=128)
             p.add_argument('--action-pattern',choices=('constant-zero','uniform-random'),default='constant-zero')
             p.add_argument('--profile',action='store_true',help='Record main-process timings; adds measurement overhead')
+            p.add_argument('--min-realtime-factor',type=float,default=5.)
     p = sub.add_parser('evaluate')
     p.add_argument('--model', type=Path, required=True)
     p.add_argument('--run-dir', type=Path, required=True)
@@ -253,7 +266,7 @@ def main():
         elif args.command == 'benchmark':
             if args.steps < 1:
                 raise ValueError('steps must be positive')
-            benchmark(config, args.num_envs, args.steps, args.run_dir,args.action_pattern,args.profile)
+            benchmark(config, args.num_envs, args.steps, args.run_dir,args.action_pattern,args.profile,args.min_realtime_factor)
     except ImportError as exc:
         parser.exit(2, f'RL dependency unavailable: {exc}. Install with uv pip install --python research/.venv/bin/python --torch-backend cpu -r research/requirements-rl.txt -e packages/core -e research\n')
     except KeyboardInterrupt:

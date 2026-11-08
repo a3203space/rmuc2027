@@ -162,6 +162,11 @@ research/.venv/bin/python -m rmuc2027_research.rl benchmark \
   --run-dir data/research/bench-rapier
 ```
 
+基准按每个环境实际推进的仿真秒数计速，提前终局不会按完整学习步高估。
+`recommended_num_envs` 只从未启用 profiler 且逐环境达到 `--min-realtime-factor`（默认 5）的结果中选择；没有达标结果时为 `null`。
+`fastest_measured_num_envs` 仅表示合计采样吞吐最高，不代表逐环境达标。
+`--action-pattern uniform-random` 用于频繁切换目标的采样压力测试；这些基准均不包含 PPO 更新。
+
 模型保存为 `model.zip`，支持 `--resume`；续训严格检查配置、规则、策略、仿真源码及依赖版本。更换后端需新实验，不能把旧优化器断点当成同一实验继续。
 
 训练后在原 Rapier 比赛环境评估与导出：

@@ -12,7 +12,7 @@ class GoalReachabilityTests(unittest.TestCase):
         for team,x,y in [('red',2.5,5.),('blue',25.5,10.),('red',12.,7.5)]:
             for folded in (False,True):
                 robot=dict(team=team,x=x,y=y,radius=.39,transform_progress=float(folded))
-                graph=sdk._prepare_chapter4(arena,team,folded)
+                graph=sdk._prepare_chapter4(arena,team,folded,robot['radius']+.04)
                 for _ in range(4):
                     proposed=[rng.uniform(0,28),rng.uniform(0,15)]
                     actual=navigator.resolve_goal(robot,proposed,arena)
@@ -24,3 +24,19 @@ class GoalReachabilityTests(unittest.TestCase):
                                sdk._route(graph,start,goal,near,set(),strict) is not None for strict in (True,False)):
                             expected=list(goal);break
                     self.assertEqual(actual,expected,(robot,proposed))
+
+    def test_large_hull_goals_use_execution_clearance(self):
+        arena=sdk._REFERENCE_ARENA
+        navigator=SdkNavigator(.25)
+        small=sdk._prepare_chapter4(arena,'red',False)
+        large=sdk._prepare_chapter4(arena,'red',False,.74)
+        # Select real map points admitted by the old fixed margin but rejected
+        # by this chassis. Test actual goal output, not only the graph argument.
+        candidates=[(i*.25,j*.25) for i in range(3,109) for j in range(3,57)
+                    if not small[3]((i*.25,j*.25)) and large[3]((i*.25,j*.25))]
+        self.assertTrue(candidates)
+        robot=dict(team='red',x=2.5,y=5.,radius=.7,transform_progress=0.)
+        for proposed in candidates[::max(1,len(candidates)//12)]:
+            goal=navigator.resolve_goal(robot,proposed,arena)
+            self.assertIsNotNone(goal)
+            self.assertFalse(large[3](goal),(proposed,goal))

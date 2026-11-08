@@ -106,7 +106,10 @@ class SdkNavigator(NavigationBackend):
 
     def resolve_goal(self, robot, proposed, arena):
         folded = robot.get('transform_progress', 0) >= .99
-        graph = _sdk._prepare_chapter4(arena, robot['team'], folded)
+        # Use the same hull clearance as SDK command execution. Otherwise a
+        # large chassis can select a legal-looking goal inside its own margin.
+        graph = _sdk._prepare_chapter4(arena, robot['team'], folded,
+                                      robot.get('radius', .28)+.04)
         _, _, clear, inside = graph
         key = (arena['layout_revision'], robot['team'], folded, robot.get('radius', .28), self.grid_m)
         if key not in self.grids:

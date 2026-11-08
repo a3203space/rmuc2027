@@ -93,6 +93,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertTrue(truncated)
             self.assertEqual(session.battle.match.status, 'running')
             self.assertEqual(info['reward_terms']['outcome'], 0)
+            self.assertAlmostEqual(info['sampled_simulation_seconds'],1.)
             with self.assertRaises(RuntimeError):
                 session.step([0, 0])
 
@@ -105,6 +106,8 @@ class RuntimeTests(unittest.TestCase):
             self.assertTrue(terminated)
             self.assertFalse(truncated)
             self.assertEqual(info['reward_terms']['outcome'], 10)
+            self.assertLess(info['sampled_simulation_seconds'],self.config['rl_seconds'])
+            self.assertGreaterEqual(info['sampled_simulation_seconds'],0.)
             self.assertEqual(len(session.battle.frames), 1)
             self.assertEqual(session.battle.actions, [])
             with self.assertRaises(RuntimeError):
