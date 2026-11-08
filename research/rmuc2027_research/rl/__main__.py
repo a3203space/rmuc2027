@@ -116,7 +116,7 @@ def check(config, cycles, steps, output, engine_only=False):
     return report
 
 
-def benchmark(config, counts, steps, output, action_pattern='constant-zero'):
+def benchmark(config, counts, steps, output, action_pattern='constant-zero', profile=False):
     from .learning import vector_env
     import numpy as np
     output = Path(output)
@@ -135,6 +135,10 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero'):
             warmup_seconds = time.perf_counter()-warmup_begin
             if hasattr(vec, 'physics'):
                 vec.physics.reset_metrics()
+            profiler=None
+            if profile:
+                import cProfile
+                profiler=cProfile.Profile();profiler.enable()
             begin = time.perf_counter()
             for _ in range(steps):
                 if action_pattern=='uniform-random':
@@ -142,12 +146,14 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero'):
                 _, rewards, _, infos = vec.step(actions)
                 assert np.isfinite(rewards).all()
             elapsed = time.perf_counter()-begin
+            if profiler is not None:
+                profiler.disable();profiler.dump_stats(str(output/f'profile-{count}.pstats'))
             # Sum live workers' resident sets when procfs is available.
             descendants = []
             if hasattr(vec, 'processes'):
                 descendants = [p.pid for p in vec.processes]
             record = {'num_envs': count, 'steps_per_env': steps,
-                'action_pattern':action_pattern,'ppo_included':False,
+                'action_pattern':action_pattern,'ppo_included':False,'profiled':profile,
                 'initialization_seconds': initialization, 'warmup_seconds': warmup_seconds, 'sampling_seconds': elapsed,
                 'per_env_simulation_seconds_per_second': steps*config['rl_seconds']/elapsed,
                 'real_seconds_per_simulation_second_per_env': elapsed/(steps*config['rl_seconds']),
@@ -198,6 +204,7 @@ def main():
             p.add_argument('--num-envs', type=int, nargs='+', default=[1, 2, 4])
             p.add_argument('--steps', type=int, default=128)
             p.add_argument('--action-pattern',choices=('constant-zero','uniform-random'),default='constant-zero')
+            p.add_argument('--profile',action='store_true',help='Record main-process timings; adds measurement overhead')
     p = sub.add_parser('evaluate')
     p.add_argument('--model', type=Path, required=True)
     p.add_argument('--run-dir', type=Path, required=True)
@@ -246,7 +253,7 @@ def main():
         elif args.command == 'benchmark':
             if args.steps < 1:
                 raise ValueError('steps must be positive')
-            benchmark(config, args.num_envs, args.steps, args.run_dir,args.action_pattern)
+            benchmark(config, args.num_envs, args.steps, args.run_dir,args.action_pattern,args.profile)
     except ImportError as exc:
         parser.exit(2, f'RL dependency unavailable: {exc}. Install with uv pip install --python research/.venv/bin/python --torch-backend cpu -r research/requirements-rl.txt -e packages/core -e research\n')
     except KeyboardInterrupt:

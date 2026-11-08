@@ -101,6 +101,8 @@ class SdkNavigator(NavigationBackend):
     def __init__(self, grid_m=0.25):
         self.grid_m = grid_m
         self.grids = {}
+        self.graph_components = {}
+        self.reachability = {}
 
     def resolve_goal(self, robot, proposed, arena):
         folded = robot.get('transform_progress', 0) >= .99
@@ -117,13 +119,37 @@ class SdkNavigator(NavigationBackend):
                 and margin <= j*g <= arena['height']-margin and not inside((i*g, j*g))]
         start = (robot['x'], robot['y'])
         near = inside(start, True)
+        graph_key=(id(graph),clear)
+        if graph_key not in self.graph_components:
+            nodes,edges,_,_=graph
+            components=[-1]*len(nodes)
+            for index in range(len(nodes)):
+                if components[index]>=0:continue
+                components[index]=index;pending=[index]
+                while pending:
+                    node=pending.pop()
+                    for other,_ in edges[node]:
+                        if components[other]<0:
+                            components[other]=index;pending.append(other)
+            self.graph_components[graph_key]=components
+        components=self.graph_components[graph_key]
+        start_components={}
         points = sorted(self.grids[key], key=lambda p: ((p[0]-proposed[0])**2+(p[1]-proposed[1])**2, p))
         for goal in points:
             # Match the SDK's strict/relaxed static-route fallbacks. Dynamic
             # contacts may still obstruct a physically valid static route.
             for strict in (True, False):
-                if clear(start, goal, near, strict) or _sdk._route(graph, start, goal, near, set(), strict) is not None:
+                if clear(start,goal,near,strict):
                     return list(goal)
+                if strict not in start_components:
+                    start_components[strict]=frozenset(components[i] for i,p in enumerate(graph[0]) if clear(start,p,near,strict))
+                visible=start_components[strict]
+                reach_key=(graph_key,goal,strict,visible)
+                if reach_key not in self.reachability:
+                    reachable=any(clear(p,goal,(),strict) for i,p in enumerate(graph[0]) if components[i] in visible)
+                    if len(self.reachability)>=4096:self.reachability.pop(next(iter(self.reachability)))
+                    self.reachability[reach_key]=reachable
+                if self.reachability[reach_key]:return list(goal)
         return None
 
     def command(self, robot, goal, observation):
