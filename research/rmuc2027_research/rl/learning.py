@@ -36,6 +36,9 @@ def vector_env(config, count):
     if config.get('sim_backend', 'rapier') == 'mjwarp':
         from .mjwarp.vector import WarpVecEnv
         vec = WarpVecEnv(factories)
+    elif config.get('sim_backend') == 'warp_kinematic' and count>1:
+        from .warp_kinematic.vector import WarpVecEnv
+        vec = WarpVecEnv(factories)
     else:
         vec = DummyVecEnv(factories) if count == 1 or config.get('slot') == 1 else SubprocVecEnv(factories, start_method='spawn')
     vec.seed(config['seed'])

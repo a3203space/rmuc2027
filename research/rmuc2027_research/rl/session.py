@@ -132,7 +132,7 @@ def provenance(config):
         result['simulation']={'backend':'warp_kinematic','device':config.get('sim_device','cuda:0'),
             'dt':1/120,'experimental':True,
             'files':{name:hashlib.sha256((folder/name).read_bytes()).hexdigest()
-                     for name in ('__init__.py','arena.py','motion.py','terrain.py','traversal.py','protocol.py')},
+                     for name in ('__init__.py','arena.py','motion.py','terrain.py','traversal.py','protocol.py','batching.py','vector.py')},
             'dependencies':{'warp-lang':version('warp-lang')}}
     else:
         result['simulation'] = {'backend': 'rapier', 'dt': 1/120}

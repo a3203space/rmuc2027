@@ -73,8 +73,8 @@ class Battle:
             adapter = ArenaPhysics(sim_device)
         elif physics_backend == 'warp_kinematic':
             # Explicit experimental selection; full acceptance is still pending.
-            from ..rl.warp_kinematic.arena import ArenaMotion
-            adapter = ArenaMotion(sim_device)
+            from ..rl.warp_kinematic.batching import make_adapter
+            adapter = make_adapter(sim_device)
         self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False
         if self.timed_assembly:
             # Fixed opening navigation executes in this process. Build its

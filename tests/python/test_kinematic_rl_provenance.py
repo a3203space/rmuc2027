@@ -10,6 +10,8 @@ class KinematicProvenanceTests(unittest.TestCase):
         self.assertTrue(record['experimental'])
         self.assertIn('arena.py',record['files'])
         self.assertIn('traversal.py',record['files'])
+        self.assertIn('batching.py',record['files'])
+        self.assertIn('vector.py',record['files'])
         self.assertNotIn('benchmark.py',record['files'])
         self.assertEqual(set(record['dependencies']),{'warp-lang'})
         self.assertNotEqual(record,provenance(load_config({'sim_backend':'rapier'}))['simulation'])

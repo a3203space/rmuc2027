@@ -11,7 +11,7 @@ import sys
 import time
 
 from .portable import OBS_SIZE
-from .session import ArenaSession, DEFAULT_CONFIG, load_config
+from .session import ArenaSession, DEFAULT_CONFIG, load_config, provenance
 
 
 def write_json(path, value):
@@ -128,6 +128,7 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
     output = Path(output)
     if not math.isfinite(min_realtime) or min_realtime<=0:raise ValueError('min realtime factor must be positive and finite')
     output.mkdir(parents=True, exist_ok=False)
+    write_json(output/'experiment.json',provenance(config))
     results = []
     for count in counts:
         started = time.perf_counter()
@@ -174,6 +175,9 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
                 service = vec.physics
                 record['physics_batches'] = service.batches
                 record['physics_world_substeps'] = service.world_steps
+                record['physics_rule_frames'] = service.world_steps
+                record['physics_substeps_120hz'] = service.world_steps*6
+                record['physics_counter_note'] = 'physics_world_substeps is a legacy name counting 50ms rule requests; use physics_rule_frames or physics_substeps_120hz.'
                 record['max_physics_batch'] = service.max_batch
                 record['physics_handler_seconds'] = service.integration_seconds
                 record['physics_phase_host_seconds'] = dict(service.phase_seconds)

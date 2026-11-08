@@ -1,0 +1,203 @@
+{
+  "date": "2026-11-08",
+  "scope": "CUDA world batching and random sampling; no PPO or gradient updates",
+  "measurements": {
+    "kinematic-shared-worlds-fixed-128-20261108": {
+      "results": [
+        {
+          "num_envs": 1,
+          "steps_per_env": 128,
+          "action_pattern": "uniform-random",
+          "ppo_included": false,
+          "profiled": false,
+          "initialization_seconds": 2.509942814000169,
+          "warmup_seconds": 0.6442121129998668,
+          "sampling_seconds": 11.103045079000367,
+          "per_env_simulated_seconds": [
+            64.0
+          ],
+          "per_env_simulation_seconds_per_second": 5.764184468731534,
+          "real_seconds_per_simulation_second_per_env": 0.17348507935938073,
+          "rl_steps_per_second": 11.528368937463068,
+          "simulation_seconds_per_second": 5.764184468731534,
+          "parent_rss_kib": 911364,
+          "worker_pids": [],
+          "sim_backend": "warp_kinematic"
+        },
+        {
+          "num_envs": 2,
+          "steps_per_env": 128,
+          "action_pattern": "uniform-random",
+          "ppo_included": false,
+          "profiled": false,
+          "initialization_seconds": 4.267250306999813,
+          "warmup_seconds": 0.40685624799971265,
+          "sampling_seconds": 16.37901388099999,
+          "per_env_simulated_seconds": [
+            64.0,
+            64.0
+          ],
+          "per_env_simulation_seconds_per_second": 3.9074391452980803,
+          "real_seconds_per_simulation_second_per_env": 0.25592209189062487,
+          "rl_steps_per_second": 15.629756581192321,
+          "simulation_seconds_per_second": 7.814878290596161,
+          "parent_rss_kib": 936556,
+          "worker_pids": [],
+          "physics_batches": 2346,
+          "physics_world_substeps": 2560,
+          "max_physics_batch": 2,
+          "physics_handler_seconds": 5.03337933999228,
+          "physics_phase_host_seconds": {},
+          "physics_batch_histogram": {
+            "1": 2132,
+            "2": 214
+          },
+          "profile_note": "Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.",
+          "sim_backend": "warp_kinematic"
+        }
+      ],
+      "minimum_per_env_realtime_factor": 5.0,
+      "recommended_num_envs": 1,
+      "fastest_measured_num_envs": 2
+    },
+    "kinematic-round-batches-128-20261108": {
+      "results": [
+        {
+          "num_envs": 1,
+          "steps_per_env": 128,
+          "action_pattern": "uniform-random",
+          "ppo_included": false,
+          "profiled": false,
+          "initialization_seconds": 2.489055801000177,
+          "warmup_seconds": 0.6565458039999612,
+          "sampling_seconds": 10.80037693200029,
+          "per_env_simulated_seconds": [
+            64.0
+          ],
+          "per_env_simulation_seconds_per_second": 5.925719111744635,
+          "real_seconds_per_simulation_second_per_env": 0.16875588956250454,
+          "rl_steps_per_second": 11.85143822348927,
+          "simulation_seconds_per_second": 5.925719111744635,
+          "parent_rss_kib": 915224,
+          "worker_pids": [],
+          "sim_backend": "warp_kinematic"
+        },
+        {
+          "num_envs": 2,
+          "steps_per_env": 128,
+          "action_pattern": "uniform-random",
+          "ppo_included": false,
+          "profiled": false,
+          "initialization_seconds": 4.253989333000391,
+          "warmup_seconds": 0.40150745399978405,
+          "sampling_seconds": 16.19251252400045,
+          "per_env_simulated_seconds": [
+            64.0,
+            64.0
+          ],
+          "per_env_simulation_seconds_per_second": 3.9524440635843,
+          "real_seconds_per_simulation_second_per_env": 0.253008008187507,
+          "rl_steps_per_second": 15.8097762543372,
+          "simulation_seconds_per_second": 7.9048881271686,
+          "parent_rss_kib": 940236,
+          "worker_pids": [],
+          "physics_batches": 1280,
+          "physics_world_substeps": 2560,
+          "physics_rule_frames": 2560,
+          "physics_substeps_120hz": 15360,
+          "physics_counter_note": "physics_world_substeps is a legacy name counting 50ms rule requests; use physics_rule_frames or physics_substeps_120hz.",
+          "max_physics_batch": 2,
+          "physics_handler_seconds": 3.1655886280009327,
+          "physics_phase_host_seconds": {},
+          "physics_batch_histogram": {
+            "2": 1280
+          },
+          "profile_note": "Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.",
+          "sim_backend": "warp_kinematic"
+        }
+      ],
+      "minimum_per_env_realtime_factor": 5.0,
+      "recommended_num_envs": 1,
+      "fastest_measured_num_envs": 2
+    }
+  },
+  "simulation_sources": {
+    "backend": "warp_kinematic",
+    "device": "cuda:0",
+    "dt": 0.008333333333333333,
+    "experimental": true,
+    "files": {
+      "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+      "arena.py": "80b7294130282744ad90b5267e1d23ce4429f42eeb950e881783868c4c38e8dc",
+      "motion.py": "c39bbacd50a88a78f01ff7ec2bd3c15d172e393de03346140a5d5da8b525763f",
+      "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+      "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+      "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+      "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
+      "vector.py": "08fbad56255b021f80d1ac2ddd96989f4e768975ea89b11244e1389a5c13b458"
+    },
+    "dependencies": {
+      "warp-lang": "1.19.0"
+    }
+  },
+  "config": {
+    "seed": 42,
+    "team": "red",
+    "slot": 7,
+    "map": "rmuc2027",
+    "duration": 420,
+    "episode_seconds": 420,
+    "rl_seconds": 0.5,
+    "grid_m": 0.25,
+    "recover_enter": 0.25,
+    "recover_exit": 0.8,
+    "friendly": "examples/claude_opus55_xhigh_2027_squad",
+    "opponent": "examples/claude_opus55_xhigh_2027_hold",
+    "controllers": {
+      "red:7": {
+        "kind": "learning"
+      }
+    },
+    "rewards": {
+      "control": 0.01,
+      "outcome": 10.0,
+      "capture_seconds": 0.001,
+      "death": -0.1
+    },
+    "ppo": {
+      "n_steps": 64,
+      "batch_size": 64,
+      "n_epochs": 4,
+      "learning_rate": 0.0003,
+      "gamma": 0.995,
+      "gae_lambda": 0.95,
+      "ent_coef": 0.01
+    },
+    "sim_backend": "warp_kinematic",
+    "sim_device": "cuda:0",
+    "policy_timeout_s": 5.0,
+    "learning_control_hz": 2,
+    "drones_enabled": false,
+    "navigation_mode": "legacy",
+    "timed_assembly": true,
+    "github_backup_repo": "a3203space/rmuc2027",
+    "fixed_policy_hz": 10,
+    "training_summary": true,
+    "action_trace": false,
+    "github_backup_seconds": 300.0
+  },
+  "experiment_sha256": "d86c75f713735d191c819c4456b26f0140bde39a7c0c47e0f86b3a1516b69cd6",
+  "tests": {
+    "kinematic_integration_suite": {
+      "passed": 36,
+      "seconds": 46.292
+    },
+    "round_vector_reset_parity": {
+      "passed": 1,
+      "seconds": 32.352
+    },
+    "round_batching_cases": 6
+  },
+  "status": "World batching works and isolates asynchronous traversal state. Two environments still fail per-environment 5x sampling gate. More environment counts, calibration, migration and PPO-inclusive gates remain.",
+  "next_bottleneck": "Worker profile finds about 91744 clear calls in slow environment goal resolution over 32 sampled steps; other environment waits. Profiled duration is not a speed gate."
+}
