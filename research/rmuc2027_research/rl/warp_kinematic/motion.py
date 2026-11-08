@@ -6,6 +6,7 @@ to later stages; it must not be advertised as a complete Arena physics adapter.
 """
 import numpy as np
 import warp as wp
+from .terrain import TerrainData, surface_height
 
 
 @wp.func
@@ -139,6 +140,7 @@ class MotionBatch:
         self.body_z = wp.array([[0.,1.]]*self.count,dtype=wp.vec2,device=self.device)
         self.height_offsets = wp.array([[0.,1.]]*self.count,dtype=wp.vec2,device=self.device)
         self.terrain = None
+        self.flat_scene = TerrainData()
         self.heights = wp.zeros(self.count,dtype=float,device=self.device)
         self.step_limits = wp.array([.04]*self.count,dtype=float,device=self.device)
         self.output = wp.empty(self.count,dtype=wp.vec2,device=self.device)
@@ -166,7 +168,9 @@ class MotionBatch:
             launch(limit_terrain,self.count,inputs=[self.terrain.data,self.previous,self.pos,
                       self.vel,self.limits,self.step_limits,self.heights,self.flight],device=self.device)
         launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
-                  self.worlds,self.body_z,self.resolved,self.resolved_velocity],device=self.device)
+                  self.worlds,self.body_z,self.enabled,self.flight,self.boxes,self.angles,self.wall_z,self.wall_masks,
+                  self.terrain.data if self.terrain is not None else self.flat_scene,int(self.terrain is not None),
+                  self.step_limits,self.resolved,self.resolved_velocity],device=self.device)
         wp.copy(self.pos,self.resolved)
         wp.copy(self.vel,self.resolved_velocity)
         if self.terrain is not None:
@@ -192,11 +196,16 @@ class MotionBatch:
 @wp.kernel
 def resolve_agents(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=wp.vec2),
                    velocity: wp.array(dtype=wp.vec2), limits: wp.array(dtype=wp.vec3),
-                   worlds: wp.array(dtype=wp.int32), body_z: wp.array(dtype=wp.vec2), result: wp.array(dtype=wp.vec2),
+                   worlds: wp.array(dtype=wp.int32), body_z: wp.array(dtype=wp.vec2),
+                   enabled: wp.array(dtype=wp.int32), flight: wp.array(dtype=wp.int32),
+                   boxes: wp.array(dtype=wp.vec4), angles: wp.array(dtype=float), wall_z: wp.array(dtype=wp.vec2),
+                   masks: wp.array2d(dtype=wp.int32), scene: TerrainData, terrain_enabled: int,
+                   steps: wp.array(dtype=float), result: wp.array(dtype=wp.vec2),
                    result_velocity: wp.array(dtype=wp.vec2)):
     i = wp.tid()
     displacement = proposed[i] - previous[i]
     fraction = float(1.0)
+    correction=wp.vec2(0.0,0.0)
     for j in range(previous.shape[0]):
         if i != j and worlds[i] == worlds[j] and body_z[i][1]>body_z[j][0] and body_z[j][1]>body_z[i][0]:
             separation = previous[i]-previous[j]
@@ -205,6 +214,14 @@ def resolve_agents(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=w
             a = wp.dot(relative, relative)
             b = wp.dot(separation, relative)
             c = wp.dot(separation,separation)-radius*radius
+            if c < -1.e-6 and enabled[i]!=0 and flight[i]==0 and flight[j]==0 and wp.length(proposed[i]-proposed[j])<radius:
+                distance=wp.length(separation)
+                normal=wp.vec2(1.0,0.0)
+                if i<j:normal=wp.vec2(-1.0,0.0)
+                if distance>1.e-6:normal=separation/distance
+                share=float(1.0)
+                if enabled[j]!=0:share=.5
+                correction=correction+normal*(radius-distance+.0001)*share
             if b < 0.0:
                 if c <= 0.0:
                     fraction = 0.0
@@ -218,6 +235,26 @@ def resolve_agents(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=w
     result_velocity[i] = velocity[i]
     if fraction < 1.0:
         result_velocity[i] = wp.vec2(0.0,0.0)
+    if wp.length(correction)>1.e-6:
+        correction=correction*wp.min(1.0,.02/wp.length(correction))
+        start=result[i];safe=float(1.0)
+        for j in range(boxes.shape[0]):
+            if masks[i,j]!=0 and body_z[i][1]>wall_z[j][0] and body_z[i][0]<wall_z[j][1]:
+                wall=boxes[j];center=wp.vec2((wall[0]+wall[2])*.5,(wall[1]+wall[3])*.5)
+                half=wp.vec2((wall[2]-wall[0])*.5+limits[i][2],(wall[3]-wall[1])*.5+limits[i][2])
+                c=wp.cos(angles[j]);s=wp.sin(angles[j]);p=start-center
+                hit=segment_box(wp.vec2(c*p[0]+s*p[1],-s*p[0]+c*p[1]),
+                                wp.vec2(c*correction[0]+s*correction[1],-s*correction[0]+c*correction[1]),-half,half)
+                safe=wp.min(safe,wp.max(0.0,hit[0]-1.e-5))
+        end=start+correction*safe
+        if terrain_enabled!=0:
+            accepted=start;old_height=surface_height(scene,start);blocked=int(0)
+            for sample in range(1,5):
+                p=start+(end-start)*(float(sample)/4.0);height=surface_height(scene,p)
+                if p[0]<limits[i][2] or p[0]>scene.width-limits[i][2] or p[1]<limits[i][2] or p[1]>scene.height-limits[i][2] or wp.abs(height-old_height)>steps[i]:blocked=1
+                if blocked==0:accepted=p;old_height=height
+            end=accepted
+        result[i]=end;result_velocity[i]=wp.vec2(0.0,0.0)
 
 
 @wp.kernel

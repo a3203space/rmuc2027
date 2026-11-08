@@ -2,9 +2,44 @@
 import unittest
 import numpy as np
 from rmuc2027_research.rl.warp_kinematic.motion import MotionBatch
+from rmuc2027_research.rl.warp_kinematic.terrain import Terrain
 
 
 class CudaMotionTests(unittest.TestCase):
+    def test_three_way_coincident_overlap_recovers_symmetrically(self):
+        sim=MotionBatch([[0,0]]*3,[[3,10,.2]]*3,[])
+        for _ in range(40):sim.step([[0,0]]*3,dt=1/120)
+        p,_=sim.state()
+        self.assertAlmostEqual(p[0,0],-p[2,0],places=5)
+        for a,b in ((0,1),(0,2),(1,2)):
+            self.assertGreaterEqual(np.linalg.norm(p[a]-p[b]),.3999)
+
+    def test_recovery_cannot_cross_cliff_or_map_boundary(self):
+        terrain=Terrain(dict(width=4.,height=4.,terrain=[dict(kind='platform',x=2.,y=0.,w=2.,h=4.,
+            elevation=.5,polygon=[[2.,0.],[4.,0.],[4.,4.],[2.,4.]])]))
+        for x in (1.99,.11):
+            sim=MotionBatch([[x,2.]]*2,[[3,10,.1]]*2,[]);sim.terrain=terrain
+            for _ in range(30):sim.step([[0,0]]*2,dt=1/120)
+            p,_=sim.state()
+            self.assertGreaterEqual(p[:,0].min(),.1-1e-6)
+            self.assertLess(p[:,0].max(),2.)
+            self.assertGreaterEqual(np.linalg.norm(p[0]-p[1]),.1999)
+
+    def test_coincident_spawn_recovers_without_crossing_wall(self):
+        sim=MotionBatch([[.21,0.],[.21,0.]],[[3,10,.2]]*2,[[-1,-2,0,2]])
+        for _ in range(30):sim.step([[0,0],[0,0]],dt=1/120)
+        p,_=sim.state()
+        self.assertGreaterEqual(p[:,0].min(),.1999)
+        self.assertGreaterEqual(np.linalg.norm(p[0]-p[1]),.3999)
+
+    def test_overlap_recovery_respects_disabled_robot_and_world(self):
+        sim=MotionBatch([[0,0],[0,0],[0,0]],[[3,10,.2]]*3,[],worlds=[0,0,1])
+        sim.enabled.assign(np.array([1,0,1],dtype=np.int32))
+        for _ in range(30):sim.step([[0,0]]*3,dt=1/120)
+        p,_=sim.state()
+        np.testing.assert_array_equal(p[1:],[[0,0],[0,0]])
+        self.assertGreaterEqual(np.linalg.norm(p[0]),.3999)
+
     def test_float32_contact_keeps_tangential_motion(self):
         radius=.38890877
         # Just inside the expanded boundary after a float32 contact readback.
