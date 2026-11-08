@@ -1392,6 +1392,20 @@ impl Engine {
         }
         frame
     }
+    /// Read-only comparison of public map height and uppermost static collider.
+    pub fn probe_terrain(&self,points:&[[f64;2]]) -> Result<Value,String> {
+        if points.len()>4096 || points.iter().any(|p|!p[0].is_finite() || !p[1].is_finite()
+            || p[0]<0.0 || p[0]>self.arena.width || p[1]<0.0 || p[1]>self.arena.height) {
+            return Err("terrain probe requires at most 4096 finite in-field points".into());
+        }
+        let samples:Vec<Value>=points.iter().map(|p| {
+            let analytic=height_at(&self.arena,p[0],p[1]);
+            let physical=self.physics.as_ref().and_then(|world|world.static_surface_height(p[0],p[1]));
+            json!({"x":p[0],"y":p[1],"analytic_ground_z":analytic,"physical_static_top_z":physical,
+                "static_top_minus_ground":physical.map(|h|h-analytic)})
+        }).collect();
+        Ok(json!({"kind":"static-terrain-probe","samples":samples}))
+    }
     /// Frame fields that never change during a match.
     pub fn static_snapshot(&self) -> [(&'static str, Value); 4] {
         [

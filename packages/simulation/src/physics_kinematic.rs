@@ -199,6 +199,56 @@ mod tests {
     }
 
     #[test]
+    fn terrain_mesh_matches_public_ridge_and_remains_watertight() {
+        let engine=Engine::new(42,420.0,"rmuc2027").unwrap();
+        let mut points:Vec<[f64;2]>=vec![[5.7,7.5]];
+        for y in [3.,6.5,7.4,7.499,7.5,7.501,8.5,12.] {points.push([12.,y]);}
+        let result=engine.probe_terrain(&points).unwrap();
+        for sample in result["samples"].as_array().unwrap() {
+            assert!(sample["static_top_minus_ground"].as_f64().unwrap().abs()<1e-8,"{sample}");
+        }
+        // A concave roof whose varying height must survive the split. Every
+        // edge of the actual closed mesh must have two incident triangles.
+        let polygon=[[1.,6.],[4.,6.],[4.,9.],[3.,9.],[3.,8.],[1.,8.]];
+        let heights=[0.1,0.2,0.4,0.3,0.2,0.15];
+        let (vertices,triangles)=prism_mesh(&polygon,&heights,-0.1,&engine.arena);
+        let mut edges=BTreeMap::new();
+        for triangle in triangles {
+            let p=triangle.map(|i|vertices[i as usize]);
+            assert!((p[1]-p[0]).cross(&(p[2]-p[0])).norm()>1e-12);
+            for i in 0..3 {
+                let a=triangle[i];let b=triangle[(i+1)%3];
+                *edges.entry((a.min(b),a.max(b))).or_insert(0)+=1;
+            }
+        }
+        assert!(edges.values().all(|&count|count==2),"{edges:?}");
+        let south=[[1.,1.],[4.,1.],[4.,3.],[1.,3.]];
+        let roof=[0.1,0.2,0.3,0.4];
+        let (unchanged,faces)=prism_mesh(&south,&roof,-0.1,&engine.arena);
+        assert_eq!(unchanged.len(),8);assert_eq!(faces.len(),12);
+        for (i,p) in south.iter().enumerate() {
+            let floor=p[1]*engine.arena.floor_slope_deg.to_radians().tan();
+            assert_eq!(unchanged[i],point![p[0],p[1],floor+roof[i]]);
+            assert_eq!(unchanged[i+4],point![p[0],p[1],floor-0.1]);
+        }
+    }
+
+    #[test]
+    fn static_terrain_probe_excludes_robots_and_does_not_advance_match() {
+        let engine=Engine::new(42,420.0,"rmuc2027").unwrap();
+        let before=engine.snapshot();
+        let r=engine.robots.iter().find(|r|r.id=="red-3").unwrap();
+        let result=engine.probe_terrain(&[[r.x,r.y]]).unwrap();
+        let sample=&result["samples"][0];
+        let expected=height_at(&engine.arena,r.x,r.y);
+        assert!((sample["physical_static_top_z"].as_f64().unwrap()-expected).abs()<1e-8);
+        assert_eq!(engine.snapshot(),before);
+        assert!(engine.probe_terrain(&[[f64::NAN,0.]]).is_err());
+        assert!(engine.probe_terrain(&[[-1.,0.]]).is_err());
+        assert!(engine.probe_terrain(&vec![[1.,1.];4097]).is_err());
+    }
+
+    #[test]
     fn drive_budget_preserves_road_boost_explicit_power_and_cap_threshold() {
         let mut engine=Engine::new(42,420.0,"rmuc2027").unwrap();
         let i=engine.robots.iter().position(|r|r.id=="red-3").unwrap();

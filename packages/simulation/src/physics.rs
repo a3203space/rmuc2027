@@ -768,32 +768,7 @@ impl PhysicsWorld {
     }
 
     fn prism(&mut self, points: &[[f64; 2]], heights: &[f64], bottom: f64, arena: &Arena) {
-        let count = points.len();
-        let floor = |y: f64| y.min(arena.height - y) * arena.floor_slope_deg.to_radians().tan();
-        let mut vertices: Vec<Point<f64>> = points
-            .iter()
-            .zip(heights)
-            .map(|(p, z)| point![p[0], p[1], floor(p[1]) + z])
-            .collect();
-        vertices.extend(
-            points
-                .iter()
-                .map(|p| point![p[0], p[1], floor(p[1]) + bottom]),
-        );
-        let triangles = triangulate(points);
-        let mut indices = triangles.clone();
-        indices.extend(triangles.iter().map(|t| {
-            [
-                t[2] + count as u32,
-                t[1] + count as u32,
-                t[0] + count as u32,
-            ]
-        }));
-        for i in 0..count {
-            let j = (i + 1) % count;
-            indices.push([i as u32, (i + count) as u32, j as u32]);
-            indices.push([j as u32, (i + count) as u32, (j + count) as u32]);
-        }
+        let (vertices,indices)=prism_mesh(points,heights,bottom,arena);
         self.colliders.insert(
             ColliderBuilder::trimesh(vertices, indices)
                 .expect("valid field mesh")
@@ -2438,6 +2413,12 @@ impl PhysicsWorld {
             None => true,
         }
     }
+    /// Diagnostic uppermost static surface; dynamic robots are excluded.
+    pub fn static_surface_height(&self,x:f64,y:f64)->Option<f64> {
+        let ray=Ray::new(point![x,y,10.0],vector![0.0,0.0,-1.0]);
+        self.queries.cast_ray(&self.bodies,&self.colliders,&ray,20.0,true,QueryFilter::only_fixed())
+            .map(|(_,distance)|10.0-distance)
+    }
     pub fn visible_point(&self, observer: usize, origin: [f64; 3], end: [f64; 3]) -> bool {
         let ray = Ray::new(
             point![origin[0], origin[1], origin[2]],
@@ -2489,6 +2470,76 @@ impl PhysicsWorld {
             )
             .map(|(_, t)| t)
     }
+}
+
+/// Split original roof triangles at the floor ridge before adding substrate.
+/// Otherwise linear interpolation across the ridge removes its height. Shared
+/// edge intersections keep the mesh watertight, with walls only on its perimeter.
+fn prism_mesh(points:&[[f64;2]],heights:&[f64],bottom:f64,arena:&Arena)
+    ->(Vec<Point<f64>>,Vec<[u32;3]>) {
+    let original_count=points.len();
+    let mut xy=points.to_vec();let mut roof=heights.to_vec();
+    let original=triangulate(points);let ridge=arena.height*0.5;
+    let split=arena.floor_slope_deg!=0.0 && points.iter().any(|p|p[1]<ridge)
+        && points.iter().any(|p|p[1]>ridge);
+    let mut intersections=BTreeMap::<(u32,u32),u32>::new();
+    let edge_key=|a:u32,b:u32|if a<b {(a,b)} else {(b,a)};
+    let mut triangles=Vec::new();
+    if split {
+        for triangle in &original {
+            for i in 0..3 {
+                let (lo,hi)=edge_key(triangle[i],triangle[(i+1)%3]);
+                let a=points[lo as usize];let b=points[hi as usize];
+                if ((a[1]<ridge && b[1]>ridge)||(b[1]<ridge && a[1]>ridge))
+                    && !intersections.contains_key(&(lo,hi)) {
+                    let t=(ridge-a[1])/(b[1]-a[1]);
+                    intersections.insert((lo,hi),xy.len() as u32);
+                    xy.push([a[0]+(b[0]-a[0])*t,ridge]);
+                    roof.push(heights[lo as usize]+(heights[hi as usize]-heights[lo as usize])*t);
+                }
+            }
+        }
+        for triangle in &original {
+            for lower in [true,false] {
+                let inside=|id:u32|if lower {xy[id as usize][1]<=ridge} else {xy[id as usize][1]>=ridge};
+                let mut polygon=Vec::new();
+                for i in 0..3 {
+                    let prev=triangle[(i+2)%3];let current=triangle[i];
+                    if inside(prev)!=inside(current) {
+                        let cut=if xy[prev as usize][1]==ridge {prev}
+                            else if xy[current as usize][1]==ridge {current}
+                            else {intersections[&edge_key(prev,current)]};
+                        if polygon.last()!=Some(&cut) {polygon.push(cut);}
+                    }
+                    if inside(current) && polygon.last()!=Some(&current) {polygon.push(current);}
+                }
+                if polygon.len()>1 && polygon.first()==polygon.last() {polygon.pop();}
+                for i in 1..polygon.len().saturating_sub(1) {
+                    let a=xy[polygon[0] as usize];let b=xy[polygon[i] as usize];let c=xy[polygon[i+1] as usize];
+                    let area=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+                    if area.abs()>1e-12 {triangles.push([polygon[0],polygon[i],polygon[i+1]]);}
+                }
+            }
+        }
+    } else {triangles=original;}
+    let mut perimeter=Vec::new();
+    for i in 0..original_count {
+        perimeter.push(i as u32);
+        if let Some(&cut)=intersections.get(&edge_key(i as u32,((i+1)%original_count) as u32)) {
+            perimeter.push(cut);
+        }
+    }
+    let floor=|y:f64|y.min(arena.height-y)*arena.floor_slope_deg.to_radians().tan();
+    let mut vertices:Vec<Point<f64>>=xy.iter().zip(&roof).map(|(p,z)|point![p[0],p[1],floor(p[1])+z]).collect();
+    vertices.extend(xy.iter().map(|p|point![p[0],p[1],floor(p[1])+bottom]));
+    let count=xy.len() as u32;
+    let mut indices=triangles.clone();
+    indices.extend(triangles.iter().map(|t|[t[2]+count,t[1]+count,t[0]+count]));
+    for i in 0..perimeter.len() {
+        let a=perimeter[i];let b=perimeter[(i+1)%perimeter.len()];
+        indices.push([a,a+count,b]);indices.push([b,a+count,b+count]);
+    }
+    (vertices,indices)
 }
 
 fn triangulate(points: &[[f64; 2]]) -> Vec<[u32; 3]> {

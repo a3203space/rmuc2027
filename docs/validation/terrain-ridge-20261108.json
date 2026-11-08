@@ -1,0 +1,270 @@
+{
+  "date": "2026-11-08",
+  "scope": "Static terrain ridge correction; no training",
+  "before": {
+    "kind": "terrain-height-audit",
+    "samples": [
+      {
+        "analytic_ground_z": 0.8916507254921543,
+        "physical_static_top_z": 0.8916507254921555,
+        "static_top_minus_ground": 1.2212453270876722e-15,
+        "x": 2.5,
+        "y": 3.5,
+        "sdk_ground_z": 0.8916507254921543,
+        "cuda_ground_z": 0.8916507363319397,
+        "cuda_minus_analytic_m": 1.0839785402616542e-08
+      },
+      {
+        "analytic_ground_z": 0.16104341765049965,
+        "physical_static_top_z": 0.16104341765050023,
+        "static_top_minus_ground": 5.828670879282072e-16,
+        "x": 3.2,
+        "y": 6.15,
+        "sdk_ground_z": 0.16104341765049965,
+        "cuda_ground_z": 0.1610434204339981,
+        "cuda_minus_analytic_m": 2.7834984595020984e-09
+      },
+      {
+        "analytic_ground_z": 0.2628189795224841,
+        "physical_static_top_z": 0.24965081055937155,
+        "static_top_minus_ground": -0.01316816896311257,
+        "x": 5.7,
+        "y": 7.5,
+        "sdk_ground_z": 0.2628189795224841,
+        "cuda_ground_z": 0.26281893253326416,
+        "cuda_minus_analytic_m": -4.6989219959492345e-08
+      },
+      {
+        "analytic_ground_z": 0.37855776470756075,
+        "physical_static_top_z": 0.3785577647075602,
+        "static_top_minus_ground": -5.551115123125783e-16,
+        "x": 12.0,
+        "y": 3.0,
+        "sdk_ground_z": 0.37855776470756075,
+        "cuda_ground_z": 0.3785577714443207,
+        "cuda_minus_analytic_m": 6.736759927683522e-09
+      },
+      {
+        "analytic_ground_z": 0.470208490199715,
+        "physical_static_top_z": 0.4508484608833161,
+        "static_top_minus_ground": -0.019360029316398908,
+        "x": 12.0,
+        "y": 6.5,
+        "sdk_ground_z": 0.470208490199715,
+        "cuda_ground_z": 0.4702084958553314,
+        "cuda_minus_analytic_m": 5.65561641963086e-09
+      },
+      {
+        "analytic_ground_z": 0.4937758196119833,
+        "physical_static_top_z": 0.4369019908578835,
+        "static_top_minus_ground": -0.0568738287540998,
+        "x": 12.0,
+        "y": 7.4,
+        "sdk_ground_z": 0.4937758196119833,
+        "cuda_ground_z": 0.4937758445739746,
+        "cuda_minus_analytic_m": 2.4961991307304032e-08
+      },
+      {
+        "analytic_ground_z": 0.496394411768902,
+        "physical_static_top_z": 0.43483633977707825,
+        "static_top_minus_ground": -0.061558071991823726,
+        "x": 12.0,
+        "y": 7.5,
+        "sdk_ground_z": 0.496394411768902,
+        "cuda_ground_z": 0.49639442563056946,
+        "cuda_minus_analytic_m": 1.3861667480519202e-08
+      },
+      {
+        "analytic_ground_z": 0.470208490199715,
+        "physical_static_top_z": 0.41609311557610695,
+        "static_top_minus_ground": -0.05411537462360805,
+        "x": 12.0,
+        "y": 8.5,
+        "sdk_ground_z": 0.470208490199715,
+        "cuda_ground_z": 0.4702084958553314,
+        "cuda_minus_analytic_m": 5.65561641963086e-09
+      },
+      {
+        "analytic_ground_z": 0.37855776470756075,
+        "physical_static_top_z": 0.3727415728908863,
+        "static_top_minus_ground": -0.005816191816674476,
+        "x": 12.0,
+        "y": 12.0,
+        "sdk_ground_z": 0.37855776470756075,
+        "cuda_ground_z": 0.3785577714443207,
+        "cuda_minus_analytic_m": 6.736759927683522e-09
+      }
+    ],
+    "device": "cuda:0",
+    "ppo_included": false,
+    "engine_binary_sha256": "416f500a328a106fc720b715fb2100bc08d5bbaadccdce7158d939d6fa42cd70",
+    "sdk_sha256": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "cuda_terrain_sha256": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+    "driver_sha256": "f214a835f74e044c400994c5f731ed427b4eac3497facafc414d17148fdcf71d",
+    "surface_definition": "Uppermost fixed collider; selected points must be checked for roofs and fixtures before interpreting difference as ground error."
+  },
+  "after": {
+    "kind": "terrain-height-audit",
+    "samples": [
+      {
+        "analytic_ground_z": 0.8916507254921543,
+        "physical_static_top_z": 0.8916507254921555,
+        "static_top_minus_ground": 1.2212453270876722e-15,
+        "x": 2.5,
+        "y": 3.5,
+        "sdk_ground_z": 0.8916507254921543,
+        "cuda_ground_z": 0.8916507363319397,
+        "cuda_minus_analytic_m": 1.0839785402616542e-08
+      },
+      {
+        "analytic_ground_z": 0.16104341765049965,
+        "physical_static_top_z": 0.16104341765050023,
+        "static_top_minus_ground": 5.828670879282072e-16,
+        "x": 3.2,
+        "y": 6.15,
+        "sdk_ground_z": 0.16104341765049965,
+        "cuda_ground_z": 0.1610434204339981,
+        "cuda_minus_analytic_m": 2.7834984595020984e-09
+      },
+      {
+        "analytic_ground_z": 0.2628189795224841,
+        "physical_static_top_z": 0.2628189795224838,
+        "static_top_minus_ground": -3.3306690738754696e-16,
+        "x": 5.7,
+        "y": 7.5,
+        "sdk_ground_z": 0.2628189795224841,
+        "cuda_ground_z": 0.26281893253326416,
+        "cuda_minus_analytic_m": -4.6989219959492345e-08
+      },
+      {
+        "analytic_ground_z": 0.37855776470756075,
+        "physical_static_top_z": 0.3785577647075602,
+        "static_top_minus_ground": -5.551115123125783e-16,
+        "x": 12.0,
+        "y": 3.0,
+        "sdk_ground_z": 0.37855776470756075,
+        "cuda_ground_z": 0.3785577714443207,
+        "cuda_minus_analytic_m": 6.736759927683522e-09
+      },
+      {
+        "analytic_ground_z": 0.470208490199715,
+        "physical_static_top_z": 0.470208490199715,
+        "static_top_minus_ground": 0.0,
+        "x": 12.0,
+        "y": 6.5,
+        "sdk_ground_z": 0.470208490199715,
+        "cuda_ground_z": 0.4702084958553314,
+        "cuda_minus_analytic_m": 5.65561641963086e-09
+      },
+      {
+        "analytic_ground_z": 0.4937758196119833,
+        "physical_static_top_z": 0.493775819611983,
+        "static_top_minus_ground": -2.7755575615628914e-16,
+        "x": 12.0,
+        "y": 7.4,
+        "sdk_ground_z": 0.4937758196119833,
+        "cuda_ground_z": 0.4937758445739746,
+        "cuda_minus_analytic_m": 2.4961991307304032e-08
+      },
+      {
+        "analytic_ground_z": 0.496394411768902,
+        "physical_static_top_z": 0.4963944117689021,
+        "static_top_minus_ground": 1.1102230246251565e-16,
+        "x": 12.0,
+        "y": 7.5,
+        "sdk_ground_z": 0.496394411768902,
+        "cuda_ground_z": 0.49639442563056946,
+        "cuda_minus_analytic_m": 1.3861667480519202e-08
+      },
+      {
+        "analytic_ground_z": 0.470208490199715,
+        "physical_static_top_z": 0.4702084901997168,
+        "static_top_minus_ground": 1.7763568394002505e-15,
+        "x": 12.0,
+        "y": 8.5,
+        "sdk_ground_z": 0.470208490199715,
+        "cuda_ground_z": 0.4702084958553314,
+        "cuda_minus_analytic_m": 5.65561641963086e-09
+      },
+      {
+        "analytic_ground_z": 0.37855776470756075,
+        "physical_static_top_z": 0.3785577647075602,
+        "static_top_minus_ground": -5.551115123125783e-16,
+        "x": 12.0,
+        "y": 12.0,
+        "sdk_ground_z": 0.37855776470756075,
+        "cuda_ground_z": 0.3785577714443207,
+        "cuda_minus_analytic_m": 6.736759927683522e-09
+      }
+    ],
+    "device": "cuda:0",
+    "ppo_included": false,
+    "engine_binary_sha256": "8fa23214a871157f9fa1ac6d0f9379b35378513b6fa95a9ca151a5b1309af090",
+    "sdk_sha256": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "cuda_terrain_sha256": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+    "driver_sha256": "f214a835f74e044c400994c5f731ed427b4eac3497facafc414d17148fdcf71d",
+    "surface_definition": "Uppermost fixed collider; selected points must be checked for roofs and fixtures before interpreting difference as ground error."
+  },
+  "existing_render_asset": {
+    "asset": "assets/web/assets/map-rmuc2027.glb",
+    "mesh": 8,
+    "samples": [
+      {
+        "x": 12.0,
+        "y": 3.0,
+        "render_highland_z": 0.37855776615996023,
+        "analytic_z": 0.37855776470756075
+      },
+      {
+        "x": 12.0,
+        "y": 6.5,
+        "render_highland_z": 0.47020850139673487,
+        "analytic_z": 0.470208490199715
+      },
+      {
+        "x": 12.0,
+        "y": 7.4,
+        "render_highland_z": 0.493775833207186,
+        "analytic_z": 0.4937758196119833
+      },
+      {
+        "x": 12.0,
+        "y": 7.5,
+        "render_highland_z": 0.49639442563056946,
+        "analytic_z": 0.496394411768902
+      },
+      {
+        "x": 12.0,
+        "y": 8.5,
+        "render_highland_z": 0.4702085006511407,
+        "analytic_z": 0.470208490199715
+      },
+      {
+        "x": 12.0,
+        "y": 12.0,
+        "render_highland_z": 0.37855776840339606,
+        "analytic_z": 0.37855776470756075
+      },
+      {
+        "x": 5.7,
+        "y": 7.5,
+        "render_highland_z": 0.26281898610759713,
+        "analytic_z": 0.2628189795224841
+      }
+    ],
+    "asset_sha256": "e8007cd29480c9624b935fbc8ccf545c138e1eaea49cb01fc80c17bcd3a01826",
+    "node": "ArenaChapter4_HighlandAsphalt",
+    "transform": "mesh/root identity; world x = simulation x - 14, world z = simulation y - 7.5; world y is height"
+  },
+  "tests": {
+    "rust": {
+      "passed": 65,
+      "seconds": 11.6
+    },
+    "navigation_and_combat": {
+      "passed": 8,
+      "seconds": 23.904
+    }
+  },
+  "status": "Selected physical surface heights now match public terrain and unchanged GLB rendering. Closed mesh topology tested. Broader geometry audit and locomotion/force/contact calibration still required; formal training not started."
+}

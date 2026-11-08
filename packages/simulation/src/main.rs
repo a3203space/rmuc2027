@@ -90,6 +90,11 @@ fn main() {
                 }
                 "step" => Ok(e.step(&request["commands"])),
                 "snapshot" => Ok(e.snapshot()),
+                "terrain_probe" => {
+                    let points:Vec<[f64;2]>=serde_json::from_value(request["points"].clone())
+                        .map_err(|e|e.to_string())?;
+                    e.probe_terrain(&points)
+                }
                 "observations" => {
                     // One round trip for every policy: a header with each observation's
                     // controlled ids, then one raw observation line per request.

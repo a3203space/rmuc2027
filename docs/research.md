@@ -179,6 +179,15 @@ research/.venv/bin/python -m rmuc2027_research.rl.warp_kinematic.calibration \
   --output data/research/ability-probe
 ```
 
+静态地形高度诊断（需先重建 Rust 程序）：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.warp_kinematic.terrain_audit \
+  --output data/research/terrain-height-audit.json
+```
+
+它比对公共高度、CUDA 高度和实际最高静态碰撞面，不推进比赛。自选位置可重复传入 `--point X Y`；射线也会击中屋顶或设施，因此检查地面误差时应选没有上层遮挡的位置。
+
 模型保存为 `model.zip`，支持 `--resume`；续训严格检查配置、规则、策略、仿真源码及依赖版本。更换后端需新实验，不能把旧优化器断点当成同一实验继续。
 
 训练后在原 Rapier 比赛环境评估与导出：
