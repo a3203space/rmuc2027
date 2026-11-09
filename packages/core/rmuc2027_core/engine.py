@@ -11,6 +11,7 @@ import threading
 import time
 
 _DIRECT_PIPE_READER=os.name=='posix'
+_CACHE_POLICY_OBSERVATIONS=True
 
 
 class _PosixLineReader:
@@ -89,6 +90,7 @@ class Match:
                 raise ValueError('Unknown physics adapter protocol')
             environment['RMUC_KINEMATIC_PHYSICS' if mode == 'kinematic_frame' else 'RMUC_EXTERNAL_PHYSICS'] = '1'
         self.lock = threading.RLock()
+        self._observation_cache = {}
         if replay_version is not None:
             raise ValueError('Legacy engines are not included; historical 2027 replays remain viewable')
         binary = binary_path()
@@ -119,10 +121,11 @@ class Match:
 
     def _request(self, request, raw=False):
         with self.lock:
-            if self.closed:
-                raise RuntimeError("Rust engine is closed")
-            if self._broken:
-                raise RuntimeError("Rust engine transport interrupted; close and reset the match")
+            self._ensure_available()
+            # Only explicit, pure engine queries preserve the current-state cache.
+            # Unknown operations invalidate conservatively, including failed writes.
+            if request.get('op') not in ('observation','observations','operator_observation','snapshot','digest','terrain_probe'):
+                self._observation_cache.clear()
             payload = json.dumps(request, allow_nan=False, separators=(",", ":")).encode() + b"\n"
             try:
                 self.process.stdin.write(payload)
@@ -152,6 +155,29 @@ class Match:
             if value.get("error"):
                 raise ValueError(value["error"])
             return (value, line) if raw else value
+
+    def _ensure_available(self):
+        if self.closed:
+            raise RuntimeError("Rust engine is closed")
+        if self._broken:
+            raise RuntimeError("Rust engine transport interrupted; close and reset the match")
+
+    @staticmethod
+    def _viewer(team, slots):
+        # Snapshot caller-owned lists before both the cache key and RPC are built.
+        frozen = tuple(slots) if type(slots) in (list, tuple) else slots
+        valid = (type(team) is str and team in ('red','blue') and
+                 (frozen is None or type(frozen) is tuple and
+                  all(type(slot) is int and slot in SLOT_IDS for slot in frozen)))
+        return frozen, (team, frozen) if valid else None
+
+    def _remember_observation(self, key, ids, line):
+        if _CACHE_POLICY_OBSERVATIONS and key is not None:
+            if key not in self._observation_cache and len(self._observation_cache) >= 32:
+                del self._observation_cache[next(iter(self._observation_cache))]
+            # Only immutable engine bytes/ids are retained. Policy augmentation
+            # and caller mutation must never enter another viewer's observation.
+            self._observation_cache[key] = (tuple(ids), line)
 
     @staticmethod
     def _read_output(stream, responses):
@@ -189,7 +215,15 @@ class Match:
         return {**self._frame, "events": list(self._frame["events"])}
 
     def observation(self, team, slots=None):
-        return self._request({"op": "observation", "team": team, "slots": slots})
+        with self.lock:
+            self._ensure_available()
+            slots,key=self._viewer(team,slots)
+            cached=self._observation_cache.get(key) if _CACHE_POLICY_OBSERVATIONS else None
+            if cached is not None:
+                return _response_json.loads(cached[1])
+            value,line=self._request({"op":"observation","team":team,"slots":slots},raw=True)
+            self._remember_observation(key,value['controlled_ids'],line)
+            return value
 
     def compact_observation(self, team, slots=None):
         """Reuse the immutable map for local callers making per-player observations."""
@@ -208,10 +242,23 @@ class Match:
         receive as is instead of being decoded and encoded again.
         """
         with self.lock:
-            header = self._request({"op": "observations", "requests": [{"team": team, "slots": slots} for team, slots in viewers]})
+            self._ensure_available()
+            viewers=[(team,*self._viewer(team,slots)) for team,slots in viewers]
+            results=[self._observation_cache.get(key) if _CACHE_POLICY_OBSERVATIONS else None for _,_,key in viewers]
+            missing=[i for i,result in enumerate(results) if result is None]
+            if not missing:
+                return [list(result[0]) for result in results], [result[1] for result in results]
+            header = self._request({"op": "observations", "requests": [{"team": viewers[i][0], "slots": viewers[i][1]} for i in missing]})
             # The engine builds every observation before replying, so the lines follow at once.
             try:
-                return header["controlled_ids"], [self._read_line() for _ in viewers]
+                lines=[self._read_line() for _ in missing]
+                controlled=header['controlled_ids']
+                if len(controlled)!=len(missing):
+                    raise RuntimeError('Invalid observation batch size')
+                for i,ids,line in zip(missing,controlled,lines):
+                    results[i]=(tuple(ids),line)
+                    self._remember_observation(viewers[i][2],ids,line)
+                return [list(result[0]) for result in results], [result[1] for result in results]
             except BaseException:
                 self._broken=True
                 raise

@@ -140,6 +140,7 @@ def provenance(config):
             'dt':1/120,'experimental':True,
             'frame_encoder':FRAME_ENCODER,
             'pipe_reader':'posix-select' if transport._DIRECT_PIPE_READER else 'threaded',
+            'policy_observation_cache':transport._CACHE_POLICY_OBSERVATIONS,
             'transport_sha256':hashlib.sha256((ROOT/'packages/core/rmuc2027_core/engine.py').read_bytes()).hexdigest(),
             'files':{name:hashlib.sha256((folder/name).read_bytes()).hexdigest()
                      for name in ('__init__.py','arena.py','motion.py','terrain.py','traversal.py','pose.py','protocol.py','batching.py','vector.py')},
