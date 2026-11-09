@@ -995,14 +995,206 @@
     "rl_interface_and_cleanup": 8,
     "decoder_equivalence": 1,
     "model_recovery_export": 1,
-    "traversal": 9
+    "traversal": 9,
+    "arena_adapter": 8,
+    "loaded_pose": 5,
+    "rl_provenance": 1
   },
   "current_transport_sha256": "bc6a0e5bb8d9cd82ed996810d3e4990aefbb51e8a0352da01a318b8daa3e6d44",
   "measurement_limitations": [
     "Each interleaved comparison isolates one stage; percentage gains must not be added as a measured total.",
     "The first full sampling run precedes the final broken-transport cleanup-order safeguard. Its source hash is retained; cleanup was outside the healthy sampling path.",
-    "The full two-environment result fails the 5x gate. Independent repetition is recorded separately when complete.",
+    "Both independent complete two-environment sampling runs fail the 5x/84s gate (85.532932249s and 85.224888000s); neither includes PPO.",
     "Interpreter switch tuning was not adopted; production scheduling remains unchanged.",
     "No PPO gradient updates, no formal training, and no claim that the remaining locomotion-transfer gates pass."
-  ]
+  ],
+  "independent_full_sampling": {
+    "results": [
+      {
+        "num_envs": 2,
+        "steps_per_env": 840,
+        "action_pattern": "uniform-random",
+        "ppo_included": false,
+        "profiled": false,
+        "initialization_seconds": 2.5627385600000707,
+        "warmup_seconds": 4.191599000999304,
+        "sampling_seconds": 85.22488800000065,
+        "per_env_simulated_seconds": [
+          420.0,
+          420.0
+        ],
+        "per_env_completed_episodes": [
+          1,
+          1
+        ],
+        "navigation_precompute": true,
+        "warmup_navigation_preparation_seconds": [
+          3.433328746999905,
+          0.0
+        ],
+        "per_env_simulation_seconds_per_second": 4.928137893240725,
+        "real_seconds_per_simulation_second_per_env": 0.20291640000000155,
+        "rl_steps_per_second": 19.7125515729629,
+        "simulation_seconds_per_second": 9.85627578648145,
+        "parent_rss_kib": 972144,
+        "worker_pids": [],
+        "physics_batches": 8400,
+        "physics_world_substeps": 16800,
+        "physics_rule_frames": 16800,
+        "physics_substeps_120hz": 100800,
+        "physics_counter_note": "physics_world_substeps is a legacy name counting 50ms rule requests; use physics_rule_frames or physics_substeps_120hz.",
+        "max_physics_batch": 2,
+        "physics_handler_seconds": 28.862283005998506,
+        "physics_phase_host_seconds": {},
+        "physics_batch_histogram": {
+          "2": 8400
+        },
+        "profile_note": "Host wall timings; upload may be charged at the following sync. Not CUDA kernel event timings.",
+        "sim_backend": "warp_kinematic"
+      }
+    ],
+    "minimum_per_env_realtime_factor": 5.0,
+    "recommended_num_envs": null,
+    "fastest_measured_num_envs": 2
+  },
+  "independent_full_experiment": {
+    "config": {
+      "seed": 42,
+      "team": "red",
+      "slot": 7,
+      "map": "rmuc2027",
+      "duration": 420,
+      "episode_seconds": 420,
+      "rl_seconds": 0.5,
+      "grid_m": 0.25,
+      "recover_enter": 0.25,
+      "recover_exit": 0.8,
+      "friendly": "examples/claude_opus55_xhigh_2027_squad",
+      "opponent": "examples/claude_opus55_xhigh_2027_hold",
+      "controllers": {
+        "red:7": {
+          "kind": "learning"
+        }
+      },
+      "rewards": {
+        "control": 0.01,
+        "outcome": 10.0,
+        "capture_seconds": 0.001,
+        "death": -0.1
+      },
+      "ppo": {
+        "n_steps": 64,
+        "batch_size": 64,
+        "n_epochs": 4,
+        "learning_rate": 0.0003,
+        "gamma": 0.995,
+        "gae_lambda": 0.95,
+        "ent_coef": 0.01
+      },
+      "sim_backend": "warp_kinematic",
+      "sim_device": "cuda:0",
+      "policy_timeout_s": 5.0,
+      "learning_control_hz": 2,
+      "drones_enabled": false,
+      "navigation_mode": "legacy",
+      "timed_assembly": true,
+      "github_backup_repo": "a3203space/rmuc2027",
+      "fixed_policy_hz": 10,
+      "training_summary": true,
+      "action_trace": false,
+      "navigation_precompute": null,
+      "github_backup_seconds": 300.0
+    },
+    "sources": {
+      "friendly": {
+        "version": "dba14ab0764239ed",
+        "manifest": {
+          "api_version": 3,
+          "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+          "mode": "squad",
+          "robot": null,
+          "entries": {
+            "1": "robot_1.py",
+            "3": "robot_3.py",
+            "4": "robot_4.py",
+            "6": "robot_6.py",
+            "7": "robot_7.py"
+          },
+          "hashes": {
+            "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+          },
+          "version": "dba14ab0764239ed"
+        },
+        "hashes": {
+          "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+        }
+      },
+      "opponent": {
+        "version": "90c6cba4ea0ca924",
+        "manifest": {
+          "api_version": 3,
+          "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+          "mode": "team",
+          "robot": null,
+          "entries": {
+            "team": "strategy.py"
+          },
+          "hashes": {
+            "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+          },
+          "team_lineup": {
+            "1": 2711,
+            "3": 2731,
+            "4": 2732,
+            "6": 2761,
+            "7": 2771
+          },
+          "version": "90c6cba4ea0ca924"
+        },
+        "hashes": {
+          "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+        }
+      }
+    },
+    "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+    "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+    "navigation": {
+      "precompute": true,
+      "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+    },
+    "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+    "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+    "simulation": {
+      "backend": "warp_kinematic",
+      "device": "cuda:0",
+      "dt": 0.008333333333333333,
+      "experimental": true,
+      "frame_encoder": "orjson-numpy",
+      "pipe_reader": "posix-select",
+      "transport_sha256": "bc6a0e5bb8d9cd82ed996810d3e4990aefbb51e8a0352da01a318b8daa3e6d44",
+      "files": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "2af07bd0986e153745cba47be2c726d402250cf7d394e55e07d6a6d8bf43fc22",
+        "motion.py": "f055a21e538cbff7cd6baaf120185d49694a80c27f3a4d395eb88cf9f928800a",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+        "protocol.py": "79602c7753c94f99347226c48e66ee945a1581f47a700ff94ed1580a7a4d8c6b",
+        "batching.py": "cf94942d32a34b974b4dc6a7370117cf67a328c6fe9baaa37a47953d2e0e92ba",
+        "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+      },
+      "dependencies": {
+        "warp-lang": "1.19.0",
+        "orjson": "3.13.0"
+      }
+    }
+  }
 }
