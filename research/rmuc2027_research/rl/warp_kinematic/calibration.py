@@ -34,7 +34,7 @@ def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
     # Nine nearby endpoints vary final approach without changing map geometry.
     dy=((seed%3)-1)*.1;dx=(((seed//3)%3)-1)*.1
     goals={'red':(12.+dx,7.5+dy),'blue':(16.-dx,7.5-dy)}
-    states={t:{} for t in lineups};metrics={t:dict(reached_at=None,settled_at=None,settled_since=None,ability_enter=None,ability_exit=None,
+    states={t:{} for t in lineups};metrics={t:dict(reached_at=None,settled_at=None,settled_since=None,stable_hold_at=None,hold_complete=False,ability_enter=None,ability_exit=None,
             folded=False,jump_commands=0,tipped=False,success=False) for t in lineups}
     commands={};interval=round(1/(control_hz*DT));started=time.perf_counter()
     adapter=ArenaMotion(device) if backend=='warp_kinematic' else None
@@ -64,28 +64,28 @@ def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
                     # arbitrary origin-to-map-height tolerance.
                     at_goal=math.dist((r['x'],r['y']),goals[team])<.25 and r.get('grounded')
                     if m['reached_at'] is None and at_goal:m['reached_at']=frame['time']
-                    if at_goal and math.hypot(r.get('vx',0.),r.get('vy',0.))<.2:
+                    if at_goal and math.hypot(r.get('vx',0.),r.get('vy',0.))<.2 and r.get('upright',1.)>=.95:
                         if m['settled_since'] is None:m['settled_since']=frame['time']
                         if m['settled_at'] is None and frame['time']-m['settled_since']>=.3-1e-12:m['settled_at']=frame['time']
                     else:m['settled_since']=None
+                    m['hold_complete']=m['settled_since'] is not None and frame['time']-m['settled_since']>=2.-1e-12
+                    if m['hold_complete'] and m['stable_hold_at'] is None:m['stable_hold_at']=frame['time']
                 if tick%2==0:
                     stream.write(json.dumps(dict(time=frame['time'],robots=[dict(
                         {k:r.get(k) for k in ('id','x','y','z','vx','vy','vz','grounded','transform_progress','upright','tipped')},
                         public_ground_z=sdk.terrain_height(arena,r['x'],r['y'])) for r in controlled.values()],state=states),allow_nan=False)+'\n')
-                if all(m['settled_at'] is not None for m in metrics.values()) or tick==round(horizon/DT):break
+                if all(m['hold_complete'] for m in metrics.values()) or tick==round(horizon/DT):break
                 if tick%interval==0:
                     commands={}
                     for team in lineups:
-                        if metrics[team]['settled_at'] is not None:fields={'move':(0.,0.),'brake':True}
-                        else:
-                            obs=match.observation(team,[slot]);obs['policy_dt']=1/control_hz
-                            robot=next(r for r in obs['robots'] if r['slot']==slot)
-                            fields=sdk.navigate_action(robot,goals[team],obs,states[team])
+                        obs=match.observation(team,[slot]);obs['policy_dt']=1/control_hz
+                        robot=next(r for r in obs['robots'] if r['slot']==slot)
+                        fields=sdk.navigate_action(robot,goals[team],obs,states[team])
                         metrics[team]['jump_commands']+=int(fields.get('jump',0)>0)
                         commands[team]={str(slot):sdk.action(**fields)}
                 frame=match.step(commands)
         for team,m in metrics.items():
-            m['success']=(m['settled_at'] is not None and m['ability_enter'] is not None and m['ability_exit'] is not None
+            m['success']=(m['hold_complete'] and m['ability_enter'] is not None and m['ability_exit'] is not None
                           and not m['tipped'] and (ability!='tunnel' or m['folded']))
             m['final']={k:controlled[team].get(k) for k in ('x','y','z','grounded','upright','tipped')}
             r=controlled[team]
@@ -104,7 +104,7 @@ def compare(results):
         for team in ('red','blue'):
             ref=backends['rapier']['metrics'][team];fast=backends['warp_kinematic']['metrics'][team]
             errors={}
-            for key in ('reached_at','settled_at','ability_seconds'):
+            for key in ('reached_at','settled_at','stable_hold_at','ability_seconds'):
                 a,b=ref[key],fast[key]
                 errors[key]=None if a is None or b is None or a<=0 else abs(b-a)/a
             pairs.append(dict(model=model,seed=seed,team=team,reference_success=ref['success'],simplified_success=fast['success'],relative_time_errors=errors,

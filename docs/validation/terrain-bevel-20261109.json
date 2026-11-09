@@ -1,0 +1,895 @@
+{
+  "kind": "bevel-mesh-geometry-validation",
+  "ppo_included": false,
+  "before": {
+    "kind": "terrain-height-audit",
+    "device": "cuda:0",
+    "ppo_included": false,
+    "sample_count": 6720,
+    "negative_static_difference_gt_2mm": 24,
+    "worst_negative_static_samples": [
+      {
+        "analytic_ground_z": 0.5669352500035667,
+        "physical_static_top_z": 0.5488399636015391,
+        "static_top_minus_ground": -0.01809528640202762,
+        "x": 13.875,
+        "y": 8.625,
+        "sdk_ground_z": 0.5669352500035667,
+        "cuda_ground_z": 0.5669352412223816,
+        "cuda_minus_analytic_m": -8.781185112383127e-09
+      },
+      {
+        "analytic_ground_z": 0.5931211715727537,
+        "physical_static_top_z": 0.5750258851707262,
+        "static_top_minus_ground": -0.01809528640202751,
+        "x": 12.875,
+        "y": 7.625,
+        "sdk_ground_z": 0.5931211715727537,
+        "cuda_ground_z": 0.5931211709976196,
+        "cuda_minus_analytic_m": -5.751340514947856e-10
+      },
+      {
+        "analytic_ground_z": 0.5931211715727537,
+        "physical_static_top_z": 0.5750258851707262,
+        "static_top_minus_ground": -0.01809528640202751,
+        "x": 15.125,
+        "y": 7.375,
+        "sdk_ground_z": 0.5931211715727537,
+        "cuda_ground_z": 0.5931211709976196,
+        "cuda_minus_analytic_m": -5.751340514947856e-10
+      },
+      {
+        "analytic_ground_z": 0.5669352500035667,
+        "physical_static_top_z": 0.5488399636015409,
+        "static_top_minus_ground": -0.018095286402025845,
+        "x": 14.125,
+        "y": 6.375,
+        "sdk_ground_z": 0.5669352500035667,
+        "cuda_ground_z": 0.5669352412223816,
+        "cuda_minus_analytic_m": -8.781185112383127e-09
+      },
+      {
+        "analytic_ground_z": 0.5138139254428988,
+        "physical_static_top_z": 0.5014510413226745,
+        "static_top_minus_ground": -0.012362884120224349,
+        "x": 13.875,
+        "y": 8.875,
+        "sdk_ground_z": 0.5138139254428988,
+        "cuda_ground_z": 0.5138139724731445,
+        "cuda_minus_analytic_m": 4.703024569785441e-08
+      },
+      {
+        "analytic_ground_z": 0.5138139254428987,
+        "physical_static_top_z": 0.5014510413226745,
+        "static_top_minus_ground": -0.012362884120224238,
+        "x": 14.125,
+        "y": 6.125,
+        "sdk_ground_z": 0.5138139254428987,
+        "cuda_ground_z": 0.5138139724731445,
+        "cuda_minus_analytic_m": 4.7030245808876714e-08
+      },
+      {
+        "analytic_ground_z": 0.5465463274043825,
+        "physical_static_top_z": 0.5341834432841583,
+        "static_top_minus_ground": -0.012362884120224127,
+        "x": 15.375,
+        "y": 7.375,
+        "sdk_ground_z": 0.5465463274043825,
+        "cuda_ground_z": 0.5465463399887085,
+        "cuda_minus_analytic_m": 1.2584326025688597e-08
+      },
+      {
+        "analytic_ground_z": 0.5465463274043825,
+        "physical_static_top_z": 0.5341834432841601,
+        "static_top_minus_ground": -0.01236288412022235,
+        "x": 12.625,
+        "y": 7.625,
+        "sdk_ground_z": 0.5465463274043825,
+        "cuda_ground_z": 0.5465463399887085,
+        "cuda_minus_analytic_m": 1.2584326025688597e-08
+      },
+      {
+        "analytic_ground_z": 0.5390641571277438,
+        "physical_static_top_z": 0.5313360599358674,
+        "static_top_minus_ground": -0.007728097191876393,
+        "x": 13.625,
+        "y": 8.625,
+        "sdk_ground_z": 0.5390641571277438,
+        "cuda_ground_z": 0.5390642285346985,
+        "cuda_minus_analytic_m": 7.140695468255132e-08
+      },
+      {
+        "analytic_ground_z": 0.5390641571277437,
+        "physical_static_top_z": 0.5313360599358674,
+        "static_top_minus_ground": -0.007728097191876282,
+        "x": 14.375,
+        "y": 6.375,
+        "sdk_ground_z": 0.5390641571277437,
+        "cuda_ground_z": 0.5390642285346985,
+        "cuda_minus_analytic_m": 7.140695479357362e-08
+      },
+      {
+        "analytic_ground_z": 0.558703598304634,
+        "physical_static_top_z": 0.5509755011127595,
+        "static_top_minus_ground": -0.007728097191874506,
+        "x": 12.875,
+        "y": 7.875,
+        "sdk_ground_z": 0.558703598304634,
+        "cuda_ground_z": 0.558703601360321,
+        "cuda_minus_analytic_m": 3.0556870367348665e-09
+      },
+      {
+        "analytic_ground_z": 0.5587035983046339,
+        "physical_static_top_z": 0.5509755011127595,
+        "static_top_minus_ground": -0.007728097191874395,
+        "x": 15.125,
+        "y": 7.125,
+        "sdk_ground_z": 0.5587035983046339,
+        "cuda_ground_z": 0.558703601360321,
+        "cuda_minus_analytic_m": 3.055687147757169e-09
+      },
+      {
+        "analytic_ground_z": 0.514582071376695,
+        "physical_static_top_z": 0.5108798720279228,
+        "static_top_minus_ground": -0.0037021993487721394,
+        "x": 12.875,
+        "y": 8.125,
+        "sdk_ground_z": 0.514582071376695,
+        "cuda_ground_z": 0.514582097530365,
+        "cuda_minus_analytic_m": 2.6153670007467156e-08
+      },
+      {
+        "analytic_ground_z": 0.5014891105921013,
+        "physical_static_top_z": 0.4977869112433293,
+        "static_top_minus_ground": -0.0037021993487720284,
+        "x": 14.625,
+        "y": 6.375,
+        "sdk_ground_z": 0.5014891105921013,
+        "cuda_ground_z": 0.5014891624450684,
+        "cuda_minus_analytic_m": 5.185296703125175e-08
+      },
+      {
+        "analytic_ground_z": 0.5145820713766949,
+        "physical_static_top_z": 0.5108798720279228,
+        "static_top_minus_ground": -0.0037021993487720284,
+        "x": 15.125,
+        "y": 6.875,
+        "sdk_ground_z": 0.5145820713766949,
+        "cuda_ground_z": 0.514582097530365,
+        "cuda_minus_analytic_m": 2.6153670118489458e-08
+      },
+      {
+        "analytic_ground_z": 0.5014891105921016,
+        "physical_static_top_z": 0.4977869112433311,
+        "static_top_minus_ground": -0.003702199348770474,
+        "x": 13.375,
+        "y": 8.625,
+        "sdk_ground_z": 0.5014891105921016,
+        "cuda_ground_z": 0.5014891624450684,
+        "cuda_minus_analytic_m": 5.1852966809207146e-08
+      },
+      {
+        "analytic_ground_z": 0.4949426301998047,
+        "physical_static_top_z": 0.4912404308510343,
+        "static_top_minus_ground": -0.0037021993487704186,
+        "x": 13.625,
+        "y": 8.875,
+        "sdk_ground_z": 0.4949426301998047,
+        "cuda_ground_z": 0.49494269490242004,
+        "cuda_minus_analytic_m": 6.470261532109944e-08
+      },
+      {
+        "analytic_ground_z": 0.4949426301998046,
+        "physical_static_top_z": 0.4912404308510343,
+        "static_top_minus_ground": -0.0037021993487703075,
+        "x": 14.375,
+        "y": 6.125,
+        "sdk_ground_z": 0.4949426301998046,
+        "cuda_ground_z": 0.49494269490242004,
+        "cuda_minus_analytic_m": 6.470261543212175e-08
+      },
+      {
+        "analytic_ground_z": 0.5211285517689916,
+        "physical_static_top_z": 0.5174263524202214,
+        "static_top_minus_ground": -0.003702199348770252,
+        "x": 15.375,
+        "y": 7.125,
+        "sdk_ground_z": 0.5211285517689916,
+        "cuda_ground_z": 0.5211285352706909,
+        "cuda_minus_analytic_m": -1.6498300725587e-08
+      },
+      {
+        "analytic_ground_z": 0.5211285517689918,
+        "physical_static_top_z": 0.5174263524202232,
+        "static_top_minus_ground": -0.0037021993487685867,
+        "x": 12.625,
+        "y": 7.875,
+        "sdk_ground_z": 0.5211285517689918,
+        "cuda_ground_z": 0.5211285352706909,
+        "cuda_minus_analytic_m": -1.6498300836609303e-08
+      }
+    ],
+    "engine_binary_sha256": "8fa23214a871157f9fa1ac6d0f9379b35378513b6fa95a9ca151a5b1309af090",
+    "sdk_sha256": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "cuda_terrain_sha256": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+    "driver_sha256": "37927b991d3f8c7073dae2f724b4495d03473db68a98e007f93a353aeb86a15d",
+    "surface_definition": "Uppermost fixed collider; selected points must be checked for roofs and fixtures before interpreting difference as ground error.",
+    "grid_spacing_m": 0.25
+  },
+  "after": {
+    "kind": "terrain-height-audit",
+    "device": "cuda:0",
+    "ppo_included": false,
+    "sample_count": 42000,
+    "negative_static_difference_gt_2mm": 5,
+    "missing_static_surfaces": 0,
+    "max_cuda_analytic_error_m": 9.73518489447156e-07,
+    "worst_cuda_samples": [
+      {
+        "analytic_ground_z": 0.07972067100227014,
+        "physical_static_top_z": 0.07972067100227065,
+        "static_top_minus_ground": 5.134781488891349e-16,
+        "x": 17.95,
+        "y": 13.55,
+        "sdk_ground_z": 0.07972067100227014,
+        "cuda_ground_z": 0.07972164452075958,
+        "cuda_minus_analytic_m": 9.73518489447156e-07
+      },
+      {
+        "analytic_ground_z": 0.25285099411840295,
+        "physical_static_top_z": 0.2531721349160403,
+        "static_top_minus_ground": 0.0003211407976373426,
+        "x": 20.55,
+        "y": 1.35,
+        "sdk_ground_z": 0.25285099411840295,
+        "cuda_ground_z": 0.2528519034385681,
+        "cuda_minus_analytic_m": 9.093201651655392e-07
+      },
+      {
+        "analytic_ground_z": 0.26070677058915903,
+        "physical_static_top_z": 0.2610279113867975,
+        "static_top_minus_ground": 0.0003211407976384528,
+        "x": 20.55,
+        "y": 1.6500000000000001,
+        "sdk_ground_z": 0.26070677058915903,
+        "cuda_ground_z": 0.26070767641067505,
+        "cuda_minus_analytic_m": 9.058215160173688e-07
+      },
+      {
+        "analytic_ground_z": 0.2685625470599151,
+        "physical_static_top_z": 0.2688836878575547,
+        "static_top_minus_ground": 0.00032114079763956305,
+        "x": 20.55,
+        "y": 1.9500000000000002,
+        "sdk_ground_z": 0.2685625470599151,
+        "cuda_ground_z": 0.268563449382782,
+        "cuda_minus_analytic_m": 9.023228668691985e-07
+      },
+      {
+        "analytic_ground_z": 0.24761380980456554,
+        "physical_static_top_z": 0.24793495060220394,
+        "static_top_minus_ground": 0.0003211407976383973,
+        "x": 20.55,
+        "y": 1.1500000000000001,
+        "sdk_ground_z": 0.24761380980456554,
+        "cuda_ground_z": 0.24761471152305603,
+        "cuda_minus_analytic_m": 9.017184904869247e-07
+      },
+      {
+        "analytic_ground_z": 0.2371394411768908,
+        "physical_static_top_z": 0.23746058197452946,
+        "static_top_minus_ground": 0.00032114079763867487,
+        "x": 20.55,
+        "y": 0.75,
+        "sdk_ground_z": 0.2371394411768908,
+        "cuda_ground_z": 0.23714034259319305,
+        "cuda_minus_analytic_m": 9.014163022680322e-07
+      },
+      {
+        "analytic_ground_z": 0.226665072549216,
+        "physical_static_top_z": 0.2269862133468532,
+        "static_top_minus_ground": 0.0003211407976372038,
+        "x": 20.55,
+        "y": 0.35000000000000003,
+        "sdk_ground_z": 0.226665072549216,
+        "cuda_ground_z": 0.22666597366333008,
+        "cuda_minus_analytic_m": 9.011141140768952e-07
+      },
+      {
+        "analytic_ground_z": 0.2554695862753216,
+        "physical_static_top_z": 0.25579072707295936,
+        "static_top_minus_ground": 0.0003211407976377312,
+        "x": 20.55,
+        "y": 1.4500000000000002,
+        "sdk_ground_z": 0.2554695862753216,
+        "cuda_ground_z": 0.25547048449516296,
+        "cuda_minus_analytic_m": 8.982198413387543e-07
+      },
+      {
+        "analytic_ground_z": 0.24499521764764687,
+        "physical_static_top_z": 0.24531635844528488,
+        "static_top_minus_ground": 0.00032114079763800873,
+        "x": 20.55,
+        "y": 1.05,
+        "sdk_ground_z": 0.24499521764764687,
+        "cuda_ground_z": 0.2449961155653,
+        "cuda_minus_analytic_m": 8.979176531198618e-07
+      },
+      {
+        "analytic_ground_z": 0.23452084901997208,
+        "physical_static_top_z": 0.2348419898176104,
+        "static_top_minus_ground": 0.00032114079763831405,
+        "x": 20.55,
+        "y": 0.65,
+        "sdk_ground_z": 0.23452084901997208,
+        "cuda_ground_z": 0.234521746635437,
+        "cuda_minus_analytic_m": 8.976154649287249e-07
+      }
+    ],
+    "worst_negative_static_samples": [
+      {
+        "analytic_ground_z": 0.8353509941184024,
+        "physical_static_top_z": 0.03535099411840115,
+        "static_top_minus_ground": -0.8000000000000013,
+        "x": 27.450000000000003,
+        "y": 13.65,
+        "sdk_ground_z": 0.8353509941184024,
+        "cuda_ground_z": 0.8353509902954102,
+        "cuda_minus_analytic_m": -3.8229922560972796e-09
+      },
+      {
+        "analytic_ground_z": 0.8353509941184024,
+        "physical_static_top_z": 0.03535099411840115,
+        "static_top_minus_ground": -0.8000000000000013,
+        "x": 27.55,
+        "y": 13.65,
+        "sdk_ground_z": 0.8353509941184024,
+        "cuda_ground_z": 0.8353509902954102,
+        "cuda_minus_analytic_m": -3.8229922560972796e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.75,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 26.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      }
+    ],
+    "engine_binary_sha256": "70537d679068372143561086bf1db13ecf0eb0fb4c0ce17da7f87a606f72224c",
+    "sdk_sha256": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "cuda_terrain_sha256": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+    "driver_sha256": "d6dde57bddea9c70efc5ab77ffbe02a200f698b9a7fbb4e145d1a7545fcd3026",
+    "surface_definition": "Uppermost fixed collider; selected points must be checked for roofs and fixtures before interpreting difference as ground error.",
+    "grid_spacing_m": 0.1
+  },
+  "boundary_neighbours": {
+    "samples": [
+      {
+        "analytic_ground_z": 0.835351020304324,
+        "physical_static_top_z": 0.8353510203043246,
+        "static_top_minus_ground": 6.661338147750939e-16,
+        "x": 27.450000000000003,
+        "y": 13.649999000000001,
+        "sdk_ground_z": 0.835351020304324,
+        "cuda_ground_z": 0.8353510499000549,
+        "cuda_minus_analytic_m": 2.959573097705004e-08
+      },
+      {
+        "analytic_ground_z": 0.8353509941184024,
+        "physical_static_top_z": 0.03535099411840115,
+        "static_top_minus_ground": -0.8000000000000013,
+        "x": 27.450000000000003,
+        "y": 13.65,
+        "sdk_ground_z": 0.8353509941184024,
+        "cuda_ground_z": 0.8353509902954102,
+        "cuda_minus_analytic_m": -3.8229922560972796e-09
+      },
+      {
+        "analytic_ground_z": 0.0353509679324808,
+        "physical_static_top_z": 0.03535096793248016,
+        "static_top_minus_ground": -6.38378239159465e-16,
+        "x": 27.450000000000003,
+        "y": 13.650001,
+        "sdk_ground_z": 0.0353509679324808,
+        "cuda_ground_z": 0.0353509783744812,
+        "cuda_minus_analytic_m": 1.0442000403232399e-08
+      },
+      {
+        "analytic_ground_z": 0.835351020304324,
+        "physical_static_top_z": 0.8353510203043246,
+        "static_top_minus_ground": 6.661338147750939e-16,
+        "x": 27.55,
+        "y": 13.649999000000001,
+        "sdk_ground_z": 0.835351020304324,
+        "cuda_ground_z": 0.8353510499000549,
+        "cuda_minus_analytic_m": 2.959573097705004e-08
+      },
+      {
+        "analytic_ground_z": 0.8353509941184024,
+        "physical_static_top_z": 0.03535099411840115,
+        "static_top_minus_ground": -0.8000000000000013,
+        "x": 27.55,
+        "y": 13.65,
+        "sdk_ground_z": 0.8353509941184024,
+        "cuda_ground_z": 0.8353509902954102,
+        "cuda_minus_analytic_m": -3.8229922560972796e-09
+      },
+      {
+        "analytic_ground_z": 0.0353509679324808,
+        "physical_static_top_z": 0.03535096793248016,
+        "static_top_minus_ground": -6.38378239159465e-16,
+        "x": 27.55,
+        "y": 13.650001,
+        "sdk_ground_z": 0.0353509679324808,
+        "cuda_ground_z": 0.0353509783744812,
+        "cuda_minus_analytic_m": 1.0442000403232399e-08
+      },
+      {
+        "analytic_ground_z": 0.11652737716880338,
+        "physical_static_top_z": 0.11652737716880246,
+        "static_top_minus_ground": -9.159339953157541e-16,
+        "x": 25.650000000000002,
+        "y": 10.549999000000001,
+        "sdk_ground_z": 0.11652737716880338,
+        "cuda_ground_z": 0.11652737110853195,
+        "cuda_minus_analytic_m": -6.060271423580232e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273247969603,
+        "physical_static_top_z": 0.9165273247969594,
+        "static_top_minus_ground": -8.881784197001252e-16,
+        "x": 25.650000000000002,
+        "y": 10.550001,
+        "sdk_ground_z": 0.9165273247969603,
+        "cuda_ground_z": 0.9165273308753967,
+        "cuda_minus_analytic_m": 6.078436420864364e-09
+      },
+      {
+        "analytic_ground_z": 0.11652737716880338,
+        "physical_static_top_z": 0.11652737716880246,
+        "static_top_minus_ground": -9.159339953157541e-16,
+        "x": 25.75,
+        "y": 10.549999000000001,
+        "sdk_ground_z": 0.11652737716880338,
+        "cuda_ground_z": 0.11652737110853195,
+        "cuda_minus_analytic_m": -6.060271423580232e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.75,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273247969603,
+        "physical_static_top_z": 0.9165273247969594,
+        "static_top_minus_ground": -8.881784197001252e-16,
+        "x": 25.75,
+        "y": 10.550001,
+        "sdk_ground_z": 0.9165273247969603,
+        "cuda_ground_z": 0.9165273308753967,
+        "cuda_minus_analytic_m": 6.078436420864364e-09
+      },
+      {
+        "analytic_ground_z": 0.11652737716880338,
+        "physical_static_top_z": 0.11652737716880246,
+        "static_top_minus_ground": -9.159339953157541e-16,
+        "x": 26.650000000000002,
+        "y": 10.549999000000001,
+        "sdk_ground_z": 0.11652737716880338,
+        "cuda_ground_z": 0.11652737110853195,
+        "cuda_minus_analytic_m": -6.060271423580232e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 26.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273247969603,
+        "physical_static_top_z": 0.9165273247969594,
+        "static_top_minus_ground": -8.881784197001252e-16,
+        "x": 26.650000000000002,
+        "y": 10.550001,
+        "sdk_ground_z": 0.9165273247969603,
+        "cuda_ground_z": 0.9165273308753967,
+        "cuda_minus_analytic_m": 6.078436420864364e-09
+      }
+    ],
+    "kind": "terrain-height-audit",
+    "device": "cuda:0",
+    "ppo_included": false,
+    "sample_count": 15,
+    "negative_static_difference_gt_2mm": 5,
+    "missing_static_surfaces": 0,
+    "max_cuda_analytic_error_m": 3.949715965401168e-08,
+    "worst_cuda_samples": [
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.75,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 26.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.835351020304324,
+        "physical_static_top_z": 0.8353510203043246,
+        "static_top_minus_ground": 6.661338147750939e-16,
+        "x": 27.450000000000003,
+        "y": 13.649999000000001,
+        "sdk_ground_z": 0.835351020304324,
+        "cuda_ground_z": 0.8353510499000549,
+        "cuda_minus_analytic_m": 2.959573097705004e-08
+      },
+      {
+        "analytic_ground_z": 0.835351020304324,
+        "physical_static_top_z": 0.8353510203043246,
+        "static_top_minus_ground": 6.661338147750939e-16,
+        "x": 27.55,
+        "y": 13.649999000000001,
+        "sdk_ground_z": 0.835351020304324,
+        "cuda_ground_z": 0.8353510499000549,
+        "cuda_minus_analytic_m": 2.959573097705004e-08
+      },
+      {
+        "analytic_ground_z": 0.0353509679324808,
+        "physical_static_top_z": 0.03535096793248016,
+        "static_top_minus_ground": -6.38378239159465e-16,
+        "x": 27.450000000000003,
+        "y": 13.650001,
+        "sdk_ground_z": 0.0353509679324808,
+        "cuda_ground_z": 0.0353509783744812,
+        "cuda_minus_analytic_m": 1.0442000403232399e-08
+      },
+      {
+        "analytic_ground_z": 0.0353509679324808,
+        "physical_static_top_z": 0.03535096793248016,
+        "static_top_minus_ground": -6.38378239159465e-16,
+        "x": 27.55,
+        "y": 13.650001,
+        "sdk_ground_z": 0.0353509679324808,
+        "cuda_ground_z": 0.0353509783744812,
+        "cuda_minus_analytic_m": 1.0442000403232399e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273247969603,
+        "physical_static_top_z": 0.9165273247969594,
+        "static_top_minus_ground": -8.881784197001252e-16,
+        "x": 25.650000000000002,
+        "y": 10.550001,
+        "sdk_ground_z": 0.9165273247969603,
+        "cuda_ground_z": 0.9165273308753967,
+        "cuda_minus_analytic_m": 6.078436420864364e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273247969603,
+        "physical_static_top_z": 0.9165273247969594,
+        "static_top_minus_ground": -8.881784197001252e-16,
+        "x": 25.75,
+        "y": 10.550001,
+        "sdk_ground_z": 0.9165273247969603,
+        "cuda_ground_z": 0.9165273308753967,
+        "cuda_minus_analytic_m": 6.078436420864364e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273247969603,
+        "physical_static_top_z": 0.9165273247969594,
+        "static_top_minus_ground": -8.881784197001252e-16,
+        "x": 26.650000000000002,
+        "y": 10.550001,
+        "sdk_ground_z": 0.9165273247969603,
+        "cuda_ground_z": 0.9165273308753967,
+        "cuda_minus_analytic_m": 6.078436420864364e-09
+      }
+    ],
+    "worst_negative_static_samples": [
+      {
+        "analytic_ground_z": 0.8353509941184024,
+        "physical_static_top_z": 0.03535099411840115,
+        "static_top_minus_ground": -0.8000000000000013,
+        "x": 27.450000000000003,
+        "y": 13.65,
+        "sdk_ground_z": 0.8353509941184024,
+        "cuda_ground_z": 0.8353509902954102,
+        "cuda_minus_analytic_m": -3.8229922560972796e-09
+      },
+      {
+        "analytic_ground_z": 0.8353509941184024,
+        "physical_static_top_z": 0.03535099411840115,
+        "static_top_minus_ground": -0.8000000000000013,
+        "x": 27.55,
+        "y": 13.65,
+        "sdk_ground_z": 0.8353509941184024,
+        "cuda_ground_z": 0.8353509902954102,
+        "cuda_minus_analytic_m": -3.8229922560972796e-09
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 25.75,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      },
+      {
+        "analytic_ground_z": 0.9165273509828818,
+        "physical_static_top_z": 0.11652735098288147,
+        "static_top_minus_ground": -0.8000000000000004,
+        "x": 26.650000000000002,
+        "y": 10.55,
+        "sdk_ground_z": 0.9165273509828818,
+        "cuda_ground_z": 0.9165273904800415,
+        "cuda_minus_analytic_m": 3.949715965401168e-08
+      }
+    ],
+    "engine_binary_sha256": "70537d679068372143561086bf1db13ecf0eb0fb4c0ce17da7f87a606f72224c",
+    "sdk_sha256": "75800d6885ff0584c6d92e5058ffd9830329b420f77671e30278a4432164b7be",
+    "cuda_terrain_sha256": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+    "driver_sha256": "d6dde57bddea9c70efc5ab77ffbe02a200f698b9a7fbb4e145d1a7545fcd3026",
+    "surface_definition": "Uppermost fixed collider; selected points must be checked for roofs and fixtures before interpreting difference as ground error.",
+    "probe_displacement_m": 1e-06
+  },
+  "render_before_collision_fix": {
+    "asset": "assets/web/assets/map-rmuc2027.glb",
+    "asset_sha256": "e8007cd29480c9624b935fbc8ccf545c138e1eaea49cb01fc80c17bcd3a01826",
+    "static_nodes": 16,
+    "samples": [
+      {
+        "x": 13.875,
+        "y": 8.625,
+        "analytic": 0.5669352500035667,
+        "physical": 0.5488399636015391,
+        "render": 0.5669352738313791,
+        "render_node": "ArenaChapter4_ProtectiveMetal"
+      },
+      {
+        "x": 12.875,
+        "y": 7.625,
+        "analytic": 0.5931211715727537,
+        "physical": 0.5750258851707262,
+        "render": 0.5931211555306497,
+        "render_node": "ArenaChapter4_ProtectiveMetal"
+      },
+      {
+        "x": 15.125,
+        "y": 7.375,
+        "analytic": 0.5931211715727537,
+        "physical": 0.5750258851707262,
+        "render": 0.5931211766720684,
+        "render_node": "ArenaChapter4_ProtectiveMetal"
+      },
+      {
+        "x": 14.125,
+        "y": 6.375,
+        "analytic": 0.5669352500035667,
+        "physical": 0.5488399636015409,
+        "render": 0.5669352736260599,
+        "render_node": "ArenaChapter4_ProtectiveMetal"
+      },
+      {
+        "x": 13.875,
+        "y": 8.875,
+        "analytic": 0.5138139254428988,
+        "physical": 0.5014510413226745,
+        "render": 0.5138139450005432,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 14.125,
+        "y": 6.125,
+        "analytic": 0.5138139254428987,
+        "physical": 0.5014510413226745,
+        "render": 0.5138139450005432,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 15.375,
+        "y": 7.375,
+        "analytic": 0.5465463274043825,
+        "physical": 0.5341834432841583,
+        "render": 0.546546323141727,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 12.625,
+        "y": 7.625,
+        "analytic": 0.5465463274043825,
+        "physical": 0.5341834432841601,
+        "render": 0.546546323141727,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 13.625,
+        "y": 8.625,
+        "analytic": 0.5390641571277438,
+        "physical": 0.5313360599358674,
+        "render": 0.539064179215449,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 14.375,
+        "y": 6.375,
+        "analytic": 0.5390641571277437,
+        "physical": 0.5313360599358674,
+        "render": 0.539064179215449,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 12.875,
+        "y": 7.875,
+        "analytic": 0.558703598304634,
+        "physical": 0.5509755011127595,
+        "render": 0.5587036103686662,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 15.125,
+        "y": 7.125,
+        "analytic": 0.5587035983046339,
+        "physical": 0.5509755011127595,
+        "render": 0.5587036103686662,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 12.875,
+        "y": 8.125,
+        "analytic": 0.514582071376695,
+        "physical": 0.5108798720279228,
+        "render": 0.5145820922653556,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 14.625,
+        "y": 6.375,
+        "analytic": 0.5014891105921013,
+        "physical": 0.4977869112433293,
+        "render": 0.501489127563776,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 15.125,
+        "y": 6.875,
+        "analytic": 0.5145820713766949,
+        "physical": 0.5108798720279228,
+        "render": 0.5145820922653556,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 13.375,
+        "y": 8.625,
+        "analytic": 0.5014891105921016,
+        "physical": 0.4977869112433311,
+        "render": 0.501489127563776,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 13.625,
+        "y": 8.875,
+        "analytic": 0.4949426301998047,
+        "physical": 0.4912404308510343,
+        "render": 0.494942645129095,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 14.375,
+        "y": 6.125,
+        "analytic": 0.4949426301998046,
+        "physical": 0.4912404308510343,
+        "render": 0.494942645129095,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 15.375,
+        "y": 7.125,
+        "analytic": 0.5211285517689916,
+        "physical": 0.5174263524202214,
+        "render": 0.5211285674544556,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      },
+      {
+        "x": 12.625,
+        "y": 7.875,
+        "analytic": 0.5211285517689918,
+        "physical": 0.5174263524202232,
+        "render": 0.5211285674544556,
+        "render_node": "ArenaChapter4_HighlandAsphalt"
+      }
+    ]
+  },
+  "limitations": [
+    "Five exact helipad boundary samples still differ by 0.8 m; both sides at +/-1 micrometre match. Raw failures retained.",
+    "Uppermost static ray may hit a roof; positive differences do not automatically imply terrain error.",
+    "Not a performance or learned-policy transfer test."
+  ],
+  "tests": {
+    "rust_library": {
+      "passed": 66,
+      "seconds": 11.06
+    },
+    "native_chassis_navigation": {
+      "passed": 2,
+      "seconds": 15.53
+    },
+    "combat_query_and_clock": {
+      "passed": 4,
+      "seconds": 1.604
+    }
+  }
+}

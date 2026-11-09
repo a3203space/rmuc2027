@@ -199,6 +199,41 @@ mod tests {
     }
 
     #[test]
+    fn bevel_mesh_matches_edge_distance_and_has_no_internal_walls() {
+        let engine=Engine::new(42,420.0,"rmuc2027").unwrap();
+        let result=engine.probe_terrain(&[[13.875,8.625],[12.875,7.625],[15.125,7.375],
+            [14.125,6.375],[13.875,8.875],[12.625,7.625]]).unwrap();
+        for sample in result["samples"].as_array().unwrap() {
+            assert!(sample["static_top_minus_ground"].as_f64().unwrap().abs()<1e-8,"{sample}");
+        }
+        for terrain in engine.arena.terrain.iter().filter(|t|t.edge_ramp_m>0.0) {
+            // Include an oversized bevel where no flat plateau remains.
+            for scale in [1.0,4.0] {
+                let mut t=terrain.clone();t.edge_ramp_m*=scale;
+                let (vertices,triangles)=bevel_prism_mesh(&t.polygon,&t,&engine.arena);
+                let mut edges=BTreeMap::new();
+                for triangle in triangles {
+                    let p=triangle.map(|i|vertices[i as usize]);
+                    assert!((p[1]-p[0]).cross(&(p[2]-p[0])).norm()>1e-12);
+                    for i in 0..3 {
+                        let a=triangle[i];let b=triangle[(i+1)%3];
+                        *edges.entry((a.min(b),a.max(b))).or_insert(0)+=1;
+                    }
+                    let area=(p[1].x-p[0].x)*(p[2].y-p[0].y)-(p[1].y-p[0].y)*(p[2].x-p[0].x);
+                    if area.abs()<1e-12 {
+                        let x=(p[0].x+p[1].x+p[2].x)/3.0;let y=(p[0].y+p[1].y+p[2].y)/3.0;
+                        assert!((0..t.polygon.len()).any(|i| {
+                            let a=t.polygon[i];let b=t.polygon[(i+1)%t.polygon.len()];
+                            ((x-a[0])*(b[1]-a[1])-(y-a[1])*(b[0]-a[0])).abs()/(b[0]-a[0]).hypot(b[1]-a[1])<1e-8
+                        }),"internal vertical wall in {}",t.id);
+                    }
+                }
+                assert!(edges.values().all(|&n|n==2),"non-watertight {} scale {scale}: {edges:?}",t.id);
+            }
+        }
+    }
+
+    #[test]
     fn terrain_mesh_matches_public_ridge_and_remains_watertight() {
         let engine=Engine::new(42,420.0,"rmuc2027").unwrap();
         let mut points:Vec<[f64;2]>=vec![[5.7,7.5]];

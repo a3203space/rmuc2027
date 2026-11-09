@@ -370,36 +370,9 @@ impl PhysicsWorld {
                 world.humps(t, arena);
                 world.hump_areas.push([t.x, t.y, t.x + t.w, t.y + t.h]);
             } else if t.edge_ramp_m > 0.0 {
-                let cx = points.iter().map(|p| p[0]).sum::<f64>() / points.len() as f64;
-                let cy = points.iter().map(|p| p[1]).sum::<f64>() / points.len() as f64;
-                let apothem = (0..points.len())
-                    .map(|i| {
-                        let a = points[i];
-                        let b = points[(i + 1) % points.len()];
-                        ((cx - a[0]) * (b[1] - a[1]) - (cy - a[1]) * (b[0] - a[0])).abs()
-                            / ((b[0] - a[0]).hypot(b[1] - a[1]))
-                    })
-                    .fold(f64::INFINITY, f64::min);
-                let scale = (1.0 - t.edge_ramp_m / apothem).max(0.02);
-                let inner: Vec<[f64; 2]> = points
-                    .iter()
-                    .map(|p| [cx + (p[0] - cx) * scale, cy + (p[1] - cy) * scale])
-                    .collect();
-                world.prism(
-                    &inner,
-                    &vec![t.elevation; inner.len()],
-                    t.base_elevation,
-                    arena,
-                );
-                for i in 0..points.len() {
-                    let next = (i + 1) % points.len();
-                    world.prism(
-                        &[points[i], points[next], inner[next], inner[i]],
-                        &[t.base_elevation, t.base_elevation, t.elevation, t.elevation],
-                        t.base_elevation - 0.01,
-                        arena,
-                    );
-                }
+                let (vertices,indices)=bevel_prism_mesh(&points,t,arena);
+                world.colliders.insert(ColliderBuilder::trimesh(vertices,indices)
+                    .expect("valid bevel mesh").friction(0.8).restitution(0.02).build());
             } else {
                 let z: Vec<f64> = points
                     .iter()
@@ -2477,16 +2450,22 @@ impl PhysicsWorld {
 /// edge intersections keep the mesh watertight, with walls only on its perimeter.
 fn prism_mesh(points:&[[f64;2]],heights:&[f64],bottom:f64,arena:&Arena)
     ->(Vec<Point<f64>>,Vec<[u32;3]>) {
-    let original_count=points.len();
+    let triangles=triangulate(points);
+    let boundary:Vec<u32>=(0..points.len() as u32).collect();
+    roof_prism_mesh(points,heights,&triangles,&boundary,bottom,arena)
+}
+
+fn roof_prism_mesh(points:&[[f64;2]],heights:&[f64],original:&[[u32;3]],boundary:&[u32],bottom:f64,arena:&Arena)
+    ->(Vec<Point<f64>>,Vec<[u32;3]>) {
     let mut xy=points.to_vec();let mut roof=heights.to_vec();
-    let original=triangulate(points);let ridge=arena.height*0.5;
+    let ridge=arena.height*0.5;
     let split=arena.floor_slope_deg!=0.0 && points.iter().any(|p|p[1]<ridge)
         && points.iter().any(|p|p[1]>ridge);
     let mut intersections=BTreeMap::<(u32,u32),u32>::new();
     let edge_key=|a:u32,b:u32|if a<b {(a,b)} else {(b,a)};
     let mut triangles=Vec::new();
     if split {
-        for triangle in &original {
+        for triangle in original {
             for i in 0..3 {
                 let (lo,hi)=edge_key(triangle[i],triangle[(i+1)%3]);
                 let a=points[lo as usize];let b=points[hi as usize];
@@ -2499,7 +2478,7 @@ fn prism_mesh(points:&[[f64;2]],heights:&[f64],bottom:f64,arena:&Arena)
                 }
             }
         }
-        for triangle in &original {
+        for triangle in original {
             for lower in [true,false] {
                 let inside=|id:u32|if lower {xy[id as usize][1]<=ridge} else {xy[id as usize][1]>=ridge};
                 let mut polygon=Vec::new();
@@ -2521,11 +2500,11 @@ fn prism_mesh(points:&[[f64;2]],heights:&[f64],bottom:f64,arena:&Arena)
                 }
             }
         }
-    } else {triangles=original;}
+    } else {triangles=original.to_vec();}
     let mut perimeter=Vec::new();
-    for i in 0..original_count {
-        perimeter.push(i as u32);
-        if let Some(&cut)=intersections.get(&edge_key(i as u32,((i+1)%original_count) as u32)) {
+    for i in 0..boundary.len() {
+        perimeter.push(boundary[i]);
+        if let Some(&cut)=intersections.get(&edge_key(boundary[i],boundary[(i+1)%boundary.len()])) {
             perimeter.push(cut);
         }
     }
@@ -2540,6 +2519,93 @@ fn prism_mesh(points:&[[f64;2]],heights:&[f64],bottom:f64,arena:&Arena)
         indices.push([a,a+count,b]);indices.push([b,a+count,b+count]);
     }
     (vertices,indices)
+}
+
+fn clip_surface_polygon(polygon:&[[f64;2]],nx:f64,ny:f64,limit:f64)->Vec<[f64;2]> {
+    let mut result=Vec::new();
+    for i in 0..polygon.len() {
+        let a=polygon[(i+polygon.len()-1)%polygon.len()];let b=polygon[i];
+        let fa=nx*a[0]+ny*a[1]-limit;let fb=nx*b[0]+ny*b[1]-limit;
+        if (fa<=0.0)!=(fb<=0.0) {
+            let t=fa/(fa-fb);result.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);
+        }
+        if fb<=0.0 {result.push(b);}
+    }
+    result
+}
+
+fn surface_vertex(xy:&mut Vec<[f64;2]>,heights:&mut Vec<f64>,ids:&mut BTreeMap<(i64,i64),u32>,p:[f64;2],t:&Terrain)->u32 {
+    // Weld roundoff from independently clipped neighbouring cells. This is
+    // sub-nanometre precision, far below collision and public-map tolerances.
+    let key=((p[0]*1e10).round() as i64,(p[1]*1e10).round() as i64);
+    if let Some(&id)=ids.get(&key) {return id;}
+    let point=[key.0 as f64/1e10,key.1 as f64/1e10];let id=xy.len() as u32;
+    xy.push(point);heights.push(terrain_elevation(t,point[0],point[1]));ids.insert(key,id);id
+}
+
+fn split_surface_edges(polygon:&[u32],xy:&[[f64;2]])->Vec<u32> {
+    let mut result=Vec::new();
+    for i in 0..polygon.len() {
+        let a=xy[polygon[i] as usize];let b=xy[polygon[(i+1)%polygon.len()] as usize];
+        let dx=b[0]-a[0];let dy=b[1]-a[1];let length2=dx*dx+dy*dy;
+        result.push(polygon[i]);
+        let mut middle=Vec::new();
+        for (id,p) in xy.iter().enumerate() {
+            let along=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/length2;
+            let cross=(p[0]-a[0])*dy-(p[1]-a[1])*dx;
+            if along>1e-9 && along<1.0-1e-9 && cross.abs()<1e-9*length2.sqrt() {middle.push((along,id as u32));}
+        }
+        middle.sort_by(|a,b|a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+        result.extend(middle.into_iter().map(|(_,id)|id));
+    }
+    result
+}
+
+/// Convex bevels follow min(distance-to-each-edge, ramp width). Scaling the
+/// polygon about its centre only implements that rule for regular polygons.
+/// Partition into each edge's closest region and the flat plateau instead.
+fn bevel_prism_mesh(points:&[[f64;2]],t:&Terrain,arena:&Arena)->(Vec<Point<f64>>,Vec<[u32;3]>) {
+    let centre=[points.iter().map(|p|p[0]).sum::<f64>()/points.len() as f64,
+                points.iter().map(|p|p[1]).sum::<f64>()/points.len() as f64];
+    let planes:Vec<[f64;3]>=(0..points.len()).map(|i| {
+        let a=points[i];let b=points[(i+1)%points.len()];let length=(b[0]-a[0]).hypot(b[1]-a[1]);
+        let mut nx=-(b[1]-a[1])/length;let mut ny=(b[0]-a[0])/length;
+        if nx*(centre[0]-a[0])+ny*(centre[1]-a[1])<0.0 {nx=-nx;ny=-ny;}
+        [nx,ny,nx*a[0]+ny*a[1]]
+    }).collect();
+    let mut regions=Vec::new();let mut plateau=points.to_vec();
+    for &[nx,ny,offset] in &planes {plateau=clip_surface_polygon(&plateau,-nx,-ny,-offset-t.edge_ramp_m);}
+    regions.push(plateau);
+    for (i,&[nx,ny,offset]) in planes.iter().enumerate() {
+        let mut cell=clip_surface_polygon(points,nx,ny,offset+t.edge_ramp_m);
+        for (j,&[ox,oy,other]) in planes.iter().enumerate() {
+            if i!=j {cell=clip_surface_polygon(&cell,nx-ox,ny-oy,offset-other);}
+        }
+        regions.push(cell);
+    }
+    let mut xy=Vec::new();let mut heights=Vec::new();let mut ids=BTreeMap::new();
+    let boundary:Vec<u32>=points.iter().map(|&p|surface_vertex(&mut xy,&mut heights,&mut ids,p,t)).collect();
+    let mut cells=Vec::new();
+    for region in regions {
+        let mut polygon:Vec<u32>=region.into_iter().map(|p|surface_vertex(&mut xy,&mut heights,&mut ids,p,t)).collect();
+        polygon.dedup();if polygon.len()>1 && polygon.first()==polygon.last() {polygon.pop();}
+        let area=(0..polygon.len()).map(|i| {
+            let a=xy[polygon[i] as usize];let b=xy[polygon[(i+1)%polygon.len()] as usize];a[0]*b[1]-b[0]*a[1]
+        }).sum::<f64>();
+        if area.abs()>1e-12 {if area<0.0 {polygon.reverse();}cells.push(polygon);}
+    }
+    // Split shared collinear edges consistently; use an interior fan centre so
+    // every boundary segment is retained without degenerate fan triangles.
+    let corners=xy.clone();let mut triangles=Vec::new();
+    for polygon in cells {
+        let polygon=split_surface_edges(&polygon,&corners);
+        let centre=[polygon.iter().map(|&i|xy[i as usize][0]).sum::<f64>()/polygon.len() as f64,
+                    polygon.iter().map(|&i|xy[i as usize][1]).sum::<f64>()/polygon.len() as f64];
+        let middle=surface_vertex(&mut xy,&mut heights,&mut ids,centre,t);
+        for i in 0..polygon.len() {triangles.push([middle,polygon[i],polygon[(i+1)%polygon.len()]]);}
+    }
+    let boundary=split_surface_edges(&boundary,&corners);
+    roof_prism_mesh(&xy,&heights,&triangles,&boundary,t.base_elevation-0.01,arena)
 }
 
 fn triangulate(points: &[[f64; 2]]) -> Vec<[u32; 3]> {

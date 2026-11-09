@@ -1,0 +1,985 @@
+{
+  "completed": 6,
+  "total": 6,
+  "results": [
+    {
+      "model": 2714,
+      "seed": 7,
+      "backend": "rapier",
+      "control_hz": 2,
+      "horizon_seconds": 40.0,
+      "simulation_seconds": 14.85,
+      "ability": "jump",
+      "goals": {
+        "red": [
+          12.1,
+          7.5
+        ],
+        "blue": [
+          15.9,
+          7.5
+        ]
+      },
+      "metrics": {
+        "red": {
+          "reached_at": 11.25,
+          "settled_at": 12.2,
+          "settled_since": 12.85,
+          "stable_hold_at": 14.85,
+          "hold_complete": true,
+          "ability_enter": 8.7,
+          "ability_exit": 9.75,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 12.079090418722165,
+            "y": 7.528937382070855,
+            "z": 0.3980005312403443,
+            "grounded": true,
+            "upright": 0.9993916092723658,
+            "tipped": false,
+            "public_ground_z": 0.495636659751577
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 7.5,
+              "goal": [
+                8.0,
+                7.5
+              ]
+            },
+            "time": 14.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              12.1,
+              7.5
+            ]
+          },
+          "ability_seconds": 1.0500000000000007
+        },
+        "blue": {
+          "reached_at": 10.25,
+          "settled_at": 11.1,
+          "settled_since": 11.65,
+          "stable_hold_at": 13.65,
+          "hold_complete": true,
+          "ability_enter": 8.2,
+          "ability_exit": 9.15,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 15.916505598602157,
+            "y": 7.500116789339775,
+            "z": 0.39752425075557196,
+            "grounded": true,
+            "upright": 0.9993945968987656,
+            "tipped": false,
+            "public_ground_z": 0.4963913535324105
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 7.0,
+              "goal": [
+                20.0,
+                7.5
+              ]
+            },
+            "time": 14.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              15.9,
+              7.5
+            ]
+          },
+          "ability_seconds": 0.9500000000000011
+        }
+      },
+      "wall_seconds": 0.51440204000005,
+      "trace": "data/research/heavy-lookahead-navigation-20261109/2714-7-rapier.jsonl"
+    },
+    {
+      "model": 2714,
+      "seed": 7,
+      "backend": "warp_kinematic",
+      "control_hz": 2,
+      "horizon_seconds": 40.0,
+      "simulation_seconds": 10.6,
+      "ability": "jump",
+      "goals": {
+        "red": [
+          12.1,
+          7.5
+        ],
+        "blue": [
+          15.9,
+          7.5
+        ]
+      },
+      "metrics": {
+        "red": {
+          "reached_at": 8.05,
+          "settled_at": 8.9,
+          "settled_since": 8.6,
+          "stable_hold_at": 10.6,
+          "hold_complete": true,
+          "ability_enter": 5.05,
+          "ability_exit": 6.4,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 12.097801208496094,
+            "y": 7.5,
+            "z": 0.49639442563056946,
+            "grounded": true,
+            "upright": 1.0,
+            "tipped": false,
+            "public_ground_z": 0.496394411768902
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 4.0,
+              "goal": [
+                8.0,
+                7.5
+              ]
+            },
+            "time": 10.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              12.1,
+              7.5
+            ]
+          },
+          "ability_seconds": 1.3500000000000005
+        },
+        "blue": {
+          "reached_at": 8.05,
+          "settled_at": 8.9,
+          "settled_since": 8.6,
+          "stable_hold_at": 10.6,
+          "hold_complete": true,
+          "ability_enter": 5.05,
+          "ability_exit": 6.4,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 15.902196884155273,
+            "y": 7.5,
+            "z": 0.49639442563056946,
+            "grounded": true,
+            "upright": 1.0,
+            "tipped": false,
+            "public_ground_z": 0.496394411768902
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 4.0,
+              "goal": [
+                20.0,
+                7.5
+              ]
+            },
+            "time": 10.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              15.9,
+              7.5
+            ]
+          },
+          "ability_seconds": 1.3500000000000005
+        }
+      },
+      "wall_seconds": 1.115067487000033,
+      "trace": "data/research/heavy-lookahead-navigation-20261109/2714-7-warp_kinematic.jsonl"
+    },
+    {
+      "model": 2714,
+      "seed": 42,
+      "backend": "rapier",
+      "control_hz": 2,
+      "horizon_seconds": 40.0,
+      "simulation_seconds": 15.05,
+      "ability": "jump",
+      "goals": {
+        "red": [
+          12.1,
+          7.4
+        ],
+        "blue": [
+          15.9,
+          7.6
+        ]
+      },
+      "metrics": {
+        "red": {
+          "reached_at": 11.3,
+          "settled_at": 12.2,
+          "settled_since": 13.05,
+          "stable_hold_at": 15.05,
+          "hold_complete": true,
+          "ability_enter": 8.7,
+          "ability_exit": 9.75,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 12.079939196554788,
+            "y": 7.434500253028176,
+            "z": 0.39808683503000575,
+            "grounded": true,
+            "upright": 0.9993564779127297,
+            "tipped": false,
+            "public_ground_z": 0.4946792405318962
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 7.5,
+              "goal": [
+                8.0,
+                7.5
+              ]
+            },
+            "time": 15.0,
+            "heavy_stage_ready": true,
+            "goal": [
+              12.1,
+              7.4
+            ]
+          },
+          "ability_seconds": 1.0500000000000007
+        },
+        "blue": {
+          "reached_at": 10.25,
+          "settled_at": 12.45,
+          "settled_since": 12.15,
+          "stable_hold_at": 14.15,
+          "hold_complete": true,
+          "ability_enter": 8.2,
+          "ability_exit": 9.15,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 15.951982937792637,
+            "y": 7.635367316438596,
+            "z": 0.3975173122878216,
+            "grounded": true,
+            "upright": 0.999523603141258,
+            "tipped": false,
+            "public_ground_z": 0.49284969383760957
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 7.0,
+              "goal": [
+                20.0,
+                7.5
+              ]
+            },
+            "time": 15.0,
+            "heavy_stage_ready": true,
+            "goal": [
+              15.9,
+              7.6
+            ]
+          },
+          "ability_seconds": 0.9500000000000011
+        }
+      },
+      "wall_seconds": 0.5221230629999809,
+      "trace": "data/research/heavy-lookahead-navigation-20261109/2714-42-rapier.jsonl"
+    },
+    {
+      "model": 2714,
+      "seed": 42,
+      "backend": "warp_kinematic",
+      "control_hz": 2,
+      "horizon_seconds": 40.0,
+      "simulation_seconds": 10.65,
+      "ability": "jump",
+      "goals": {
+        "red": [
+          12.1,
+          7.4
+        ],
+        "blue": [
+          15.9,
+          7.6
+        ]
+      },
+      "metrics": {
+        "red": {
+          "reached_at": 8.05,
+          "settled_at": 8.95,
+          "settled_since": 8.65,
+          "stable_hold_at": 10.65,
+          "hold_complete": true,
+          "ability_enter": 5.05,
+          "ability_exit": 6.4,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 12.09777545928955,
+            "y": 7.400241851806641,
+            "z": 0.4937821626663208,
+            "grounded": true,
+            "upright": 1.0,
+            "tipped": false,
+            "public_ground_z": 0.49378215272442333
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 4.0,
+              "goal": [
+                8.0,
+                7.5
+              ]
+            },
+            "time": 10.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              12.1,
+              7.4
+            ]
+          },
+          "ability_seconds": 1.3500000000000005
+        },
+        "blue": {
+          "reached_at": 8.05,
+          "settled_at": 8.95,
+          "settled_since": 8.65,
+          "stable_hold_at": 10.65,
+          "hold_complete": true,
+          "ability_enter": 5.05,
+          "ability_exit": 6.4,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 15.902215003967285,
+            "y": 7.599759101867676,
+            "z": 0.4937821328639984,
+            "grounded": true,
+            "upright": 1.0,
+            "tipped": false,
+            "public_ground_z": 0.4937821277515825
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 4.0,
+              "goal": [
+                20.0,
+                7.5
+              ]
+            },
+            "time": 10.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              15.9,
+              7.6
+            ]
+          },
+          "ability_seconds": 1.3500000000000005
+        }
+      },
+      "wall_seconds": 0.6581130420000818,
+      "trace": "data/research/heavy-lookahead-navigation-20261109/2714-42-warp_kinematic.jsonl"
+    },
+    {
+      "model": 2714,
+      "seed": 91,
+      "backend": "rapier",
+      "control_hz": 2,
+      "horizon_seconds": 40.0,
+      "simulation_seconds": 14.6,
+      "ability": "jump",
+      "goals": {
+        "red": [
+          11.9,
+          7.5
+        ],
+        "blue": [
+          16.1,
+          7.5
+        ]
+      },
+      "metrics": {
+        "red": {
+          "reached_at": 11.0,
+          "settled_at": 11.95,
+          "settled_since": 12.6,
+          "stable_hold_at": 14.6,
+          "hold_complete": true,
+          "ability_enter": 8.7,
+          "ability_exit": 9.75,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 11.881269663337415,
+            "y": 7.491734169199449,
+            "z": 0.39759360564087415,
+            "grounded": true,
+            "upright": 0.9993935129723662,
+            "tipped": false,
+            "public_ground_z": 0.4961779633718546
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 7.5,
+              "goal": [
+                8.0,
+                7.5
+              ]
+            },
+            "time": 14.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              11.9,
+              7.5
+            ]
+          },
+          "ability_seconds": 1.0500000000000007
+        },
+        "blue": {
+          "reached_at": 10.1,
+          "settled_at": 11.05,
+          "settled_since": 11.75,
+          "stable_hold_at": 13.75,
+          "hold_complete": true,
+          "ability_enter": 8.2,
+          "ability_exit": 9.15,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 16.132360789948958,
+            "y": 7.501317194380399,
+            "z": 0.3975226947583106,
+            "grounded": true,
+            "upright": 0.9993945020895617,
+            "tipped": false,
+            "public_ground_z": 0.4963599198201655
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 7.0,
+              "goal": [
+                20.0,
+                7.5
+              ]
+            },
+            "time": 14.5,
+            "heavy_stage_ready": true,
+            "goal": [
+              16.1,
+              7.5
+            ]
+          },
+          "ability_seconds": 0.9500000000000011
+        }
+      },
+      "wall_seconds": 0.5340150769999354,
+      "trace": "data/research/heavy-lookahead-navigation-20261109/2714-91-rapier.jsonl"
+    },
+    {
+      "model": 2714,
+      "seed": 91,
+      "backend": "warp_kinematic",
+      "control_hz": 2,
+      "horizon_seconds": 40.0,
+      "simulation_seconds": 11.05,
+      "ability": "jump",
+      "goals": {
+        "red": [
+          11.9,
+          7.5
+        ],
+        "blue": [
+          16.1,
+          7.5
+        ]
+      },
+      "metrics": {
+        "red": {
+          "reached_at": 7.9,
+          "settled_at": 9.35,
+          "settled_since": 9.05,
+          "stable_hold_at": 11.05,
+          "hold_complete": true,
+          "ability_enter": 5.05,
+          "ability_exit": 6.4,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 11.920245170593262,
+            "y": 7.5,
+            "z": 0.49639442563056946,
+            "grounded": true,
+            "upright": 1.0,
+            "tipped": false,
+            "public_ground_z": 0.496394411768902
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 4.0,
+              "goal": [
+                8.0,
+                7.5
+              ]
+            },
+            "time": 11.0,
+            "heavy_stage_ready": true,
+            "goal": [
+              11.9,
+              7.5
+            ]
+          },
+          "ability_seconds": 1.3500000000000005
+        },
+        "blue": {
+          "reached_at": 7.9,
+          "settled_at": 9.35,
+          "settled_since": 9.05,
+          "stable_hold_at": 11.05,
+          "hold_complete": true,
+          "ability_enter": 5.05,
+          "ability_exit": 6.4,
+          "folded": false,
+          "jump_commands": 1,
+          "tipped": false,
+          "success": true,
+          "final": {
+            "x": 16.079757690429688,
+            "y": 7.5,
+            "z": 0.49639442563056946,
+            "grounded": true,
+            "upright": 1.0,
+            "tipped": false,
+            "public_ground_z": 0.496394411768902
+          },
+          "state": {
+            "heavy_low_stance": true,
+            "heavy_stage": {
+              "time": 4.0,
+              "goal": [
+                20.0,
+                7.5
+              ]
+            },
+            "time": 11.0,
+            "heavy_stage_ready": true,
+            "goal": [
+              16.1,
+              7.5
+            ]
+          },
+          "ability_seconds": 1.3500000000000005
+        }
+      },
+      "wall_seconds": 0.6853176869999515,
+      "trace": "data/research/heavy-lookahead-navigation-20261109/2714-91-warp_kinematic.jsonl"
+    }
+  ],
+  "comparisons": [
+    {
+      "model": 2714,
+      "seed": 7,
+      "team": "red",
+      "reference_success": true,
+      "simplified_success": true,
+      "relative_time_errors": {
+        "reached_at": 0.2844444444444444,
+        "settled_at": 0.27049180327868844,
+        "stable_hold_at": 0.2861952861952862,
+        "ability_seconds": 0.28571428571428537
+      },
+      "final_origin_offset_difference_m": 0.09763614237290019,
+      "pass_gate": false
+    },
+    {
+      "model": 2714,
+      "seed": 7,
+      "team": "blue",
+      "reference_success": true,
+      "simplified_success": true,
+      "relative_time_errors": {
+        "reached_at": 0.21463414634146336,
+        "settled_at": 0.19819819819819814,
+        "stable_hold_at": 0.22344322344322348,
+        "ability_seconds": 0.42105263157894635
+      },
+      "final_origin_offset_difference_m": 0.098867116638506,
+      "pass_gate": false
+    },
+    {
+      "model": 2714,
+      "seed": 42,
+      "team": "red",
+      "reference_success": true,
+      "simplified_success": true,
+      "relative_time_errors": {
+        "reached_at": 0.28761061946902655,
+        "settled_at": 0.26639344262295084,
+        "stable_hold_at": 0.292358803986711,
+        "ability_seconds": 0.28571428571428537
+      },
+      "final_origin_offset_difference_m": 0.09659241544378794,
+      "pass_gate": false
+    },
+    {
+      "model": 2714,
+      "seed": 42,
+      "team": "blue",
+      "reference_success": true,
+      "simplified_success": true,
+      "relative_time_errors": {
+        "reached_at": 0.21463414634146336,
+        "settled_at": 0.28112449799196787,
+        "stable_hold_at": 0.24734982332155475,
+        "ability_seconds": 0.42105263157894635
+      },
+      "final_origin_offset_difference_m": 0.0953323866622039,
+      "pass_gate": false
+    },
+    {
+      "model": 2714,
+      "seed": 91,
+      "team": "red",
+      "reference_success": true,
+      "simplified_success": true,
+      "relative_time_errors": {
+        "reached_at": 0.2818181818181818,
+        "settled_at": 0.21757322175732216,
+        "stable_hold_at": 0.2431506849315068,
+        "ability_seconds": 0.28571428571428537
+      },
+      "final_origin_offset_difference_m": 0.09858437159264793,
+      "pass_gate": false
+    },
+    {
+      "model": 2714,
+      "seed": 91,
+      "team": "blue",
+      "reference_success": true,
+      "simplified_success": true,
+      "relative_time_errors": {
+        "reached_at": 0.21782178217821777,
+        "settled_at": 0.15384615384615394,
+        "stable_hold_at": 0.19636363636363632,
+        "ability_seconds": 0.42105263157894635
+      },
+      "final_origin_offset_difference_m": 0.09883723892352236,
+      "pass_gate": false
+    }
+  ],
+  "ability_summary": {
+    "2714": {
+      "paired_attempts": 6,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    }
+  },
+  "ppo_included": false,
+  "experiment": {
+    "kind": "ability-calibration",
+    "ppo_included": false,
+    "control_hz": 2,
+    "sources": {
+      "rapier": {
+        "config": {
+          "seed": 42,
+          "team": "red",
+          "slot": 7,
+          "map": "rmuc2027",
+          "duration": 420,
+          "episode_seconds": 60,
+          "rl_seconds": 0.5,
+          "grid_m": 0.25,
+          "recover_enter": 0.25,
+          "recover_exit": 0.8,
+          "friendly": "examples/claude_opus55_xhigh_2027_squad",
+          "opponent": "examples/claude_opus55_xhigh_2027_hold",
+          "controllers": {
+            "red:7": {
+              "kind": "learning"
+            }
+          },
+          "rewards": {
+            "control": 0.01,
+            "outcome": 10.0,
+            "capture_seconds": 0.001,
+            "death": -0.1
+          },
+          "ppo": {
+            "n_steps": 64,
+            "batch_size": 64,
+            "n_epochs": 4,
+            "learning_rate": 0.0003,
+            "gamma": 0.995,
+            "gae_lambda": 0.95,
+            "ent_coef": 0.01
+          },
+          "sim_backend": "rapier",
+          "navigation_precompute": false,
+          "learning_control_hz": 2,
+          "policy_timeout_s": 5.0,
+          "navigation_mode": "legacy",
+          "timed_assembly": false,
+          "drones_enabled": true,
+          "fixed_policy_hz": 10,
+          "training_summary": true,
+          "action_trace": false,
+          "github_backup_seconds": 300.0
+        },
+        "sources": {
+          "friendly": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "opponent": {
+            "version": "90c6cba4ea0ca924",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "team",
+              "robot": null,
+              "entries": {
+                "team": "strategy.py"
+              },
+              "hashes": {
+                "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              },
+              "team_lineup": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2771
+              },
+              "version": "90c6cba4ea0ca924"
+            },
+            "hashes": {
+              "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            }
+          }
+        },
+        "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+        "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+        "navigation": {
+          "precompute": false,
+          "preparation_sha256": "dbda4ab0c0f5ae11f36fa82d4a9f9db2940076e61c13e02e61bf40d9012c1699"
+        },
+        "engine_binary_sha256": "70537d679068372143561086bf1db13ecf0eb0fb4c0ce17da7f87a606f72224c",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "rapier",
+          "dt": 0.008333333333333333
+        }
+      },
+      "warp_kinematic": {
+        "config": {
+          "seed": 42,
+          "team": "red",
+          "slot": 7,
+          "map": "rmuc2027",
+          "duration": 420,
+          "episode_seconds": 60,
+          "rl_seconds": 0.5,
+          "grid_m": 0.25,
+          "recover_enter": 0.25,
+          "recover_exit": 0.8,
+          "friendly": "examples/claude_opus55_xhigh_2027_squad",
+          "opponent": "examples/claude_opus55_xhigh_2027_hold",
+          "controllers": {
+            "red:7": {
+              "kind": "learning"
+            }
+          },
+          "rewards": {
+            "control": 0.01,
+            "outcome": 10.0,
+            "capture_seconds": 0.001,
+            "death": -0.1
+          },
+          "ppo": {
+            "n_steps": 64,
+            "batch_size": 64,
+            "n_epochs": 4,
+            "learning_rate": 0.0003,
+            "gamma": 0.995,
+            "gae_lambda": 0.95,
+            "ent_coef": 0.01
+          },
+          "sim_backend": "warp_kinematic",
+          "navigation_precompute": false,
+          "learning_control_hz": 2,
+          "policy_timeout_s": 5.0,
+          "navigation_mode": "legacy",
+          "timed_assembly": false,
+          "drones_enabled": true,
+          "fixed_policy_hz": 10,
+          "training_summary": true,
+          "action_trace": false,
+          "github_backup_seconds": 300.0
+        },
+        "sources": {
+          "friendly": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "opponent": {
+            "version": "90c6cba4ea0ca924",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "team",
+              "robot": null,
+              "entries": {
+                "team": "strategy.py"
+              },
+              "hashes": {
+                "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              },
+              "team_lineup": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2771
+              },
+              "version": "90c6cba4ea0ca924"
+            },
+            "hashes": {
+              "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            }
+          }
+        },
+        "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+        "runtime_hash": "7ed9caca221cd5fd33aab54ab7b900540543b896d2b576d712a753c6f78d5fb7",
+        "navigation": {
+          "precompute": false,
+          "preparation_sha256": "dbda4ab0c0f5ae11f36fa82d4a9f9db2940076e61c13e02e61bf40d9012c1699"
+        },
+        "engine_binary_sha256": "70537d679068372143561086bf1db13ecf0eb0fb4c0ce17da7f87a606f72224c",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "warp_kinematic",
+          "device": "cuda:0",
+          "dt": 0.008333333333333333,
+          "experimental": true,
+          "files": {
+            "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+            "arena.py": "d0b6e6fe1c8c6074e7608a3b27b4c1a34be0b4f2d85ad70d044e3dfa9ec7fa7d",
+            "motion.py": "c39bbacd50a88a78f01ff7ec2bd3c15d172e393de03346140a5d5da8b525763f",
+            "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+            "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+            "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+            "batching.py": "30482daa48c2e209315b0e945ec32f93b720d967678511f99c9cf6f3856203fb",
+            "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+          },
+          "dependencies": {
+            "warp-lang": "1.19.0"
+          }
+        }
+      }
+    },
+    "driver_sha256": "38aa3a10d5288738432697de78811c47eeb683f603647731f9c23e31e1b69e0c",
+    "scope": "Paired public-SDK navigation; seed and nearby goal variation; not trained-policy win-rate transfer"
+  },
+  "limitations": [
+    "Only six paired direction/seed attempts, below minimum 20.",
+    "Success and stable hold now pass but time differences still fail the 20 percent gate.",
+    "No PPO training or trained-policy transfer."
+  ],
+  "tests": {
+    "jump_navigation": 8,
+    "cuda_traversal": 9,
+    "calibration_gates": 3
+  }
+}

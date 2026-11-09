@@ -838,7 +838,11 @@ def _navigate_action_legacy(robot, point, observation, state):
                 # Allow the chassis to rise before its nose reaches the stair rim.
                 # At 10 Hz a threshold at 8.65 can issue the jump only at 8.8.
                 takeoff_x = 8.55 if parallel_legs else 8.65
-                if ready and x > takeoff_x and robot.get('grounded') and now-entry['last_jump'] > _design(robot).get('jump_cooldown_s', .9)+.15:
+                forward_speed = -robot.get('vx', 0.) if flip else robot.get('vx', 0.)
+                crossing_before_next_decision = (parallel_legs and x >= 8.1 and
+                    observation.get('policy_dt', .1) >= .49 and
+                    x + max(0., forward_speed)*observation['policy_dt'] > takeoff_x)
+                if ready and entry['jumps']<3 and (x > takeoff_x or crossing_before_next_decision) and robot.get('grounded') and now-entry['last_jump'] > _design(robot).get('jump_cooldown_s', .9)+.15:
                     fields['jump'] = 1.
                     if parallel_legs:
                         fields.update(move=(0., 0.), brake=False)
@@ -1093,6 +1097,33 @@ def _stationary_teammate_detour(robot, point, fields, observation, state):
 
 def navigate_action(robot, point, observation, state):
     """Opt-in sampled local avoidance using only the controller's observation."""
+    if observation['time']<state.get('time',-1):state.clear()
+    design=_design(robot)
+    armed_parallel=(robot.get('alive',True) and design.get('chassis_type')=='wheel_legged'
+                    and design.get('arm_count',0)>0 and design.get('leg_type')!='serial'
+                    and design.get('capabilities',{}).get('jump') and design.get('capabilities',{}).get('step_climb_m',0)>0)
+    if armed_parallel and observation['arena'].get('layout_revision')=='chapter4-2027-v1':
+        flip=robot['team']=='blue'
+        gx,gy=(28-point[0],15-point[1]) if flip else point
+        central=10.5<gx<17.5 and 3<gy<12
+        if central:state['heavy_low_stance']=True
+        else:
+            state.pop('heavy_stage',None);state.pop('heavy_stage_ready',None)
+        x=28-robot['x'] if flip else robot['x']
+        if (central and observation.get('policy_dt',.1)>=.49 and x<10.3 and robot.get('grounded',True)
+                and not state.get('entry',{}).get('jumps') and not state.get('heavy_stage_ready')):
+            # At 2 Hz, a moving chassis can hit the stair before the next jump
+            # decision. Establish a stopped run-up origin first. The low leg
+            # stance also keeps an arm-carrying chassis balanced on the way.
+            staging=(20.,7.5) if flip else (8.,7.5)
+            if (math.dist((robot['x'],robot['y']),staging)>=.07 or
+                    math.hypot(robot.get('vx',0.),robot.get('vy',0.))>=.2 or
+                    not robot.get('grounded',True) or robot.get('upright',1.)<.95):
+                fields=navigate_action(robot,staging,observation,state.setdefault('heavy_stage',{}))
+                fields.setdefault('leg_height',design.get('leg_min_m',.12))
+                state['time']=observation['time']
+                return fields
+            state['heavy_stage_ready']=True
     fields = _navigate_action_legacy(robot, point, observation, state)
     if (observation.get('navigation_mode') == 'predictive' and
             not any(k in state for k in ('entry', 'tunnel')) and
@@ -1100,6 +1131,10 @@ def navigate_action(robot, point, observation, state):
             robot.get('grounded', True) and robot.get('role') != 'aerial'):
         fields.update(_trajectory_move(robot, point, observation, state))
     fields = _stationary_teammate_detour(robot, point, fields, observation, state)
+    if armed_parallel and state.get('heavy_low_stance'):
+        # Keep the stable transport stance after landing; raising the loaded
+        # chassis immediately can undo an otherwise successful arrival.
+        fields.setdefault('leg_height',design.get('leg_min_m',.12))
     return predictive_navigation(robot, fields, observation, state)
 
 
