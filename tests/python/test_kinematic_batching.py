@@ -59,6 +59,12 @@ class WorldBatchTests(unittest.TestCase):
         a['robots'][0]['move']=[.5,0.];b['robots'][0].update(transform=True,move=[-.4,0.])
         self.compare([a,b])
 
+    def test_coast_and_brake_are_isolated_across_world_slots(self):
+        a=request();b=copy.deepcopy(a)
+        for command in (a,b):command['robots'][0]['velocity']=[1.,0.,0.]
+        a['robots'][0]['coast']=True
+        self.compare([a,b])
+
     def test_service_merges_concurrent_worlds_and_closes(self):
         service=PhysicsService(2,wait_seconds=.02)
         clients=[BatchClient(service,'cuda:0') for _ in range(2)]

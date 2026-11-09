@@ -15,6 +15,18 @@ def request(model=2732,fold=0.,roof=False):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_coast_flag_reaches_motion_and_releasing_it_brakes(self):
+        adapter=ArenaMotion();command=request()
+        robot=command['robots'][0];robot.update(coast=True,velocity=[2.,0.,0.])
+        try:
+            first=adapter.step(command)
+            self.assertGreater(first['velocities'][-1][0][0],1.9)
+            robot.update(pos=first['positions'][-1][0],velocity=first['velocities'][-1][0],coast=False)
+            command['sequence']=1
+            second=adapter.step(command)
+            self.assertLess(second['velocities'][-1][0][0],first['velocities'][-1][0][0]-.1)
+        finally:adapter.close()
+
     def test_fully_folded_drive_uses_original_half_speed_rule(self):
         speeds=[]
         for folded in (False,True):

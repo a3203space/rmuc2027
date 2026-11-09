@@ -6,6 +6,32 @@ from rmuc2027_research.rl.warp_kinematic.terrain import Terrain
 
 
 class CudaMotionTests(unittest.TestCase):
+    def test_powered_coast_preserves_momentum_with_only_passive_drag(self):
+        sim=MotionBatch([[0.,0.]]*2,[[3.,4.,.2]]*2,[],worlds=[0,1])
+        sim.vel.assign(np.asarray([[2.,0.]]*2,dtype=np.float32))
+        sim.resistance.assign(np.asarray([[.02,.1]]*2,dtype=np.float32))
+        sim.drive.assign(np.asarray([[20.,.75,100.]]*2,dtype=np.float32))
+        sim.coast.assign(np.asarray([1,0],dtype=np.int32))
+        expected=2.
+        for _ in range(60):
+            expected=max(0.,expected-(.02*9.81+.6125*.1*expected**2/20.)/120.)
+            sim.step([[0.,0.]]*2,dt=1/120)
+        p,v=sim.state()
+        self.assertAlmostEqual(v[0,0],expected,places=5)
+        self.assertGreater(v[0,0],1.8)
+        self.assertLess(v[1,0],.001)
+        self.assertGreater(p[0,0],p[1,0])
+
+    def test_coasting_still_hits_walls_and_drive_cancels_freewheeling(self):
+        sim=MotionBatch([[0.,0.]],[[3.,4.,.2]],[[1.,-2.,1.1,2.]])
+        sim.vel.assign(np.asarray([[2.,0.]],dtype=np.float32))
+        sim.coast.assign(np.asarray([1],dtype=np.int32))
+        for _ in range(60):sim.step([[0.,0.]],dt=1/120)
+        self.assertLessEqual(sim.state()[0][0,0],.8)
+        self.assertAlmostEqual(sim.state()[1][0,0],0.,places=6)
+        sim.step([[-1.,0.]],dt=1/120)
+        self.assertLess(sim.state()[1][0,0],0.)
+
     def test_three_way_coincident_overlap_recovers_symmetrically(self):
         sim=MotionBatch([[0,0]]*3,[[3,10,.2]]*3,[])
         for _ in range(40):sim.step([[0,0]]*3,dt=1/120)
