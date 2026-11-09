@@ -8,6 +8,7 @@ import math
 import json
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from typing import Any, Literal, TypedDict
 
 
@@ -895,6 +896,7 @@ def _square_to_bumps(robot,target,arena,lookahead=.75,tolerance=math.radians(12)
 
 
 _NAV_ROUTE_COSTS={}
+_NAV_ROUTE_LOCK=Lock()
 
 
 def _route_costs(graph,goal,near_goal,strict):
@@ -902,7 +904,9 @@ def _route_costs(graph,goal,near_goal,strict):
     import heapq
     nodes,edges,clear,_=graph
     key=(id(graph),clear,goal,frozenset(near_goal.items()) if isinstance(near_goal,dict) else frozenset(near_goal),strict)
-    if key in _NAV_ROUTE_COSTS:return _NAV_ROUTE_COSTS[key]
+    with _NAV_ROUTE_LOCK:
+        cached=_NAV_ROUTE_COSTS.get(key)
+        if cached is not None:return cached
     distances={i:math.dist(p,goal) for i,p in enumerate(nodes) if clear(p,goal,near_goal,strict)}
     queue=[(cost,i) for i,cost in distances.items()];heapq.heapify(queue)
     while queue:
@@ -911,9 +915,14 @@ def _route_costs(graph,goal,near_goal,strict):
         for other,d in edges[index]:
             if cost+d<distances.get(other,float('inf')):
                 distances[other]=cost+d;heapq.heappush(queue,(cost+d,other))
-    if len(_NAV_ROUTE_COSTS)>=128:_NAV_ROUTE_COSTS.pop(next(iter(_NAV_ROUTE_COSTS)))
-    _NAV_ROUTE_COSTS[key]=distances
-    return distances
+    # Dijkstra stays outside the critical section. Recheck after computing so
+    # concurrent hits/evictions are atomic without serializing route searches.
+    with _NAV_ROUTE_LOCK:
+        cached=_NAV_ROUTE_COSTS.get(key)
+        if cached is not None:return cached
+        if len(_NAV_ROUTE_COSTS)>=128:_NAV_ROUTE_COSTS.pop(next(iter(_NAV_ROUTE_COSTS)))
+        _NAV_ROUTE_COSTS[key]=distances
+        return distances
 
 
 def _route(graph,start,goal,near_start,near_goal,strict,reached=0):
