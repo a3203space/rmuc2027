@@ -1,0 +1,3121 @@
+{
+  "results": [
+    {
+      "model": 2731,
+      "backend": "rapier",
+      "results": [
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "red",
+          "median_origin_offset_m": -0.09243691782537206,
+          "origin_offset_range_m": 1.1525373158349783e-06,
+          "all_grounded": true,
+          "minimum_upright": 0.999660044399002
+        },
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "blue",
+          "median_origin_offset_m": -0.09243691782537235,
+          "origin_offset_range_m": 1.1525373165982566e-06,
+          "all_grounded": true,
+          "minimum_upright": 0.999660044399002
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.02498455634950962,
+          "origin_offset_range_m": 1.6523171719740049e-12,
+          "all_grounded": true,
+          "minimum_upright": 0.9996587574260439
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.024984556349509815,
+          "origin_offset_range_m": 1.6514567491299204e-12,
+          "all_grounded": true,
+          "minimum_upright": 0.9996587574260439
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "red",
+          "median_origin_offset_m": 0.12006232655590708,
+          "origin_offset_range_m": 5.578218997825957e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9994543486078932
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "blue",
+          "median_origin_offset_m": 0.12006232655590715,
+          "origin_offset_range_m": 5.578219552937469e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9994543486078931
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.024984556348809972,
+          "origin_offset_range_m": 3.599093245654217e-12,
+          "all_grounded": true,
+          "minimum_upright": 0.9996587572807623
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.024984556348809403,
+          "origin_offset_range_m": 3.599232023532295e-12,
+          "all_grounded": true,
+          "minimum_upright": 0.9996587572807623
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2731-rapier.jsonl",
+      "trace_sha256": "ad9af40a912b34ffdb43eceed94c348e744d39b3cb80a68bb975418d4617a53a"
+    },
+    {
+      "model": 2731,
+      "backend": "warp_kinematic",
+      "results": [
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "red",
+          "median_origin_offset_m": -0.09240627260196921,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "blue",
+          "median_origin_offset_m": -0.09240627501670998,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.025000005674250092,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.02500000808899086,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "red",
+          "median_origin_offset_m": 0.11999999015342477,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "blue",
+          "median_origin_offset_m": 0.11999997283752281,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.025000005674250092,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.02500000808899086,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2731-warp_kinematic.jsonl",
+      "trace_sha256": "9ecf24b9901c6cab960e996713a6ab320d40b82e38695a1ca10e195e4106d6a0"
+    },
+    {
+      "model": 2714,
+      "backend": "rapier",
+      "results": [
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "red",
+          "median_origin_offset_m": -0.09887122417322072,
+          "origin_offset_range_m": 4.5263084932911646e-08,
+          "all_grounded": true,
+          "minimum_upright": 0.9993946060391186
+        },
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "blue",
+          "median_origin_offset_m": -0.09887122417322,
+          "origin_offset_range_m": 4.5263084613722526e-08,
+          "all_grounded": true,
+          "minimum_upright": 0.9993946060391186
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.030676193148597014,
+          "origin_offset_range_m": 8.404403678552441e-07,
+          "all_grounded": true,
+          "minimum_upright": 0.9990452034108317
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.030676193148597944,
+          "origin_offset_range_m": 8.404403680217776e-07,
+          "all_grounded": true,
+          "minimum_upright": 0.9990452034108317
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "red",
+          "median_origin_offset_m": 0.11397662621509944,
+          "origin_offset_range_m": 1.7487537632698835e-06,
+          "all_grounded": true,
+          "minimum_upright": 0.9969854452464266
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "blue",
+          "median_origin_offset_m": 0.11397662621509846,
+          "origin_offset_range_m": 1.7487537633531502e-06,
+          "all_grounded": true,
+          "minimum_upright": 0.9969854452464266
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.030661484426397698,
+          "origin_offset_range_m": 1.8218046404783195e-07,
+          "all_grounded": true,
+          "minimum_upright": 0.9990460988594546
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.030661484426398516,
+          "origin_offset_range_m": 1.8218046413109867e-07,
+          "all_grounded": true,
+          "minimum_upright": 0.9990460988594546
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2714-rapier.jsonl",
+      "trace_sha256": "3e5f8e090ed3acd9f6914d35269cd7d024663364c4ac1ddc7f5d78ef403d5bc7"
+    },
+    {
+      "model": 2714,
+      "backend": "warp_kinematic",
+      "results": [
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "red",
+          "median_origin_offset_m": -0.09316605135439698,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "minimum",
+          "target_leg_height_m": 0.12,
+          "team": "blue",
+          "median_origin_offset_m": -0.09316605135439698,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.025000004019725963,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.025000004019725963,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "red",
+          "median_origin_offset_m": 0.11999997690678771,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "maximum",
+          "target_leg_height_m": 0.39,
+          "team": "blue",
+          "median_origin_offset_m": 0.11999997690678771,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.025000004019725963,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal-return",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.025000004019725963,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2714-warp_kinematic.jsonl",
+      "trace_sha256": "4dd861f9ad0dc9bc1ddc4d9eb497bae3cb3cb4e060d374b4a936815fdd59b56d"
+    },
+    {
+      "model": 2732,
+      "backend": "rapier",
+      "results": [
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.017994094785505677,
+          "origin_offset_range_m": 9.23884940773334e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9995728681952266
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.01799409478550565,
+          "origin_offset_range_m": 9.238853015958171e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9995728681952266
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2732-rapier.jsonl",
+      "trace_sha256": "78503c5fccac15a8497aaab2cb3b89c60653644393828cf3ac296039d2d28d5b"
+    },
+    {
+      "model": 2732,
+      "backend": "warp_kinematic",
+      "results": [
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.01800000638950583,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.018000008804246598,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2732-warp_kinematic.jsonl",
+      "trace_sha256": "898d8606e15abe7228e53f4b13848e26263f597bf6abeed8ff646d7a2ba12c9e"
+    },
+    {
+      "model": 2773,
+      "backend": "rapier",
+      "results": [
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.017994094785505843,
+          "origin_offset_range_m": 9.238853293513927e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9995728681952266
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.017994094785505607,
+          "origin_offset_range_m": 9.238854958848464e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9995728681952266
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2773-rapier.jsonl",
+      "trace_sha256": "d91cb747a1a7128c6ccbd6441177cd3bb654d85b43b6eb1d0a800cb7ac0f8505"
+    },
+    {
+      "model": 2773,
+      "backend": "warp_kinematic",
+      "results": [
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.01800000638950583,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.018000008804246598,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/2773-warp_kinematic.jsonl",
+      "trace_sha256": "d9f19ddbaa1f45c253174c631508a3028229a04b4949c11072cf7daef47a4ec3"
+    },
+    {
+      "model": 303,
+      "backend": "rapier",
+      "results": [
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.017994099913524547,
+          "origin_offset_range_m": 9.227233976893956e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9995789064577244
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.017994099913524395,
+          "origin_offset_range_m": 9.227232311559419e-10,
+          "all_grounded": true,
+          "minimum_upright": 0.9995789064577244
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/303-rapier.jsonl",
+      "trace_sha256": "920ae7cc41a0c53d9dad0bfb5c2491379c1c555863f3c415f4c1bc369b0765d2"
+    },
+    {
+      "model": 303,
+      "backend": "warp_kinematic",
+      "results": [
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "red",
+          "median_origin_offset_m": -0.017999991488344635,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        },
+        {
+          "phase": "nominal",
+          "target_leg_height_m": null,
+          "team": "blue",
+          "median_origin_offset_m": -0.018000008804246598,
+          "origin_offset_range_m": 0.0,
+          "all_grounded": true,
+          "minimum_upright": 1.0
+        }
+      ],
+      "trace": "data/research/loaded-pose-authority-audit-20261109/303-warp_kinematic.jsonl",
+      "trace_sha256": "e8096fb439fffc8ecb84cfcdcd239366a01015d65cc3543cb355fc66984b1d98"
+    }
+  ],
+  "comparisons": [
+    {
+      "model": 2731,
+      "phase": "minimum",
+      "team": "red",
+      "native": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "red",
+        "median_origin_offset_m": -0.09243691782537206,
+        "origin_offset_range_m": 1.1525373158349783e-06,
+        "all_grounded": true,
+        "minimum_upright": 0.999660044399002
+      },
+      "simplified": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "red",
+        "median_origin_offset_m": -0.09240627260196921,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 3.064522340284759e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "minimum",
+      "team": "blue",
+      "native": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "blue",
+        "median_origin_offset_m": -0.09243691782537235,
+        "origin_offset_range_m": 1.1525373165982566e-06,
+        "all_grounded": true,
+        "minimum_upright": 0.999660044399002
+      },
+      "simplified": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "blue",
+        "median_origin_offset_m": -0.09240627501670998,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 3.064280866237057e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "nominal",
+      "team": "red",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.02498455634950962,
+        "origin_offset_range_m": 1.6523171719740049e-12,
+        "all_grounded": true,
+        "minimum_upright": 0.9996587574260439
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.025000005674250092,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 1.5449324740471337e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "nominal",
+      "team": "blue",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.024984556349509815,
+        "origin_offset_range_m": 1.6514567491299204e-12,
+        "all_grounded": true,
+        "minimum_upright": 0.9996587574260439
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.02500000808899086,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 1.54517394810455e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "maximum",
+      "team": "red",
+      "native": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "red",
+        "median_origin_offset_m": 0.12006232655590708,
+        "origin_offset_range_m": 5.578218997825957e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9994543486078932
+      },
+      "simplified": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "red",
+        "median_origin_offset_m": 0.11999999015342477,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 6.233640248230754e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "maximum",
+      "team": "blue",
+      "native": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "blue",
+        "median_origin_offset_m": 0.12006232655590715,
+        "origin_offset_range_m": 5.578219552937469e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9994543486078931
+      },
+      "simplified": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "blue",
+        "median_origin_offset_m": 0.11999997283752281,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 6.235371838433923e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "nominal-return",
+      "team": "red",
+      "native": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.024984556348809972,
+        "origin_offset_range_m": 3.599093245654217e-12,
+        "all_grounded": true,
+        "minimum_upright": 0.9996587572807623
+      },
+      "simplified": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.025000005674250092,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 1.544932544012001e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2731,
+      "phase": "nominal-return",
+      "team": "blue",
+      "native": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.024984556348809403,
+        "origin_offset_range_m": 3.599232023532295e-12,
+        "all_grounded": true,
+        "minimum_upright": 0.9996587572807623
+      },
+      "simplified": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.02500000808899086,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 1.5451740181457452e-05,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "minimum",
+      "team": "red",
+      "native": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "red",
+        "median_origin_offset_m": -0.09887122417322072,
+        "origin_offset_range_m": 4.5263084932911646e-08,
+        "all_grounded": true,
+        "minimum_upright": 0.9993946060391186
+      },
+      "simplified": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "red",
+        "median_origin_offset_m": -0.09316605135439698,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.005705172818823739,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "minimum",
+      "team": "blue",
+      "native": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "blue",
+        "median_origin_offset_m": -0.09887122417322,
+        "origin_offset_range_m": 4.5263084613722526e-08,
+        "all_grounded": true,
+        "minimum_upright": 0.9993946060391186
+      },
+      "simplified": {
+        "phase": "minimum",
+        "target_leg_height_m": 0.12,
+        "team": "blue",
+        "median_origin_offset_m": -0.09316605135439698,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.005705172818823018,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "nominal",
+      "team": "red",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.030676193148597014,
+        "origin_offset_range_m": 8.404403678552441e-07,
+        "all_grounded": true,
+        "minimum_upright": 0.9990452034108317
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.025000004019725963,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.005676189128871051,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "nominal",
+      "team": "blue",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.030676193148597944,
+        "origin_offset_range_m": 8.404403680217776e-07,
+        "all_grounded": true,
+        "minimum_upright": 0.9990452034108317
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.025000004019725963,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.005676189128871981,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "maximum",
+      "team": "red",
+      "native": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "red",
+        "median_origin_offset_m": 0.11397662621509944,
+        "origin_offset_range_m": 1.7487537632698835e-06,
+        "all_grounded": true,
+        "minimum_upright": 0.9969854452464266
+      },
+      "simplified": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "red",
+        "median_origin_offset_m": 0.11999997690678771,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.006023350691688273,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "maximum",
+      "team": "blue",
+      "native": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "blue",
+        "median_origin_offset_m": 0.11397662621509846,
+        "origin_offset_range_m": 1.7487537633531502e-06,
+        "all_grounded": true,
+        "minimum_upright": 0.9969854452464266
+      },
+      "simplified": {
+        "phase": "maximum",
+        "target_leg_height_m": 0.39,
+        "team": "blue",
+        "median_origin_offset_m": 0.11999997690678771,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.006023350691689244,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "nominal-return",
+      "team": "red",
+      "native": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.030661484426397698,
+        "origin_offset_range_m": 1.8218046404783195e-07,
+        "all_grounded": true,
+        "minimum_upright": 0.9990460988594546
+      },
+      "simplified": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.025000004019725963,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.0056614804066717345,
+      "pass_gate": true
+    },
+    {
+      "model": 2714,
+      "phase": "nominal-return",
+      "team": "blue",
+      "native": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.030661484426398516,
+        "origin_offset_range_m": 1.8218046413109867e-07,
+        "all_grounded": true,
+        "minimum_upright": 0.9990460988594546
+      },
+      "simplified": {
+        "phase": "nominal-return",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.025000004019725963,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 0.005661480406672553,
+      "pass_gate": true
+    },
+    {
+      "model": 2732,
+      "phase": "nominal",
+      "team": "red",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.017994094785505677,
+        "origin_offset_range_m": 9.23884940773334e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9995728681952266
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.01800000638950583,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 5.9116040001527814e-06,
+      "pass_gate": true
+    },
+    {
+      "model": 2732,
+      "phase": "nominal",
+      "team": "blue",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.01799409478550565,
+        "origin_offset_range_m": 9.238853015958171e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9995728681952266
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.018000008804246598,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 5.91401874094899e-06,
+      "pass_gate": true
+    },
+    {
+      "model": 2773,
+      "phase": "nominal",
+      "team": "red",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.017994094785505843,
+        "origin_offset_range_m": 9.238853293513927e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9995728681952266
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.01800000638950583,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 5.911603999986248e-06,
+      "pass_gate": true
+    },
+    {
+      "model": 2773,
+      "phase": "nominal",
+      "team": "blue",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.017994094785505607,
+        "origin_offset_range_m": 9.238854958848464e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9995728681952266
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.018000008804246598,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 5.914018740990623e-06,
+      "pass_gate": true
+    },
+    {
+      "model": 303,
+      "phase": "nominal",
+      "team": "red",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.017994099913524547,
+        "origin_offset_range_m": 9.227233976893956e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9995789064577244
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "red",
+        "median_origin_offset_m": -0.017999991488344635,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 5.891574820088286e-06,
+      "pass_gate": true
+    },
+    {
+      "model": 303,
+      "phase": "nominal",
+      "team": "blue",
+      "native": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.017994099913524395,
+        "origin_offset_range_m": 9.227232311559419e-10,
+        "all_grounded": true,
+        "minimum_upright": 0.9995789064577244
+      },
+      "simplified": {
+        "phase": "nominal",
+        "target_leg_height_m": null,
+        "team": "blue",
+        "median_origin_offset_m": -0.018000008804246598,
+        "origin_offset_range_m": 0.0,
+        "all_grounded": true,
+        "minimum_upright": 1.0
+      },
+      "absolute_offset_difference_m": 5.908890722203242e-06,
+      "pass_gate": true
+    }
+  ],
+  "all_pass": true,
+  "ppo_included": false,
+  "limitation": "Stationary loaded height only. No validation of suspension bounce, moving terrain contact, airborne leg geometry or transfer win rate.",
+  "experiment": {
+    "kind": "stationary-loaded-pose-audit",
+    "ppo_included": false,
+    "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+    "driver_sha256": "c629bdfaa261252c6386a3ce0480b475c4c63564f713307dd4d4a76b2b968e2a",
+    "sources": {
+      "rapier": {
+        "config": {
+          "seed": 42,
+          "team": "red",
+          "slot": 7,
+          "map": "rmuc2027",
+          "duration": 420,
+          "episode_seconds": 60,
+          "rl_seconds": 1.0,
+          "grid_m": 0.25,
+          "recover_enter": 0.25,
+          "recover_exit": 0.8,
+          "friendly": "examples/claude_opus55_xhigh_2027_squad",
+          "opponent": "examples/claude_opus55_xhigh_2027_hold",
+          "controllers": {
+            "red:7": {
+              "kind": "learning"
+            }
+          },
+          "rewards": {
+            "control": 0.01,
+            "outcome": 10.0,
+            "capture_seconds": 0.001,
+            "death": -0.1
+          },
+          "ppo": {
+            "n_steps": 64,
+            "batch_size": 64,
+            "n_epochs": 4,
+            "learning_rate": 0.0003,
+            "gamma": 0.995,
+            "gae_lambda": 0.95,
+            "ent_coef": 0.01
+          },
+          "sim_backend": "rapier",
+          "policy_timeout_s": 5.0,
+          "navigation_mode": "legacy",
+          "timed_assembly": false,
+          "drones_enabled": true,
+          "fixed_policy_hz": 10,
+          "learning_control_hz": 10,
+          "training_summary": true,
+          "action_trace": false,
+          "navigation_precompute": null,
+          "github_backup_seconds": 300.0
+        },
+        "sources": {
+          "friendly": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "opponent": {
+            "version": "90c6cba4ea0ca924",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "team",
+              "robot": null,
+              "entries": {
+                "team": "strategy.py"
+              },
+              "hashes": {
+                "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              },
+              "team_lineup": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2771
+              },
+              "version": "90c6cba4ea0ca924"
+            },
+            "hashes": {
+              "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            }
+          }
+        },
+        "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+        "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+        "navigation": {
+          "precompute": false,
+          "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+        },
+        "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "rapier",
+          "dt": 0.008333333333333333
+        }
+      },
+      "warp_kinematic": {
+        "config": {
+          "seed": 42,
+          "team": "red",
+          "slot": 7,
+          "map": "rmuc2027",
+          "duration": 420,
+          "episode_seconds": 60,
+          "rl_seconds": 1.0,
+          "grid_m": 0.25,
+          "recover_enter": 0.25,
+          "recover_exit": 0.8,
+          "friendly": "examples/claude_opus55_xhigh_2027_squad",
+          "opponent": "examples/claude_opus55_xhigh_2027_hold",
+          "controllers": {
+            "red:7": {
+              "kind": "learning"
+            }
+          },
+          "rewards": {
+            "control": 0.01,
+            "outcome": 10.0,
+            "capture_seconds": 0.001,
+            "death": -0.1
+          },
+          "ppo": {
+            "n_steps": 64,
+            "batch_size": 64,
+            "n_epochs": 4,
+            "learning_rate": 0.0003,
+            "gamma": 0.995,
+            "gae_lambda": 0.95,
+            "ent_coef": 0.01
+          },
+          "sim_backend": "warp_kinematic",
+          "policy_timeout_s": 5.0,
+          "navigation_mode": "legacy",
+          "timed_assembly": false,
+          "drones_enabled": true,
+          "fixed_policy_hz": 10,
+          "learning_control_hz": 10,
+          "training_summary": true,
+          "action_trace": false,
+          "navigation_precompute": null,
+          "github_backup_seconds": 300.0
+        },
+        "sources": {
+          "friendly": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "opponent": {
+            "version": "90c6cba4ea0ca924",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "team",
+              "robot": null,
+              "entries": {
+                "team": "strategy.py"
+              },
+              "hashes": {
+                "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              },
+              "team_lineup": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2771
+              },
+              "version": "90c6cba4ea0ca924"
+            },
+            "hashes": {
+              "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            }
+          }
+        },
+        "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+        "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+        "navigation": {
+          "precompute": true,
+          "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+        },
+        "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "warp_kinematic",
+          "device": "cuda:0",
+          "dt": 0.008333333333333333,
+          "experimental": true,
+          "files": {
+            "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+            "arena.py": "914ee778f73fb7a6bf63f02b849f6f7430e49c52b577aa43f88bee8256604812",
+            "motion.py": "0b27c573ab59d65f9d61b8c54bbb2aa392ce8b917166fc4e3485741694457040",
+            "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+            "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+            "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+            "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+            "batching.py": "ce09d85a5e7c8a93e38211409b7375d0b1c206feedf42aec11eb29bb3c716c2b",
+            "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+          },
+          "dependencies": {
+            "warp-lang": "1.19.0"
+          }
+        }
+      }
+    },
+    "scope": "Constant held controls, referee poses for diagnostics only; no actor features or training samples."
+  },
+  "tests": {
+    "rust_library": 67,
+    "loaded_pose": 5,
+    "world_batch": 10,
+    "traversal": 9,
+    "adapter": 8,
+    "combat": 4,
+    "vector_reset": 1,
+    "provenance": 1
+  },
+  "ability_probe": {
+    "experiment": {
+      "kind": "ability-calibration",
+      "ppo_included": false,
+      "control_hz": 2,
+      "sources": {
+        "rapier": {
+          "config": {
+            "seed": 42,
+            "team": "red",
+            "slot": 7,
+            "map": "rmuc2027",
+            "duration": 420,
+            "episode_seconds": 60,
+            "rl_seconds": 0.5,
+            "grid_m": 0.25,
+            "recover_enter": 0.25,
+            "recover_exit": 0.8,
+            "friendly": "examples/claude_opus55_xhigh_2027_squad",
+            "opponent": "examples/claude_opus55_xhigh_2027_hold",
+            "controllers": {
+              "red:7": {
+                "kind": "learning"
+              }
+            },
+            "rewards": {
+              "control": 0.01,
+              "outcome": 10.0,
+              "capture_seconds": 0.001,
+              "death": -0.1
+            },
+            "ppo": {
+              "n_steps": 64,
+              "batch_size": 64,
+              "n_epochs": 4,
+              "learning_rate": 0.0003,
+              "gamma": 0.995,
+              "gae_lambda": 0.95,
+              "ent_coef": 0.01
+            },
+            "sim_backend": "rapier",
+            "navigation_precompute": false,
+            "learning_control_hz": 2,
+            "policy_timeout_s": 5.0,
+            "navigation_mode": "legacy",
+            "timed_assembly": false,
+            "drones_enabled": true,
+            "fixed_policy_hz": 10,
+            "training_summary": true,
+            "action_trace": false,
+            "github_backup_seconds": 300.0
+          },
+          "sources": {
+            "friendly": {
+              "version": "dba14ab0764239ed",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "squad",
+                "robot": null,
+                "entries": {
+                  "1": "robot_1.py",
+                  "3": "robot_3.py",
+                  "4": "robot_4.py",
+                  "6": "robot_6.py",
+                  "7": "robot_7.py"
+                },
+                "hashes": {
+                  "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+                },
+                "version": "dba14ab0764239ed"
+              },
+              "hashes": {
+                "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              }
+            },
+            "opponent": {
+              "version": "90c6cba4ea0ca924",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "team",
+                "robot": null,
+                "entries": {
+                  "team": "strategy.py"
+                },
+                "hashes": {
+                  "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+                },
+                "team_lineup": {
+                  "1": 2711,
+                  "3": 2731,
+                  "4": 2732,
+                  "6": 2761,
+                  "7": 2771
+                },
+                "version": "90c6cba4ea0ca924"
+              },
+              "hashes": {
+                "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              }
+            }
+          },
+          "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+          "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+          "navigation": {
+            "precompute": false,
+            "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+          },
+          "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+          "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+          "simulation": {
+            "backend": "rapier",
+            "dt": 0.008333333333333333
+          }
+        },
+        "warp_kinematic": {
+          "config": {
+            "seed": 42,
+            "team": "red",
+            "slot": 7,
+            "map": "rmuc2027",
+            "duration": 420,
+            "episode_seconds": 60,
+            "rl_seconds": 0.5,
+            "grid_m": 0.25,
+            "recover_enter": 0.25,
+            "recover_exit": 0.8,
+            "friendly": "examples/claude_opus55_xhigh_2027_squad",
+            "opponent": "examples/claude_opus55_xhigh_2027_hold",
+            "controllers": {
+              "red:7": {
+                "kind": "learning"
+              }
+            },
+            "rewards": {
+              "control": 0.01,
+              "outcome": 10.0,
+              "capture_seconds": 0.001,
+              "death": -0.1
+            },
+            "ppo": {
+              "n_steps": 64,
+              "batch_size": 64,
+              "n_epochs": 4,
+              "learning_rate": 0.0003,
+              "gamma": 0.995,
+              "gae_lambda": 0.95,
+              "ent_coef": 0.01
+            },
+            "sim_backend": "warp_kinematic",
+            "navigation_precompute": false,
+            "learning_control_hz": 2,
+            "policy_timeout_s": 5.0,
+            "navigation_mode": "legacy",
+            "timed_assembly": false,
+            "drones_enabled": true,
+            "fixed_policy_hz": 10,
+            "training_summary": true,
+            "action_trace": false,
+            "github_backup_seconds": 300.0
+          },
+          "sources": {
+            "friendly": {
+              "version": "dba14ab0764239ed",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "squad",
+                "robot": null,
+                "entries": {
+                  "1": "robot_1.py",
+                  "3": "robot_3.py",
+                  "4": "robot_4.py",
+                  "6": "robot_6.py",
+                  "7": "robot_7.py"
+                },
+                "hashes": {
+                  "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+                },
+                "version": "dba14ab0764239ed"
+              },
+              "hashes": {
+                "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              }
+            },
+            "opponent": {
+              "version": "90c6cba4ea0ca924",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "team",
+                "robot": null,
+                "entries": {
+                  "team": "strategy.py"
+                },
+                "hashes": {
+                  "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+                },
+                "team_lineup": {
+                  "1": 2711,
+                  "3": 2731,
+                  "4": 2732,
+                  "6": 2761,
+                  "7": 2771
+                },
+                "version": "90c6cba4ea0ca924"
+              },
+              "hashes": {
+                "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              }
+            }
+          },
+          "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+          "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+          "navigation": {
+            "precompute": false,
+            "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+          },
+          "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+          "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+          "simulation": {
+            "backend": "warp_kinematic",
+            "device": "cuda:0",
+            "dt": 0.008333333333333333,
+            "experimental": true,
+            "files": {
+              "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+              "arena.py": "f86a911fef351505460351741d7aa855e882af76b72f11b6dd0441dd7d1225cb",
+              "motion.py": "0b27c573ab59d65f9d61b8c54bbb2aa392ce8b917166fc4e3485741694457040",
+              "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+              "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+              "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+              "protocol.py": "7d56a6e2e3da8335a35e52f7451762dd57c2892eee82491c2b868f0d9984874e",
+              "batching.py": "6c0ef2e3b1f92fd23f16e8c7aefc373afd7d027f6d152f024f52dc544b5fb6c4",
+              "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+            },
+            "dependencies": {
+              "warp-lang": "1.19.0"
+            }
+          }
+        }
+      },
+      "driver_sha256": "6e43ce977e137bc004dccf0a22764bcfc9ae959569b7aa353633c7a133cfdd17",
+      "scope": "Paired public-SDK navigation; seed and nearby goal variation; not trained-policy win-rate transfer"
+    },
+    "ability_summary": {
+      "2731": {
+        "paired_attempts": 20,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "2732": {
+        "paired_attempts": 20,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "2773": {
+        "paired_attempts": 20,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      },
+      "2714": {
+        "paired_attempts": 20,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": true,
+        "ability_gate_pass": true
+      },
+      "303": {
+        "paired_attempts": 20,
+        "minimum_attempts": 20,
+        "reference_success_rate": 1.0,
+        "simplified_success_rate": 1.0,
+        "successful_pairs_meet_time_gate": false,
+        "ability_gate_pass": false
+      }
+    },
+    "comparisons": [
+      {
+        "model": 2731,
+        "seed": 0,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004587155963302818,
+          "settled_at": 0.003861003861003779,
+          "stable_hold_at": 0.003412969283276499,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0032891333547359625,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 0,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004587155963302818,
+          "settled_at": 0.003861003861003779,
+          "stable_hold_at": 0.003412969283276499,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0032891236957733883,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 1,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004587155963302818,
+          "settled_at": 0.003861003861003779,
+          "stable_hold_at": 0.003412969283276499,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.005653446766084924,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 1,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004587155963302818,
+          "settled_at": 0.003861003861003779,
+          "stable_hold_at": 0.003412969283276499,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.005653446766084647,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 2,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00913242009132417,
+          "settled_at": 0.1342281879194631,
+          "stable_hold_at": 0.12048192771084347,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.003201661019961999,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 2,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00913242009132417,
+          "settled_at": 0.1342281879194631,
+          "stable_hold_at": 0.12048192771084347,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.003201651360998814,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 3,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004566210045662003,
+          "settled_at": 0.25072046109510093,
+          "stable_hold_at": 0.22834645669291345,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0031987262248774906,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 3,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004566210045662003,
+          "settled_at": 0.25072046109510093,
+          "stable_hold_at": 0.22834645669291345,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.003198743540779647,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 4,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004566210045662003,
+          "settled_at": 0.20489296636085633,
+          "stable_hold_at": 0.18559556786703607,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.00489021154583591,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 4,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004566210045662003,
+          "settled_at": 0.20489296636085633,
+          "stable_hold_at": 0.18559556786703607,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.004890211545838852,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 5,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004566210045662003,
+          "settled_at": 0.13621262458471764,
+          "stable_hold_at": 0.16239316239316245,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0031887120969671945,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 5,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004566210045662003,
+          "settled_at": 0.13621262458471764,
+          "stable_hold_at": 0.16239316239316245,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0031887294128703503,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 6,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00454545454545461,
+          "settled_at": 0.22157434402332357,
+          "stable_hold_at": 0.20159151193633953,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0029734355018484204,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 6,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00454545454545461,
+          "settled_at": 0.22157434402332357,
+          "stable_hold_at": 0.20159151193633953,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0029734479882718157,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 7,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00454545454545461,
+          "settled_at": 0.18348623853211019,
+          "stable_hold_at": 0.16620498614958448,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.004353331486086742,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 7,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00454545454545461,
+          "settled_at": 0.18348623853211019,
+          "stable_hold_at": 0.16620498614958448,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.004353331486083745,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 8,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00454545454545461,
+          "settled_at": 0.11000000000000003,
+          "stable_hold_at": 0.09880239520958076,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0029987111304776715,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 8,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.00454545454545461,
+          "settled_at": 0.11000000000000003,
+          "stable_hold_at": 0.09880239520958076,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0029987111304756175,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 9,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004587155963302818,
+          "settled_at": 0.003861003861003779,
+          "stable_hold_at": 0.003412969283276499,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0032891333547359625,
+        "pass_gate": false
+      },
+      {
+        "model": 2731,
+        "seed": 9,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.004587155963302818,
+          "settled_at": 0.003861003861003779,
+          "stable_hold_at": 0.003412969283276499,
+          "ability_seconds": 0.3333333333333333
+        },
+        "final_origin_offset_difference_m": 0.0032891236957733883,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 0,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2695035460992908,
+          "settled_at": 0.10894941634241248,
+          "stable_hold_at": 0.10218978102189771,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.001085836094740944,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 0,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2695035460992908,
+          "settled_at": 0.10894941634241248,
+          "stable_hold_at": 0.10218978102189771,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0010857781165628522,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 1,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.27014218009478674,
+          "settled_at": 0.32301740812379115,
+          "stable_hold_at": 0.3030852994555354,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.00355836809282567,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 1,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.27014218009478674,
+          "settled_at": 0.32301740812379115,
+          "stable_hold_at": 0.3030852994555354,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.003513012540427074,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 2,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2684085510688836,
+          "settled_at": 0.25918762088974867,
+          "stable_hold_at": 0.20145190562613433,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0027834306205890003,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 2,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2684085510688836,
+          "settled_at": 0.25918762088974867,
+          "stable_hold_at": 0.20145190562613433,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.00281566505995523,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 3,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.27634660421545676,
+          "settled_at": 0.31506849315068497,
+          "stable_hold_at": 0.29541284403669726,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0014957197360341845,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 3,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.27634660421545676,
+          "settled_at": 0.31506849315068497,
+          "stable_hold_at": 0.29541284403669726,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0014942524781356714,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 4,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2735849056603773,
+          "settled_at": 0.27234927234927236,
+          "stable_hold_at": 0.254368932038835,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0033484579938757864,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 4,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2735849056603773,
+          "settled_at": 0.27234927234927236,
+          "stable_hold_at": 0.254368932038835,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.003349179044649764,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 5,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.27186761229314416,
+          "settled_at": 0.31568627450980397,
+          "stable_hold_at": 0.29595588235294124,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0030557165527675956,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 5,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.27186761229314416,
+          "settled_at": 0.31568627450980397,
+          "stable_hold_at": 0.29595588235294124,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0030536354507749164,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 6,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2695035460992908,
+          "settled_at": 0.31906614785992216,
+          "stable_hold_at": 0.2992700729927007,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0011200963702535094,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 6,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.26777251184834133,
+          "settled_at": 0.2886178861788618,
+          "stable_hold_at": 0.3030852994555354,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0014359821243563053,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 7,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2684085510688836,
+          "settled_at": 0.28716904276985744,
+          "stable_hold_at": 0.29151291512915134,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.003861282361179108,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 7,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2684085510688836,
+          "settled_at": 0.28716904276985744,
+          "stable_hold_at": 0.29151291512915134,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.003864545950001519,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 8,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.26666666666666666,
+          "settled_at": 0.2906504065040651,
+          "stable_hold_at": 0.2718631178707225,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0017435155931185276,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 8,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.26666666666666666,
+          "settled_at": 0.2906504065040651,
+          "stable_hold_at": 0.2718631178707225,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0017436003272185419,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 9,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2695035460992908,
+          "settled_at": 0.10894941634241248,
+          "stable_hold_at": 0.10218978102189771,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.001085836094740944,
+        "pass_gate": false
+      },
+      {
+        "model": 2732,
+        "seed": 9,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2695035460992908,
+          "settled_at": 0.10894941634241248,
+          "stable_hold_at": 0.10218978102189771,
+          "ability_seconds": 0.3793103448275869
+        },
+        "final_origin_offset_difference_m": 0.0010857781165628522,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 0,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19195046439628494,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015926544856775804,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 0,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19195046439628494,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015989249213543277,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 1,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.14523809523809528,
+          "stable_hold_at": 0.13436123348017626,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0030565022838210387,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 1,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.14523809523809528,
+          "stable_hold_at": 0.13436123348017626,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.003055148045439604,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 2,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18944099378881968,
+          "settled_at": 0.1401425178147268,
+          "stable_hold_at": 0.12967032967032963,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0025770831310104048,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 2,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18944099378881968,
+          "settled_at": 0.1401425178147268,
+          "stable_hold_at": 0.12967032967032963,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0025723684971316607,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 3,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19195046439628494,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015941392955825529,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 3,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19195046439628494,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015976584076906608,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 4,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.14523809523809528,
+          "stable_hold_at": 0.13436123348017626,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0031451237495954687,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 4,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.14523809523809528,
+          "stable_hold_at": 0.13436123348017626,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0031474510844567427,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 5,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18944099378881968,
+          "settled_at": 0.1401425178147268,
+          "stable_hold_at": 0.12967032967032963,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.002572487114420985,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 5,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18944099378881968,
+          "settled_at": 0.1401425178147268,
+          "stable_hold_at": 0.12967032967032963,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0025724198955856536,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 6,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015926568868956936,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 6,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015908133610344488,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 7,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.14523809523809528,
+          "stable_hold_at": 0.13436123348017626,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0031905500781138074,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 7,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18885448916408676,
+          "settled_at": 0.14523809523809528,
+          "stable_hold_at": 0.13436123348017626,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0031864086155402593,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 8,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18944099378881968,
+          "settled_at": 0.1401425178147268,
+          "stable_hold_at": 0.12967032967032963,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0025755040571902033,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 8,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18944099378881968,
+          "settled_at": 0.1401425178147268,
+          "stable_hold_at": 0.12967032967032963,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0025699176966008652,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 9,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19195046439628494,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015926544856775804,
+        "pass_gate": false
+      },
+      {
+        "model": 2773,
+        "seed": 9,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19195046439628494,
+          "settled_at": 0.1455847255369929,
+          "stable_hold_at": 0.13465783664459166,
+          "ability_seconds": 0.3214285714285721
+        },
+        "final_origin_offset_difference_m": 0.0015989249213543277,
+        "pass_gate": false
+      },
+      {
+        "model": 2714,
+        "seed": 0,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.11261261261261261,
+          "settled_at": 0.004166666666666726,
+          "stable_hold_at": 0.07770270270270273,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.0021015840484413517,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 0,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024752475247524754,
+          "settled_at": 0.08144796380090484,
+          "stable_hold_at": 0.007272727272727247,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.0027626560172041015,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 1,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.10454545454545458,
+          "settled_at": 0.0,
+          "stable_hold_at": 0.06506849315068489,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.005418318297512437,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 1,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024752475247524754,
+          "settled_at": 0.08144796380090484,
+          "stable_hold_at": 0.007272727272727247,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.005671185628386866,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 2,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.10454545454545458,
+          "settled_at": 0.0,
+          "stable_hold_at": 0.06185567010309281,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.003067953320734673,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 2,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024752475247524754,
+          "settled_at": 0.08144796380090484,
+          "stable_hold_at": 0.007272727272727247,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.002801680440579657,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 3,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.11555555555555562,
+          "settled_at": 0.004098360655737763,
+          "stable_hold_at": 0.08223684210526316,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.003107368967638857,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 3,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.02450980392156863,
+          "settled_at": 0.09865470852017934,
+          "stable_hold_at": 0.00711743772242003,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.002428626884630636,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 4,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.11210762331838564,
+          "settled_at": 0.016597510373443924,
+          "stable_hold_at": 0.044520547945205505,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.005274722124786024,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 4,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.029411764705882252,
+          "settled_at": 0.09865470852017934,
+          "stable_hold_at": 0.00711743772242003,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.005646005043436708,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 5,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.10360360360360364,
+          "settled_at": 0.020833333333333332,
+          "stable_hold_at": 0.018248175182481754,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.0031291376877909394,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 5,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.02450980392156863,
+          "settled_at": 0.09865470852017934,
+          "stable_hold_at": 0.00711743772242003,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.002492101367691013,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 6,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.11504424778761067,
+          "settled_at": 0.012295081967213144,
+          "stable_hold_at": 0.06644518272425248,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.003426376715334689,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 6,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024390243902439025,
+          "settled_at": 0.008032128514056196,
+          "stable_hold_at": 0.007067137809187254,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.0021663575927137746,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 7,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.1111111111111111,
+          "settled_at": 0.012295081967213144,
+          "stable_hold_at": 0.0538720538720538,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.004470089077764694,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 7,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024390243902439025,
+          "settled_at": 0.11261261261261261,
+          "stable_hold_at": 0.02930402930402933,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.005701063343370505,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 8,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.1111111111111111,
+          "settled_at": 0.024896265560165887,
+          "stable_hold_at": 0.02181818181818187,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.003122627251301302,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 8,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024390243902439025,
+          "settled_at": 0.0,
+          "stable_hold_at": 0.0,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.0028531644463288264,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 9,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.11261261261261261,
+          "settled_at": 0.004166666666666726,
+          "stable_hold_at": 0.07770270270270273,
+          "ability_seconds": 0.047619047619047415
+        },
+        "final_origin_offset_difference_m": 0.0021015840484413517,
+        "pass_gate": true
+      },
+      {
+        "model": 2714,
+        "seed": 9,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.024752475247524754,
+          "settled_at": 0.08144796380090484,
+          "stable_hold_at": 0.007272727272727247,
+          "ability_seconds": 0.15789473684210453
+        },
+        "final_origin_offset_difference_m": 0.0027626560172041015,
+        "pass_gate": true
+      },
+      {
+        "model": 303,
+        "seed": 0,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19512195121951212,
+          "settled_at": 0.023569023569023545,
+          "stable_hold_at": 0.0031055900621118453,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.001758905130932742,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 0,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.17499999999999996,
+          "settled_at": 0.03797468354430389,
+          "stable_hold_at": 0.05865102639296187,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0019432938552747525,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 1,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19405594405594406,
+          "settled_at": 0.027072758037225066,
+          "stable_hold_at": 0.0015576323987540267,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.004689216836486321,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 1,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.17531305903398922,
+          "settled_at": 0.076103500761035,
+          "stable_hold_at": 0.07235890014471781,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0038903110428140653,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 2,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19298245614035087,
+          "settled_at": 0.030560271646859156,
+          "stable_hold_at": 0.0,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.0017270327708428512,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 2,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.17562724014336914,
+          "settled_at": 0.024115755627009645,
+          "stable_hold_at": 0.02286585365853659,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.002008009975510039,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 3,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18989547038327523,
+          "settled_at": 0.03367003367003367,
+          "stable_hold_at": 0.007776049766718507,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.0018155121119206585,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 3,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.23267326732673269,
+          "settled_at": 0.03761755485893415,
+          "stable_hold_at": 0.035714285714285796,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0029600491362178905,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 4,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18881118881118888,
+          "settled_at": 0.03891708967851095,
+          "stable_hold_at": 0.010920436817472744,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.004705802172113582,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 4,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19584055459272104,
+          "settled_at": 0.004909983633387842,
+          "stable_hold_at": 0.00465116279069763,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.00461079045097329,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 5,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.21525423728813564,
+          "settled_at": 0.01605136436597111,
+          "stable_hold_at": 0.015220700152207,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.0023004218491585737,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 5,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19478260869565223,
+          "settled_at": 0.0049180327868851995,
+          "stable_hold_at": 0.004658385093167658,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0015718360342955595,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 6,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19130434782608696,
+          "settled_at": 0.031932773109243674,
+          "stable_hold_at": 0.006211180124223469,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.001677663126873341,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 6,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.2351973684210526,
+          "settled_at": 0.04658385093167713,
+          "stable_hold_at": 0.04424778761061947,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0025481141773702753,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 7,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19022687609075042,
+          "settled_at": 0.03716216216216209,
+          "stable_hold_at": 0.010920436817472744,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.004593319193225309,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 7,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.23305785123966943,
+          "settled_at": 0.03912363067292645,
+          "stable_hold_at": 0.03714710252600297,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0045288843138582835,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 8,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.18914185639229428,
+          "settled_at": 0.04067796610169489,
+          "stable_hold_at": 0.010920436817472744,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.002028676536928231,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 8,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.23217247097844113,
+          "settled_at": 0.03761755485893415,
+          "stable_hold_at": 0.035714285714285796,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0028936296568780606,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 9,
+        "team": "red",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.19512195121951212,
+          "settled_at": 0.023569023569023545,
+          "stable_hold_at": 0.0031055900621118453,
+          "ability_seconds": 0.8714285714285716
+        },
+        "final_origin_offset_difference_m": 0.001758905130932742,
+        "pass_gate": false
+      },
+      {
+        "model": 303,
+        "seed": 9,
+        "team": "blue",
+        "reference_success": true,
+        "simplified_success": true,
+        "relative_time_errors": {
+          "reached_at": 0.17499999999999996,
+          "settled_at": 0.03797468354430389,
+          "stable_hold_at": 0.05865102639296187,
+          "ability_seconds": 0.8741258741258743
+        },
+        "final_origin_offset_difference_m": 0.0019432938552747525,
+        "pass_gate": false
+      }
+    ],
+    "all_traversals_succeeded": true,
+    "scope": "200 traversals after loaded pose implementation, before the later airborne authority-correction safeguard. The safeguard is covered by separate solo and batched rollback tests."
+  },
+  "limitations": [
+    "Quasi-static loaded height with rate-limited actuator targets; no suspension bounce, pitch/roll dynamics, passive leg collapse or airborne leg geometry.",
+    "Stationary height agreement does not prove moving terrain contact or trained-policy win-rate transfer.",
+    "Four model locomotion timing gates still fail.",
+    "Current full-episode performance remeasurement is separate; no PPO training has started."
+  ]
+}

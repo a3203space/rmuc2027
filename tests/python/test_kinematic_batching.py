@@ -16,16 +16,24 @@ def feedback(command,frame):
 
 
 class WorldBatchTests(unittest.TestCase):
-    def compare(self,commands,death=False,teleport=False):
+    def compare(self,commands,death=False,teleport=False,compact=False,rollback=False):
         # Same IDs across worlds, different authority and asynchronous schedules.
         clients=[BatchClient(None,'cuda:0') for _ in commands]
         for c,r in zip(clients,commands):c.ids=tuple(b['id'] for b in r['robots'])
+        if compact:
+            for c,r in zip(clients,commands):c.designs=[b['design'] for b in r['robots']];c.arena=r['arena']
         solos=[ArenaMotion() for _ in commands];engines={}
         try:
             for tick in range(35):
+                if compact:
+                    for request in commands:
+                        if request['sequence']>0:
+                            request['arena']=None
+                            for robot in request['robots']:robot['design']=None
                 order=[0,1] if tick%2 else [1,0]
                 if tick%3==0:order=[0]  # World 1 must not advance while absent.
                 if tick==4 and death:commands[0]['robots'][0].update(enabled=False,alive=False)
+                if tick==4 and rollback:commands[0]['robots'][0]['pos'][2]-=.1
                 if tick==7 and teleport:
                     commands[0]['robots'][0].update(pos=[4.,4.,0.],velocity=[0.,0.,0.],jump=0.)
                 items=[(clients[i],commands[i]) for i in order]
@@ -64,6 +72,20 @@ class WorldBatchTests(unittest.TestCase):
         for command in (a,b):command['robots'][0]['velocity']=[1.,0.,0.]
         a['robots'][0]['coast']=True
         self.compare([a,b])
+
+    def test_leg_extension_state_follows_world_across_cache_slots(self):
+        a=request(model=2731);b=copy.deepcopy(a)
+        a['robots'][0]['leg_height']=.12;b['robots'][0]['leg_height']=.39
+        self.compare([a,b],teleport=True)
+
+    def test_compact_requests_preserve_leg_state_through_teleport(self):
+        a=request(model=2731);b=copy.deepcopy(a)
+        a['robots'][0]['leg_height']=.12;b['robots'][0]['leg_height']=.39
+        self.compare([a,b],teleport=True,compact=True)
+
+    def test_midframe_death_preserves_ground_datum_in_compact_worlds(self):
+        self.compare([launch_request(8.6,0.),launch_request(19.4,3.141592653589793)],
+                     death=True,rollback=True,compact=True)
 
     def test_service_merges_concurrent_worlds_and_closes(self):
         service=PhysicsService(2,wait_seconds=.02)

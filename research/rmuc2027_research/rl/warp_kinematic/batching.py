@@ -21,12 +21,14 @@ active_service = None
 def restore_state(state: wp.array2d(dtype=float),starts: wp.array(dtype=wp.vec3),ends: wp.array(dtype=wp.vec3),
                   elapsed: wp.array(dtype=float),durations: wp.array(dtype=float),cooldown: wp.array(dtype=float),
                   status: wp.array(dtype=wp.int32),fall: wp.array(dtype=float),altitude: wp.array(dtype=float),
-                  offsets: wp.array(dtype=wp.vec2),base: wp.array(dtype=float),flight: wp.array(dtype=wp.int32)):
+                  offsets: wp.array(dtype=wp.vec2),base: wp.array(dtype=float),flight: wp.array(dtype=wp.int32),
+                  leg_command: wp.array(dtype=float)):
     i=wp.tid()
     starts[i]=wp.vec3(state[i,0],state[i,1],state[i,2]);ends[i]=wp.vec3(state[i,3],state[i,4],state[i,5])
     elapsed[i]=state[i,6];durations[i]=state[i,7];cooldown[i]=state[i,8];status[i]=int(state[i,9])
     fall[i]=state[i,10];altitude[i]=state[i,11];offsets[i]=wp.vec2(state[i,12],state[i,13])
     base[i]=state[i,14];flight[i]=int(state[i,15])
+    leg_command[i]=state[i,16]
 
 
 class BatchClient:
@@ -80,26 +82,37 @@ class WorldBatch:
                       arena=items[0][0].arena or items[0][1]['arena'])
         if engine.motion is None:
             engine.initialize(combined)
-            self.upload=wp.empty((len(robots),16),dtype=float,device=engine.device)
+            self.upload=wp.empty((len(robots),17),dtype=float,device=engine.device)
             self.restore_command=wp.launch(restore_state,len(robots),inputs=[self.upload,engine.jump_start,
                 engine.jump_end,engine.jump_elapsed,engine.jump_duration,engine.jump_cooldown,engine.jump_status,
-                engine.fall_speed,engine.motion.flight_z,engine.motion.height_offsets,engine.base,engine.motion.flight],
+                engine.fall_speed,engine.motion.flight_z,engine.motion.height_offsets,engine.base,engine.motion.flight,engine.leg_command],
                 device=engine.device,record_cmd=True)
         states=[]
         for (client,request),span in zip(items,slices):
+            bodies=request['robots']
+            designs=client.designs if client.designs is not None else [r['design'] for r in bodies]
             if client.state is None:
-                bodies=request['robots']
                 floor=engine.terrain.heights([r['pos'][:2] for r in bodies])
-                base=np.maximum(0.,np.asarray([r['pos'][2] for r in bodies])-floor)
-                state=np.zeros((len(bodies),16),dtype=np.float32)
+                base=np.asarray([r['pos'][2] for r in bodies])-floor
+                state=np.zeros((len(bodies),17),dtype=np.float32)
                 state[:,12]=base
-                state[:,13]=base+np.asarray([r['design'].get('muzzle_z_m',.4)+.06 for r in bodies])
+                state[:,13]=base+np.asarray([d.get('muzzle_z_m',.4)+.06 for d in designs])
                 state[:,14]=base
+                state[:,16]=[d.get('leg_nominal_m',0.) for d in designs]
             else:
                 state=client.state.copy()
                 authoritative=np.asarray([r['pos'] for r in request['robots']])
                 changed=np.linalg.norm(authoritative-client.expected_positions,axis=1)>.05
-                state[np.ix_(changed,[6,8,9,10])]=0.
+                state[np.ix_(changed,[6,8,9,10,15])]=0.
+                reset_pose=changed & np.asarray([r.get('grounded',True) for r in bodies],dtype=bool)
+                if reset_pose.any():
+                    bodies=request['robots']
+                    floor=engine.terrain.heights([r['pos'][:2] for r in bodies])
+                    base=authoritative[:,2]-floor
+                    heights=state[:,13]-state[:,12]
+                    state[reset_pose,12]=base[reset_pose];state[reset_pose,13]=(base+heights)[reset_pose]
+                    state[reset_pose,14]=base[reset_pose]
+                    state[reset_pose,16]=np.asarray([d.get('leg_nominal_m',0.) for d in designs])[reset_pose]
             states.append(state)
         self.upload.assign(np.concatenate(states))
         self.restore_command.launch()

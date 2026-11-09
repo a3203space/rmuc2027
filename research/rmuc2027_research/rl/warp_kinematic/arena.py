@@ -8,6 +8,7 @@ import warp as wp
 from .motion import MotionBatch
 from .terrain import Terrain, TerrainData, surface_height
 from .protocol import MotionFrame, DT
+from .pose import parameters as pose_parameters, loaded_origin
 
 
 @wp.func
@@ -23,9 +24,29 @@ def controls(pos: wp.array(dtype=wp.vec2), ground: wp.array(dtype=float),
              legged: wp.array(dtype=wp.int32), enabled: wp.array(dtype=wp.int32),
              limits: wp.array(dtype=wp.vec3), boxes: wp.array(dtype=wp.vec4),
              angles: wp.array(dtype=float), wall_z: wp.array(dtype=wp.vec2), masks: wp.array2d(dtype=wp.int32),
+             stance: wp.array(dtype=wp.vec4), support: wp.array(dtype=wp.vec4), ride: wp.array(dtype=float),
+             leg_goal: wp.array(dtype=float), leg_command: wp.array(dtype=float), base: wp.array(dtype=float),
+             flight: wp.array(dtype=wp.int32),
              offsets: wp.array(dtype=wp.vec2), commands: wp.array(dtype=wp.vec2)):
     i=wp.tid();a=heading[i];spec=params[i];command=requested[i]
     if enabled[i]!=0:
+        if flight[i]==0:
+            candidate=ride[i];extension=leg_command[i]
+            if legged[i]!=0:
+                leg=stance[i];target=wp.clamp(leg_goal[i],leg[0],leg[1])
+                extension=extension+wp.clamp(target-extension,-leg[3]*DT,leg[3]*DT)
+                candidate=loaded_origin(extension,leg[0],support[i])
+            clear_height=int(1)
+            if candidate>base[i]+1.e-7:
+                top=ground[i]+candidate+spec[0]+(spec[1]-spec[0])*fold[i]
+                for j in range(boxes.shape[0]):
+                    b=boxes[j];c=wp.cos(angles[j]);s=wp.sin(angles[j]);relative=pos[i]-wp.vec2((b[0]+b[2])*.5,(b[1]+b[3])*.5)
+                    local=wp.vec2(c*relative[0]+s*relative[1],-s*relative[0]+c*relative[1])
+                    if masks[i,j]!=0 and wp.abs(local[0])<(b[2]-b[0])*.5+limits[i][2] and wp.abs(local[1])<(b[3]-b[1])*.5+limits[i][2]:
+                        if top>wall_z[j][0] and ground[i]+base[i]<wall_z[j][1]:clear_height=0
+            if clear_height!=0:
+                base[i]=candidate;leg_command[i]=extension
+            offsets[i]=wp.vec2(base[i],base[i]+spec[0]+(spec[1]-spec[0])*fold[i])
         was_folded=fold[i]>.999
         goal=a
         if wp.length(command)>.01:
@@ -79,11 +100,19 @@ def sync_passive(scene: TerrainData,positions: wp.array(dtype=wp.vec2),z: wp.arr
 
 
 @wp.kernel
-def reset_traversal(mask: wp.array(dtype=wp.int32),status: wp.array(dtype=wp.int32),
-                    elapsed: wp.array(dtype=float),cooldown: wp.array(dtype=float),fall_speed: wp.array(dtype=float)):
+def reset_traversal(mask: wp.array(dtype=wp.vec2i),status: wp.array(dtype=wp.int32),
+                    elapsed: wp.array(dtype=float),cooldown: wp.array(dtype=float),fall_speed: wp.array(dtype=float),
+                    scene: TerrainData,pos: wp.array(dtype=wp.vec2),z: wp.array(dtype=float),base: wp.array(dtype=float),
+                    offsets: wp.array(dtype=wp.vec2),leg_command: wp.array(dtype=float),stance: wp.array(dtype=wp.vec4),
+                    flight: wp.array(dtype=wp.int32)):
     i=wp.tid()
-    if mask[i]!=0:
+    if mask[i][0]!=0:
         status[i]=0;elapsed[i]=0.0;cooldown[i]=0.0;fall_speed[i]=0.0
+        if mask[i][1]!=0:
+            height=offsets[i][1]-offsets[i][0]
+            base[i]=z[i]-surface_height(scene,pos[i]);offsets[i]=wp.vec2(base[i],base[i]+height)
+            leg_command[i]=stance[i][2]
+        flight[i]=0
 
 
 @wp.kernel
@@ -97,6 +126,7 @@ def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
            starts: wp.array(dtype=wp.vec3), ends: wp.array(dtype=wp.vec3),
            elapsed: wp.array(dtype=float), durations: wp.array(dtype=float), cooldown: wp.array(dtype=float),
            status: wp.array(dtype=wp.int32), fall_speed: wp.array(dtype=float), base: wp.array(dtype=float),
+           leg_command: wp.array(dtype=float),
            carry_state: int):
     i=wp.tid();z=ground[i]+offsets[i][0]
     if flight[i]!=0:z=altitude[i]
@@ -115,6 +145,7 @@ def record(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
         packed[index,i,18]=float(status[i]);packed[index,i,19]=fall_speed[i];packed[index,i,20]=altitude[i]
         packed[index,i,21]=offsets[i][0];packed[index,i,22]=offsets[i][1]
         packed[index,i,23]=base[i];packed[index,i,24]=float(flight[i])
+        packed[index,i,25]=leg_command[i]
 
 
 class ArenaMotion:
@@ -148,13 +179,18 @@ class ArenaMotion:
         m.angles.assign(np.asarray([w.get('rotation',0) for w in obstacles],dtype=np.float32))
         m.wall_z.assign(np.asarray([[w.get('bottom',0),w.get('bottom',0)+w['height']] for w in obstacles],dtype=np.float32))
         floor=self.terrain.heights([r['pos'][:2] for r in robots])
-        self.base_offsets=np.maximum(0.,np.asarray([r['pos'][2] for r in robots])-floor)
+        self.base_offsets=np.asarray([r['pos'][2] for r in robots])-floor
         m.height_offsets.assign(np.asarray([[z,z+p[0]] for z,p in zip(self.base_offsets,params)],dtype=np.float32))
         n=m.count
         def array(values,dtype):return wp.array(values,dtype=dtype,device=m.device)
         self.params=array(params,wp.vec4)
         self.ground_agents=array([int(r['role']!='aerial') for r in robots],wp.int32)
         self.base=array(self.base_offsets,wp.float32)
+        pose=[pose_parameters(d) for d in self.designs]
+        self.stance=array([p[0] for p in pose],wp.vec4);self.support=array([p[1] for p in pose],wp.vec4)
+        self.ride=array([p[2] for p in pose],wp.float32)
+        self.leg_command=array([p[0][2] for p in pose],wp.float32)
+        self.leg_goal=wp.empty(n,dtype=float,device=m.device)
         supported=request['arena'].get('layout_revision')=='chapter4-2027-v1'
         self.gates=array([[8.1,6.9,9.15,8.1],[18.85,6.9,19.9,8.1]] if supported else [],wp.vec4)
         self.destinations=array([[10.85,7.5],[17.15,7.5]] if supported else [],wp.vec2)
@@ -175,7 +211,7 @@ class ArenaMotion:
         self.requested=wp.zeros(n,dtype=wp.vec2,device=m.device);self.targets=wp.zeros(n,dtype=wp.vec2,device=m.device)
         m.raw_commands=self.requested
         self.flags=wp.zeros(n,dtype=wp.vec3i,device=m.device);self.last_z=wp.zeros(n,dtype=float,device=m.device)
-        self.packed=wp.zeros((6,n,25 if self.carry_state else 9),dtype=float,device=m.device)
+        self.packed=wp.zeros((6,n,26 if self.carry_state else 9),dtype=float,device=m.device)
         m.resistance.assign(np.asarray([[d.get('rolling_resistance',0),d.get('drag_area_m2',0)] for d in self.designs],dtype=np.float32))
         self.positions=wp.empty((6,n),dtype=wp.vec3,device=m.device);self.velocities=wp.empty((6,n),dtype=wp.vec3,device=m.device)
         self.angles=wp.empty((6,n),dtype=float,device=m.device);self.folds=wp.empty((6,n),dtype=float,device=m.device)
@@ -189,17 +225,20 @@ class ArenaMotion:
         if tuple(r['id'] for r in robots)!=self.ids:raise ValueError('Robot order changed')
         m=self.motion
         authoritative=np.asarray([r['pos'] for r in robots],dtype=np.float64)
+        changed=None
         if self.expected_positions is not None:
             changed=np.linalg.norm(authoritative-self.expected_positions,axis=1)>.05
-            if changed.any():
-                mask=wp.array(changed.astype(np.int32),dtype=wp.int32,device=m.device)
-                wp.launch(reset_traversal,m.count,inputs=[mask,self.jump_status,self.jump_elapsed,
-                          self.jump_cooldown,self.fall_speed],device=m.device)
         def assign(target,values):target.assign(np.asarray(values,dtype=np.float32))
         assign(m.pos,[r['pos'][:2] for r in robots]);assign(m.vel,[r['velocity'][:2] for r in robots])
         assign(self.heading,[r['heading'] for r in robots]);assign(self.fold,[r['folded'] for r in robots])
         assign(self.jump_command,[r.get('jump',0.) for r in robots])
         assign(self.last_z,[r['pos'][2] for r in robots]);assign(self.requested,[r['move'] for r in robots])
+        assign(self.leg_goal,[r.get('leg_height') if r.get('leg_height') is not None else d.get('leg_nominal_m',0.)
+                              for r,d in zip(robots,self.designs)])
+        if changed is not None and changed.any():
+            mask=wp.array(np.asarray([[bool(c),bool(c) and r.get('grounded',True)] for c,r in zip(changed,robots)],dtype=np.int32),dtype=wp.vec2i,device=m.device)
+            wp.launch(reset_traversal,m.count,inputs=[mask,self.jump_status,self.jump_elapsed,self.jump_cooldown,
+                      self.fall_speed,self.terrain.data,m.pos,self.last_z,self.base,m.height_offsets,self.leg_command,self.stance,m.flight],device=m.device)
         assign(self.targets,[[r.get('heading_goal') or 0.,r.get('yaw_rate') or 0.] for r in robots])
         self.flags.assign(np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
         m.enabled.assign(np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
@@ -253,7 +292,8 @@ class ArenaMotion:
         for index in range(6):
             self._launch(sample_heights,m.count,inputs=[self.terrain.data,m.pos,m.heights],device=m.device)
             self._launch(controls,m.count,inputs=[m.pos,m.heights,self.heading,self.fold,self.requested,self.targets,self.flags,
-                      self.params,self.legged,m.enabled,m.limits,m.boxes,m.angles,m.wall_z,m.wall_masks,m.height_offsets,m.commands],device=m.device)
+                      self.params,self.legged,m.enabled,m.limits,m.boxes,m.angles,m.wall_z,m.wall_masks,
+                      self.stance,self.support,self.ride,self.leg_goal,self.leg_command,self.base,m.flight,m.height_offsets,m.commands],device=m.device)
             from .traversal import prepare_jump, finish_jump
             self._launch(prepare_jump,m.count,inputs=[self.terrain.data,m.pos,m.vel,self.heading,self.base,self.params,m.limits,m.enabled,
                 self.capable,self.jump_command,self.gates,self.destinations,m.boxes,m.angles,m.wall_z,m.wall_masks,m.worlds,
@@ -265,7 +305,7 @@ class ArenaMotion:
             self._launch(record,m.count,inputs=[m.pos,m.vel,m.heights,m.height_offsets,self.heading,self.fold,self.last_z,
                       self.positions,self.velocities,self.angles,self.folds,m.flight,m.flight_z,self.grounded,self.packed,index,
                       self.jump_start,self.jump_end,self.jump_elapsed,self.jump_duration,self.jump_cooldown,
-                      self.jump_status,self.fall_speed,self.base,int(self.carry_state)],device=m.device)
+                      self.jump_status,self.fall_speed,self.base,self.leg_command,int(self.carry_state)],device=m.device)
 
     def close(self):
         self.closed=True

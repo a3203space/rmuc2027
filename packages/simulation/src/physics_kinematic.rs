@@ -59,7 +59,7 @@ impl PhysicsWorld {
                 "fly_pass":r.fly_pass,
                 "move":a.mv,"heading_goal":a.heading,"yaw_rate":a.yaw_rate,
                 "transform":a.transform.unwrap_or(a.crouch),"jump":a.jump,
-                "coast":a.coast,"design":if sequence==0 {self.designs[i].clone()} else {Value::Null}})
+                "coast":a.coast,"leg_height":a.leg_height,"design":if sequence==0 {self.designs[i].clone()} else {Value::Null}})
         }).collect();
         let request=json!({"op":"kinematic_frame","version":1,"sequence":sequence,
             "dt":PHYSICS_DT,"substeps":6,"time":now,"robots":entries,
@@ -116,6 +116,21 @@ impl PhysicsWorld {
             let rot=rotation.quaternion();r.quaternion=[rot.i,rot.j,rot.k,rot.w];
             r.angular_velocity=[0.0,0.0,heading_rate];
             r.upright=1.0;r.tipped=false;r.self_righting=false;
+            if d["chassis_type"]=="wheel_legged" && r.grounded {
+                for (wheel,side) in [-1.,1.].iter().enumerate() {
+                    let y=side*n(d,"track_m")*0.5;
+                    let x=r.x-r.heading.sin()*y;let y=r.y+r.heading.cos()*y;
+                    r.legs[wheel]=(r.z+n(d,"hip_height_m")-height_at(arena,x,y)-n(d,"wheel_radius_m"))
+                        .clamp(n(d,"leg_min_m")-0.01,n(d,"leg_max_m"));
+                }
+                let changed=self.colliders[self.hulls[i]].shape().as_compound().map_or(true,|shape| {
+                    (0..2).any(|wheel|shape.shapes().get(wheel+2).map_or(true,|(pose,_)|
+                        (n(d,"hip_height_m")-pose.translation.z-r.legs[wheel]).abs()>0.004))
+                });
+                if changed {
+                    self.colliders[self.hulls[i]].set_shape(Self::leg_hull(d,r.legs,0.).build().shared_shape().clone());
+                }
+            }
             advance_weapon_clock(r,a,d,&pose);
             let disabled=!r.powered || r.deployed || r.role=="aerial";
             let on_humps=arena.terrain.iter().any(|t|t.kind=="bumps" && r.x>t.x && r.x<t.x+t.w && r.y>t.y && r.y<t.y+t.h);
@@ -125,7 +140,7 @@ impl PhysicsWorld {
             let drag=(n(d,"rolling_resistance")*r.mass_kg*9.81+0.5*1.225*n(d,"drag_area_m2")*speed*speed)*speed;
             r.motor_power_w=if disabled {0.} else {(3.+(kinetic+drag)/n(d,"drive_efficiency").max(0.1)+heading_rate.abs()*2.).min(budget)};
             let leg_power=if r.powered && d["chassis_type"]=="wheel_legged" {
-                n(d,"leg_holding_power_w")+if !r.grounded {r.mass_kg*9.81*r.vz.max(0.)/0.75} else {0.}
+                n(d,"leg_holding_power_w")+r.mass_kg*9.81*r.vz.max(0.)/0.75
             } else {0.};
             account_drive_energy(r,d,disabled,leg_power);
             r.charging_power_w=self.charge_power(arena,r,d,&pose);
@@ -156,6 +171,32 @@ mod tests {
             "ids":["red-3"],"positions":vec![vec![[0.,0.,0.]];6],
             "velocities":vec![vec![[0.,0.,0.]];6],"headings":vec![vec![0.];6],
             "folded":vec![vec![0.];6],"grounded":vec![vec![true];6]})
+    }
+    #[test]
+    fn grounded_leg_pose_updates_collider_and_pays_for_raising() {
+        let mut engine=Engine::new(42,420.0,"rmuc2027").unwrap();
+        let count=engine.robots.len();let index=engine.robots.iter().position(|r|r.id=="red-3").unwrap();
+        let ids=engine.robots.iter().map(|r|r.id.clone()).collect::<Vec<_>>();
+        let mut poses=vec![engine.robots.iter().map(|r|[r.x,r.y,r.z]).collect::<Vec<_>>();6];
+        for (sample,row) in poses.iter_mut().enumerate() {
+            row[index]=[8.,7.5,height_at(&engine.arena,8.,7.5)+0.04+sample as f64*0.003];
+        }
+        let mut velocities=vec![vec![[0.,0.,0.];count];6];
+        for row in &mut velocities {row[index][2]=0.36;}
+        let value=json!({"op":"kinematic_frame_result","version":1,"sequence":0,"dt":PHYSICS_DT,
+            "ids":ids,"positions":poses,"velocities":velocities,
+            "headings":vec![vec![0.;count];6],"folded":vec![vec![0.;count];6],"grounded":vec![vec![true;count];6]});
+        let frame=MotionFrame::parse(value,0,&ids).unwrap();let actions=vec![Action::default();count];
+        let mut world=engine.physics.take().unwrap();let before=engine.robots[index].battery_remaining_wh;
+        for sample in 0..3 {world.apply_motion_sample(&mut engine.robots,&actions,&frame,sample,sample as f64*PHYSICS_DT,&engine.arena);}
+        let d=&world.designs[index];let r=&engine.robots[index];
+        let shape=world.colliders[world.hulls[index]].shape().as_compound().unwrap();
+        for wheel in 0..2 {
+            let length=n(d,"hip_height_m")-shape.shapes()[wheel+2].0.translation.z;
+            assert!((length-r.legs[wheel]).abs()<0.004);
+        }
+        let work=(n(d,"leg_holding_power_w")+r.mass_kg*9.81*0.36/0.75)*PHYSICS_DT*3./3600.;
+        assert!(before-r.battery_remaining_wh>=work-1e-10);
     }
     #[test]
     fn death_freezes_remaining_prediction_and_weapon_clock_advances() {

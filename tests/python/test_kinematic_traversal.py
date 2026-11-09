@@ -44,7 +44,7 @@ class TraversalTests(unittest.TestCase):
             robot.update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],grounded=frame['grounded'][-1][0])
         self.assertTrue(np.asarray(frame['grounded']).all())
         self.assertTrue((np.diff(zs)<=1e-6).all())
-        self.assertAlmostEqual(zs[-1],terrain_height(_REFERENCE_ARENA,*initial[:2]),places=4)
+        self.assertAlmostEqual(zs[-1],terrain_height(_REFERENCE_ARENA,*initial[:2])-.025,places=4)
         adapter.close()
 
     def test_authoritative_teleport_cancels_old_jump(self):
@@ -84,7 +84,9 @@ class TraversalTests(unittest.TestCase):
                 self.assertTrue(airborne,trace)
                 self.assertEqual(trace[-1][1],2,trace)
                 self.assertAlmostEqual(trace[-1][0][0],target,places=3)
-                self.assertAlmostEqual(trace[-1][0][2],terrain_height(_REFERENCE_ARENA,target,7.5),places=4)
+                # Loaded nominal leg spring compression puts the body origin
+                # 25 mm below the ground datum; it is not a tyre contact point.
+                self.assertAlmostEqual(trace[-1][0][2],terrain_height(_REFERENCE_ARENA,target,7.5)-.025,places=4)
                 adapter.close()
 
     def test_non_jump_chassis_cannot_use_link(self):
@@ -134,7 +136,7 @@ class TraversalTests(unittest.TestCase):
         self.assertEqual(states[-1],3,'Landing after an interrupted jump is a failure')
         self.assertLessEqual(samples[:,0].max(),9.15+.001)
         self.assertLess(np.abs(np.diff(samples[:,2])).max(),.08,'No instantaneous ground snap')
-        self.assertAlmostEqual(samples[-1,2],terrain_height(_REFERENCE_ARENA,*samples[-1,:2]),places=4)
+        self.assertAlmostEqual(samples[-1,2],terrain_height(_REFERENCE_ARENA,*samples[-1,:2])-.025,places=4)
         self.assertTrue(frame['grounded'][-1][0])
         adapter.close()
 
