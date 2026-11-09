@@ -267,6 +267,7 @@ def _aim_target(robot,target):
 
 
 _AIM_CACHE={}
+_AIM_CACHE_LOCK=Lock()
 def _ballistic_solution(robot,target,speed=None):
     speed=speed or muzzle_speed(robot);point=_aim_target(robot,target)
     dx,dy=point[0]-robot['x'],point[1]-robot['y'];distance_=max(.01,math.hypot(dx,dy));ux,uy=dx/distance_,dy/distance_
@@ -274,7 +275,9 @@ def _ballistic_solution(robot,target,speed=None):
     pivot=_rotate(robot.get('quaternion',(0,0,0,1)),(0,0,robot.get('muzzle_height_m',.25 if robot['role']=='aerial' else .55)))
     base_z=robot.get('z',0)+pivot[2];reach=robot.get('muzzle_reach_m',.3)
     key=tuple(round(v,3) for v in (distance_,point[2]-base_z,speed,inherited,robot.get('vz',0),reach))+(is_42(robot),)
-    if key in _AIM_CACHE:return _AIM_CACHE[key]
+    with _AIM_CACHE_LOCK:
+        cached=_AIM_CACHE.get(key)
+        if cached is not None:return cached
     radius=.02125 if is_42(robot) else .0084;mass=.0445 if is_42(robot) else .0032
     drag=.5*1.225*.47*math.pi*radius*radius/mass;dt=1/120
     def height(angle):
@@ -294,9 +297,14 @@ def _ballistic_solution(robot,target,speed=None):
             if value is None or value<point[2]:low=mid
             else:high=mid
     result=((low+high)/2 if reachable else math.pi/4,reachable)
-    if len(_AIM_CACHE)>=256:_AIM_CACHE.pop(next(iter(_AIM_CACHE)))
-    _AIM_CACHE[key]=result
-    return result
+    # Integration stays outside the lock. Publish atomically so parallel RL
+    # controllers cannot evict the same oldest entry or race a cache hit.
+    with _AIM_CACHE_LOCK:
+        cached=_AIM_CACHE.get(key)
+        if cached is not None:return cached
+        if len(_AIM_CACHE)>=256:_AIM_CACHE.pop(next(iter(_AIM_CACHE)))
+        _AIM_CACHE[key]=result
+        return result
 
 
 def aim_pitch(robot,target,speed=None):
