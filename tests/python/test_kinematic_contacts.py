@@ -57,6 +57,17 @@ class ContactTests(unittest.TestCase):
         self.assertLessEqual(pos[0,0],.01001)
         self.assertGreater(pos[2,0],pos[0,0])
 
+    def test_interleaved_world_members_keep_global_agent_identity(self):
+        sim=self.sim([[0,0],[0,0],[.41,0],[.41,0]],worlds=[7,2,7,2])
+        sim.enabled.assign(np.asarray([1,1,1,0],np.int32))
+        sim.step([[.1,0],[.1,0],[0,0],[0,0]],dt=.05)
+        pos,_=sim.state()
+        self.assertGreater(pos[2,0],.45)
+        self.assertAlmostEqual(pos[3,0],.41,places=6)
+        self.assertGreater(pos[0,0],pos[1,0]+.05)
+        self.assertLessEqual(pos[1,0],.0101)
+        self.assertFalse(sim.contact_exhausted.numpy().any())
+
     def test_ten_body_free_chain_does_not_exhaust_or_interpenetrate(self):
         sim=self.sim([[i*.40001,0] for i in range(10)])
         for _ in range(30):sim.step([[.1,0]]+[[0,0]]*9,dt=1/120)

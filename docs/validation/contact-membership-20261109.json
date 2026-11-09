@@ -1,0 +1,568 @@
+{
+  "kind": "static-world-member-contact-loops",
+  "reference_commit": "4a0323a7b11db2b253591f86efd1f3d55dfc5b5e",
+  "reference_kernel_sha256": "ff1caff1c7d0c65660090fdfa7309d13038fbff0f3eb3738acaa69f16963ef3a",
+  "short_comparison": {
+    "results": [
+      {
+        "reference_kernel": true,
+        "seconds": 13.239860511999723,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      },
+      {
+        "reference_kernel": false,
+        "seconds": 12.519810687001154,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      },
+      {
+        "reference_kernel": false,
+        "seconds": 12.52810755199971,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      },
+      {
+        "reference_kernel": true,
+        "seconds": 13.307416793000812,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      }
+    ],
+    "median_seconds": {
+      "True": 13.273638652500267,
+      "False": 12.523959119500432
+    },
+    "ppo_included": false,
+    "scope": "Both paths use the same host wrapper and current motion buffers. Only contact kernel loop mapping/signature differs. Old/new/new/old, initialization/warmup excluded, in-process navigation preparation reused."
+  },
+  "mixed_world_primitive_and_micro": {
+    "parity": [
+      [
+        "49018e5cb26659502cdb432a786476425f40c1855f7f1d9fc4b44dae97d77121",
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "49018e5cb26659502cdb432a786476425f40c1855f7f1d9fc4b44dae97d77121",
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    ],
+    "results": [
+      {
+        "legacy": true,
+        "seconds": 0.05774204599947552
+      },
+      {
+        "legacy": false,
+        "seconds": 0.057353797999894596
+      },
+      {
+        "legacy": false,
+        "seconds": 0.0573276769991935
+      },
+      {
+        "legacy": true,
+        "seconds": 0.0564466989999346
+      }
+    ],
+    "median_seconds": {
+      "True": 0.05709437249970506,
+      "False": 0.05734073749954405
+    },
+    "scope": "120 random interleaved-world steps include coincident overlap, wall contact, unequal masses and disable/re-enable. Microbenchmark includes the entire MotionBatch stage, no terrain/AI/rules/PPO."
+  },
+  "sources_at_comparison": {
+    "sources": {
+      "config": {
+        "seed": 42,
+        "team": "red",
+        "slot": 7,
+        "map": "rmuc2027",
+        "duration": 420,
+        "episode_seconds": 60,
+        "rl_seconds": 1.0,
+        "grid_m": 0.25,
+        "recover_enter": 0.25,
+        "recover_exit": 0.8,
+        "friendly": "examples/claude_opus55_xhigh_2027_squad",
+        "opponent": "examples/claude_opus55_xhigh_2027_hold",
+        "controllers": {
+          "red:7": {
+            "kind": "learning"
+          }
+        },
+        "rewards": {
+          "control": 0.01,
+          "outcome": 10.0,
+          "capture_seconds": 0.001,
+          "death": -0.1
+        },
+        "ppo": {
+          "n_steps": 64,
+          "batch_size": 64,
+          "n_epochs": 4,
+          "learning_rate": 0.0003,
+          "gamma": 0.995,
+          "gae_lambda": 0.95,
+          "ent_coef": 0.01
+        },
+        "sim_backend": "warp_kinematic",
+        "policy_timeout_s": 5.0,
+        "navigation_mode": "legacy",
+        "timed_assembly": false,
+        "drones_enabled": true,
+        "fixed_policy_hz": 10,
+        "learning_control_hz": 10,
+        "training_summary": true,
+        "action_trace": false,
+        "navigation_precompute": null,
+        "github_backup_seconds": 300.0
+      },
+      "sources": {
+        "friendly": {
+          "version": "dba14ab0764239ed",
+          "manifest": {
+            "api_version": 3,
+            "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+            "mode": "squad",
+            "robot": null,
+            "entries": {
+              "1": "robot_1.py",
+              "3": "robot_3.py",
+              "4": "robot_4.py",
+              "6": "robot_6.py",
+              "7": "robot_7.py"
+            },
+            "hashes": {
+              "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            },
+            "version": "dba14ab0764239ed"
+          },
+          "hashes": {
+            "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+          }
+        },
+        "opponent": {
+          "version": "90c6cba4ea0ca924",
+          "manifest": {
+            "api_version": 3,
+            "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+            "mode": "team",
+            "robot": null,
+            "entries": {
+              "team": "strategy.py"
+            },
+            "hashes": {
+              "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            },
+            "team_lineup": {
+              "1": 2711,
+              "3": 2731,
+              "4": 2732,
+              "6": 2761,
+              "7": 2771
+            },
+            "version": "90c6cba4ea0ca924"
+          },
+          "hashes": {
+            "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+          }
+        }
+      },
+      "sdk_hash": "e912f7f89f4ae91b97746dcb2e65d19975b7fb732b3d02290c22d2aa99e9efc7",
+      "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+      "navigation": {
+        "precompute": true,
+        "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+      },
+      "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+      "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+      "simulation": {
+        "backend": "warp_kinematic",
+        "device": "cuda:0",
+        "dt": 0.008333333333333333,
+        "experimental": true,
+        "frame_encoder": "orjson-numpy",
+        "pipe_reader": "posix-select",
+        "policy_observation_cache": true,
+        "transport_sha256": "7fb6c826ac10df23af2f01cfc38915571a8505ee6af029df0575ac9a79d7c82f",
+        "files": {
+          "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+          "arena.py": "9e0433366c3af175509e2154bb6b369a6613cef34db9d31a345467fe756a93e3",
+          "motion.py": "cfe10413bd91abe68a937543638db1744581b2e6aff58e8ced2cd155aed58641",
+          "contacts.py": "835ea36d3765cc0c62f5b3e5120c530b42f9bf7872e46d9520f60ed050475baa",
+          "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+          "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+          "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+          "protocol.py": "79602c7753c94f99347226c48e66ee945a1581f47a700ff94ed1580a7a4d8c6b",
+          "batching.py": "cf94942d32a34b974b4dc6a7370117cf67a328c6fe9baaa37a47953d2e0e92ba",
+          "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+        },
+        "dependencies": {
+          "warp-lang": "1.19.0",
+          "orjson": "3.13.0"
+        }
+      }
+    },
+    "reference_sha256": "ff1caff1c7d0c65660090fdfa7309d13038fbff0f3eb3738acaa69f16963ef3a"
+  },
+  "current_contact_sha256": "0ddf63300b71d02468c36299c2edbd8847eccc9f9383308e8df52ded509fb694",
+  "same_parsed_kernel_after_formatting": true,
+  "profile": {
+    "seconds": 12.426630059000672,
+    "simulated_seconds": [
+      64.0,
+      64.0
+    ],
+    "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+    "stats_columns": [
+      "samples",
+      "samples_with_events",
+      "total_events",
+      "maximum_events_per_sample"
+    ],
+    "batches": [
+      {
+        "stats": [
+          [
+            7680,
+            2773,
+            4253,
+            22
+          ],
+          [
+            7680,
+            0,
+            0,
+            0
+          ],
+          [
+            7680,
+            0,
+            0,
+            0
+          ],
+          [
+            7680,
+            3009,
+            4132,
+            13
+          ],
+          [
+            7680,
+            0,
+            0,
+            0
+          ],
+          [
+            7680,
+            0,
+            0,
+            0
+          ]
+        ],
+        "members": [
+          [
+            0,
+            1,
+            2,
+            4,
+            5,
+            6,
+            7,
+            9
+          ],
+          [
+            3,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            8,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            10,
+            11,
+            12,
+            14,
+            15,
+            16,
+            17,
+            19
+          ],
+          [
+            13,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            18,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "sizes": [
+          8,
+          1,
+          1,
+          8,
+          1,
+          1
+        ],
+        "budget_flags": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "ppo_included": false,
+    "note": "Diagnostic counters instrument the exact contact owner loop. No CPU/GPU profiler; initialization/compilation and warmup excluded. This is diagnostic, not production throughput acceptance."
+  },
+  "profile_sources": {
+    "sources": {
+      "config": {
+        "seed": 42,
+        "team": "red",
+        "slot": 7,
+        "map": "rmuc2027",
+        "duration": 420,
+        "episode_seconds": 420,
+        "rl_seconds": 0.5,
+        "grid_m": 0.25,
+        "recover_enter": 0.25,
+        "recover_exit": 0.8,
+        "friendly": "examples/claude_opus55_xhigh_2027_squad",
+        "opponent": "examples/claude_opus55_xhigh_2027_hold",
+        "controllers": {
+          "red:7": {
+            "kind": "learning"
+          }
+        },
+        "rewards": {
+          "control": 0.01,
+          "outcome": 10.0,
+          "capture_seconds": 0.001,
+          "death": -0.1
+        },
+        "ppo": {
+          "n_steps": 64,
+          "batch_size": 64,
+          "n_epochs": 4,
+          "learning_rate": 0.0003,
+          "gamma": 0.995,
+          "gae_lambda": 0.95,
+          "ent_coef": 0.01
+        },
+        "sim_backend": "warp_kinematic",
+        "sim_device": "cuda:0",
+        "policy_timeout_s": 5.0,
+        "learning_control_hz": 2,
+        "drones_enabled": false,
+        "navigation_mode": "legacy",
+        "timed_assembly": true,
+        "github_backup_repo": "a3203space/rmuc2027",
+        "fixed_policy_hz": 10,
+        "training_summary": true,
+        "action_trace": false,
+        "navigation_precompute": null,
+        "github_backup_seconds": 300.0
+      },
+      "sources": {
+        "friendly": {
+          "version": "dba14ab0764239ed",
+          "manifest": {
+            "api_version": 3,
+            "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+            "mode": "squad",
+            "robot": null,
+            "entries": {
+              "1": "robot_1.py",
+              "3": "robot_3.py",
+              "4": "robot_4.py",
+              "6": "robot_6.py",
+              "7": "robot_7.py"
+            },
+            "hashes": {
+              "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            },
+            "version": "dba14ab0764239ed"
+          },
+          "hashes": {
+            "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+          }
+        },
+        "opponent": {
+          "version": "90c6cba4ea0ca924",
+          "manifest": {
+            "api_version": 3,
+            "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+            "mode": "team",
+            "robot": null,
+            "entries": {
+              "team": "strategy.py"
+            },
+            "hashes": {
+              "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            },
+            "team_lineup": {
+              "1": 2711,
+              "3": 2731,
+              "4": 2732,
+              "6": 2761,
+              "7": 2771
+            },
+            "version": "90c6cba4ea0ca924"
+          },
+          "hashes": {
+            "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+          }
+        }
+      },
+      "sdk_hash": "e912f7f89f4ae91b97746dcb2e65d19975b7fb732b3d02290c22d2aa99e9efc7",
+      "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+      "navigation": {
+        "precompute": true,
+        "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+      },
+      "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+      "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+      "simulation": {
+        "backend": "warp_kinematic",
+        "device": "cuda:0",
+        "dt": 0.008333333333333333,
+        "experimental": true,
+        "frame_encoder": "orjson-numpy",
+        "pipe_reader": "posix-select",
+        "policy_observation_cache": true,
+        "transport_sha256": "7fb6c826ac10df23af2f01cfc38915571a8505ee6af029df0575ac9a79d7c82f",
+        "files": {
+          "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+          "arena.py": "9e0433366c3af175509e2154bb6b369a6613cef34db9d31a345467fe756a93e3",
+          "motion.py": "cfe10413bd91abe68a937543638db1744581b2e6aff58e8ced2cd155aed58641",
+          "contacts.py": "835ea36d3765cc0c62f5b3e5120c530b42f9bf7872e46d9520f60ed050475baa",
+          "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+          "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+          "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+          "protocol.py": "79602c7753c94f99347226c48e66ee945a1581f47a700ff94ed1580a7a4d8c6b",
+          "batching.py": "cf94942d32a34b974b4dc6a7370117cf67a328c6fe9baaa37a47953d2e0e92ba",
+          "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+        },
+        "dependencies": {
+          "warp-lang": "1.19.0",
+          "orjson": "3.13.0"
+        }
+      }
+    },
+    "profile_kernel_sha256": "aa6c9f3a30f97cb46530a730f6a1147e1ca3be9ecc6aebe4c136d6d7dc28248d"
+  },
+  "regression_tests": 66,
+  "limits": [
+    "Short paired sampling is not a full 420-second or PPO throughput gate.",
+    "No-contact MotionBatch microbenchmark did not improve; do not claim a universal speedup.",
+    "Both timed comparison paths use the same host wrapper; the reference signature needs an extra argument-list adaptation.",
+    "Instrumented event profile is diagnostic and not production performance acceptance.",
+    "Physical timing/transfer gaps and formal training remain outstanding."
+  ]
+}

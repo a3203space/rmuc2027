@@ -163,6 +163,12 @@ class MotionBatch:
             raise ValueError('Expected nonnegative world ids[N]')
         self.count = len(p)
         self.worlds = wp.array(world_ids,dtype=wp.int32,device=self.device)
+        groups=[np.flatnonzero(world_ids==world).tolist() for world in dict.fromkeys(world_ids.tolist())]
+        members=np.full((len(groups),max(map(len,groups))),-1,dtype=np.int32)
+        for index,group in enumerate(groups):members[index,:len(group)]=group
+        self.contact_groups=len(groups)
+        self.contact_members=wp.array(members,dtype=wp.int32,device=self.device)
+        self.contact_sizes=wp.array([len(group) for group in groups],dtype=wp.int32,device=self.device)
         self.flight = wp.zeros(self.count,dtype=wp.int32,device=self.device)
         self.flight_goal = wp.empty(self.count,dtype=wp.vec2,device=self.device)
         self.flight_z = wp.zeros(self.count,dtype=float,device=self.device)
@@ -225,8 +231,8 @@ class MotionBatch:
                       self.vel,self.limits,self.step_limits,self.heights,self.flight],device=self.device)
         if self.dynamic_contacts:
             from .contacts import resolve
-            launch(resolve,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
-                  self.worlds,self.body_z,self.enabled,self.flight,self.drive,self.boxes,self.angles,self.wall_z,self.wall_masks,
+            launch(resolve,self.contact_groups,inputs=[self.previous,self.pos,self.vel,self.limits,
+                  self.contact_members,self.contact_sizes,self.body_z,self.enabled,self.flight,self.drive,self.boxes,self.angles,self.wall_z,self.wall_masks,
                   self.terrain.data if self.terrain is not None else self.flat_scene,int(self.terrain is not None),
                   self.step_limits,self.resolved,self.resolved_velocity,self.output,self.contact_touched,self.contact_exhausted],device=self.device)
         else:
