@@ -13,6 +13,7 @@ import numpy as np
 import warp as wp
 from .arena import ArenaMotion
 from .protocol import DT, MotionFrame
+from .uploads import HostUploads
 
 active_service = None
 
@@ -75,6 +76,7 @@ class WorldBatch:
     def __init__(self,device):
         self.engine=ArenaMotion(device,carry_state=True)
         self.upload=None;self.restore_command=None
+        self.host_uploads=HostUploads()
 
     def step_many(self,items,frames=False):
         engine=self.engine;robots=[];slices=[]
@@ -120,7 +122,7 @@ class WorldBatch:
                     state[reset_pose,14]=base[reset_pose]
                     state[reset_pose,16]=np.asarray([d.get('leg_nominal_m',0.) for d in designs])[reset_pose]
             states.append(state)
-        self.upload.assign(np.concatenate(states))
+        self.host_uploads.assign(self.upload,np.concatenate(states))
         self.restore_command.launch()
         # Previous use of this cache slot may have contained different clients.
         # Per-client authority correction was applied above instead.
@@ -135,7 +137,9 @@ class WorldBatch:
         return results
 
     def close(self):
-        self.restore_command=None;self.upload=None;self.engine.close()
+        self.restore_command=None
+        try:self.host_uploads.close()
+        finally:self.upload=None;self.engine.close()
 
 
 class PhysicsService:

@@ -9,6 +9,7 @@ from .motion import MotionBatch
 from .terrain import Terrain, TerrainData, surface_height
 from .protocol import MotionFrame, DT
 from .pose import parameters as pose_parameters, loaded_origin
+from .uploads import HostUploads
 
 
 @wp.func
@@ -157,6 +158,7 @@ class ArenaMotion:
         self.carry_state=carry_state;self.last_state=None
         self.reuse_commands=reuse_commands;self.launches=[];self.launch_index=0
         self.expected_positions=None
+        self.host_uploads=HostUploads()
 
     def initialize(self,request):
         robots=request['robots'];self.ids=tuple(r['id'] for r in robots)
@@ -235,7 +237,7 @@ class ArenaMotion:
         changed=None
         if self.expected_positions is not None:
             changed=np.linalg.norm(authoritative-self.expected_positions,axis=1)>.05
-        def assign(target,values):target.assign(np.asarray(values,dtype=np.float32))
+        def assign(target,values):self.host_uploads.assign(target,np.asarray(values,dtype=np.float32))
         assign(m.pos,[r['pos'][:2] for r in robots]);assign(m.vel,[r['velocity'][:2] for r in robots])
         assign(self.heading,[r['heading'] for r in robots]);assign(self.fold,[r['folded'] for r in robots])
         assign(self.jump_command,[r.get('jump',0.) for r in robots])
@@ -247,9 +249,9 @@ class ArenaMotion:
             wp.launch(reset_traversal,m.count,inputs=[mask,self.jump_status,self.jump_elapsed,self.jump_cooldown,
                       self.fall_speed,self.terrain.data,m.pos,self.last_z,self.base,m.height_offsets,self.leg_command,self.stance,m.flight],device=m.device)
         assign(self.targets,[[r.get('heading_goal') or 0.,r.get('yaw_rate') or 0.] for r in robots])
-        self.flags.assign(np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
-        m.enabled.assign(np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
-        m.coast.assign(np.asarray([bool(r.get('coast',False)) and math.hypot(*r['move'])<.01
+        self.host_uploads.assign(self.flags,np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
+        self.host_uploads.assign(m.enabled,np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
+        self.host_uploads.assign(m.coast,np.asarray([bool(r.get('coast',False)) and math.hypot(*r['move'])<.01
                                   for r in robots],dtype=np.int32))
         if any(not r['enabled'] and not r.get('grounded',True) and r['role']!='aerial' for r in robots):
             assign(self.passive_vz,[r['velocity'][2] for r in robots])
@@ -260,7 +262,7 @@ class ArenaMotion:
         for r in robots:
             masks.append([1]*self.physical_count+[int(z['kind'] in ('base','dart_station','pad') or
                 z['kind']=='highway' and r.get('fly_pass',0)<2 or z.get('owner') not in (None,r['team'])) for z in self.forbidden])
-        m.wall_masks.assign(np.asarray(masks,dtype=np.int32))
+        self.host_uploads.assign(m.wall_masks,np.asarray(masks,dtype=np.int32))
         if self.use_graph and self.next_sequence>0:
             if self.graph is None:
                 # The first frame loads all kernels before capture. All arrays
@@ -321,4 +323,5 @@ class ArenaMotion:
         self.closed=True
         self.graph=None
         self.launches.clear()
-        self.motion=None
+        try:self.host_uploads.close()
+        finally:self.motion=None

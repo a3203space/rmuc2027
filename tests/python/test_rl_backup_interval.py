@@ -17,7 +17,8 @@ class BackupIntervalTests(unittest.TestCase):
     def test_upload_waits_for_interval_and_published_checkpoint(self):
         for interval,expected in ((300.,2),(600.,1)):
             callback=TraceCallback(Path('/tmp/checkpoint-interval-test/actions.jsonl'),detailed=False,backup_seconds=interval)
-            callback.model=SimpleNamespace(n_steps=64,_n_updates=2,get_env=lambda:SimpleNamespace(num_envs=1))
+            callback.model=SimpleNamespace(n_steps=64,_n_updates=2,get_env=lambda:SimpleNamespace(num_envs=1),
+                                           lr_schedule=lambda _:3e-4,_current_progress_remaining=1.)
             callback.locals={'infos':[]};callback.num_timesteps=256;callback.stream=io.StringIO();callback.backup=Mock()
             callback.last_checkpoint=0.;callback.last_backup=0.;callback.progress_started=0.
             with patch('rmuc2027_research.rl.learning.save_checkpoint') as save:

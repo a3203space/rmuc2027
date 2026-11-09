@@ -22,6 +22,10 @@ def bundle(run, checkpoint, progress):
     payload = {'model.zip': Path(checkpoint).read_bytes(),
                'experiment.json': (run/'experiment.json').read_bytes(),
                'progress.json': json.dumps(progress, indent=2).encode()}
+    for name in ('learning-rate.json', 'learning-rate-events.jsonl', 'updates.jsonl',
+                 'episodes.jsonl', 'source-snapshot.zip'):
+        if (run/name).is_file():
+            payload[name] = (run/name).read_bytes()
     manifest = {name:hashlib.sha256(data).hexdigest() for name,data in payload.items()}
     with zipfile.ZipFile(target.with_suffix('.tmp'), 'w', zipfile.ZIP_DEFLATED) as archive:
         for name,data in payload.items(): archive.writestr(name,data)

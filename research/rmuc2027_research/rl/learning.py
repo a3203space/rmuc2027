@@ -46,11 +46,48 @@ def vector_env(config, count):
 
 
 class TimedPPO(PPO):
+    def apply_learning_rate_control(self):
+        """Apply an operator request between complete PPO rollouts only."""
+        path = getattr(self, 'learning_rate_control_path', None)
+        if not path or not Path(path).exists():
+            return
+        try:
+            request = json.loads(Path(path).read_text())
+            value = request['learning_rate']
+            if isinstance(value, bool) or not math.isfinite(float(value)) or float(value) <= 0:
+                raise ValueError('learning_rate must be finite and positive')
+            value = float(value)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(json.dumps({'kind': 'learning-rate-control-error', 'error': str(exc)}), flush=True)
+            return
+        previous = float(self.lr_schedule(self._current_progress_remaining))
+        if value == previous:
+            return
+        self.learning_rate = value
+        self.lr_schedule = lambda _: value
+        event = {'kind': 'learning-rate-change', 'total_samples': self.num_timesteps,
+                 'old': previous, 'new': value, 'reason': str(request.get('reason', 'operator request')),
+                 'time_unix': time.time()}
+        with Path(path).with_name('learning-rate-events.jsonl').open('a') as stream:
+            stream.write(json.dumps(event)+'\n')
+        print(json.dumps(event), flush=True)
+
     def train(self):
+        self.apply_learning_rate_control()
         started = time.perf_counter()
         super().train()
         seconds = time.perf_counter()-started
         self.optimization_seconds = getattr(self, 'optimization_seconds', 0.0)+seconds
+        path = getattr(self, 'update_log_path', None)
+        if path:
+            row = {'kind': 'ppo-update', 'total_samples': self.num_timesteps,
+                   'gradient_epochs': self._n_updates, 'optimization_seconds': seconds,
+                   'learning_rate': float(self.lr_schedule(self._current_progress_remaining)),
+                   'behavior': getattr(self, 'last_rollout_behavior', {}),
+                   'losses': {str(k): float(v) for k, v in self.logger.name_to_value.items()
+                              if k.startswith('train/') and np.isscalar(v)}}
+            with Path(path).open('a') as stream:
+                stream.write(json.dumps(row)+'\n')
 
 
 class TraceCallback(BaseCallback):
@@ -74,11 +111,28 @@ class TraceCallback(BaseCallback):
 
     def _on_rollout_start(self):
         self.started = time.perf_counter()
+        self.rollout_behavior = {'samples': 0, 'moving_commands': 0, 'modes': {}}
 
     def _on_rollout_end(self):
         self.sampling_seconds += time.perf_counter()-self.started
+        self.model.last_rollout_behavior = copy.deepcopy(self.rollout_behavior)
 
     def _on_step(self):
+        for index, info in enumerate(self.locals['infos']):
+            trace = info.get('action_trace', {})
+            action = trace.get('executed_action') or {}
+            # execute_goal stores a single robot command, not the team map.
+            move = action.get('move', [0., 0.])
+            self.rollout_behavior['samples'] += 1
+            self.rollout_behavior['moving_commands'] += int(math.hypot(*move) > .05)
+            mode = trace.get('mode') or 'unknown'
+            self.rollout_behavior['modes'][mode] = self.rollout_behavior['modes'].get(mode, 0)+1
+            if self.locals['dones'][index]:
+                row = {'env': index, 'total_samples': self.num_timesteps,
+                       **{key: info.get(key) for key in ('seed', 'time', 'winner', 'reason', 'metrics',
+                                                       'reward_totals', 'control', 'bases')}}
+                with (self.path.parent/'episodes.jsonl').open('a') as episodes:
+                    episodes.write(json.dumps(row)+'\n')
         for index, info in enumerate(self.locals['infos'] if self.detailed else []):
             # SB3 stores self.locals['actions'] and its original log probability
             # in RolloutBuffer. Do not replace them with clipped/snapped goals.
@@ -107,7 +161,8 @@ class TraceCallback(BaseCallback):
             self.last_checkpoint = now
             if self.backup is not None and now-self.last_backup >= self.backup_seconds:
                 self.backup.submit(self.path.parent/'latest.zip', {'total_steps':self.num_timesteps,
-                    'gradient_epochs':self.model._n_updates,'elapsed_seconds':now-self.progress_started})
+                    'gradient_epochs':self.model._n_updates,'elapsed_seconds':now-self.progress_started,
+                    'learning_rate':float(self.model.lr_schedule(self.model._current_progress_remaining))})
                 self.last_backup = now
         self.timed_out = self.deadline is not None and now >= self.deadline
         return not self.timed_out
@@ -170,6 +225,8 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
         else:
             model = TimedPPO('MlpPolicy', vec, seed=config['seed'], device=device, verbose=1,
                 policy_kwargs={'net_arch': {'pi': [64, 64], 'vf': [64, 64]}}, **config['ppo'])
+        model.learning_rate_control_path = str((output/'learning-rate.json').resolve())
+        model.update_log_path = str((output/'updates.jsonl').resolve())
         block = model.n_steps*num_envs
         if steps is None:
             steps = block * 1000000000 if wall_seconds is not None else 256
