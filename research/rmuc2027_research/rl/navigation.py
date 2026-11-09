@@ -7,6 +7,7 @@ from collections import OrderedDict
 from threading import RLock
 from types import MappingProxyType
 import time
+import numpy as np
 from .portable import SdkNavigator, _sdk
 
 _TABLES=OrderedDict()
@@ -18,6 +19,21 @@ class PreparedNavigator(SdkNavigator):
     def __init__(self,grid_m=.25):
         super().__init__(grid_m)
         self.preparation_seconds=0.
+        self._point_arrays={}
+
+    def _ordered_goals(self, points, proposed, key):
+        entry=self._point_arrays.get(key)
+        if entry is None or entry[0] is not points:
+            coordinates=np.asarray(points,dtype=np.float64).reshape(-1,2)
+            coordinates.setflags(write=False)
+            entry=self._point_arrays[key]=(points,coordinates)
+        coordinates=entry[1]
+        dx=coordinates[:,0]-proposed[0];dy=coordinates[:,1]-proposed[1]
+        # Python float ** uses libm pow. float_power keeps the same rounding;
+        # ordinary multiplication can differ by an ulp at an equidistant tie.
+        distance=np.float_power(dx,2.)+np.float_power(dy,2.)
+        order=np.lexsort((coordinates[:,1],coordinates[:,0],distance))
+        return (points[int(i)] for i in order)
 
     def resolve_goal(self,robot,proposed,arena):
         folded=robot.get('transform_progress',0)>=.99

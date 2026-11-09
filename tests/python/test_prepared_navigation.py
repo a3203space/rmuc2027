@@ -8,6 +8,26 @@ from rmuc2027_research.rl.session import load_config,provenance
 
 
 class PreparedNavigationTests(unittest.TestCase):
+    def test_candidate_order_preserves_python_power_rounding(self):
+        points=[(0.,0.),(14.,7.)];query=(4.320076355178555,8.85984728964289)
+        self.assertEqual(SdkNavigator()._ordered_goals(points,query,'tie'),[(14.,7.),(0.,0.)])
+        self.assertEqual(list(PreparedNavigator()._ordered_goals(points,query,'tie')),
+                         SdkNavigator()._ordered_goals(points,query,'tie'))
+
+    def test_candidate_order_preserves_distance_and_coordinate_ties(self):
+        rng=random.Random(107)
+        reference=SdkNavigator();prepared=PreparedNavigator()
+        points=[(x*.25,y*.25) for x in range(1,112) for y in range(1,60)]
+        rng.shuffle(points)
+        queries=[(14.,7.5),(14.125,7.625),(-1.,16.),(28.,0.)]
+        queries.extend((rng.uniform(-2,30),rng.uniform(-2,17)) for _ in range(100))
+        for proposed in queries:
+            self.assertEqual(list(prepared._ordered_goals(points,proposed,'grid')),
+                             reference._ordered_goals(points,proposed,'grid'))
+        for replacement in ([],[(3.,3.),(1.,1.),(2.,2.)]):
+            self.assertEqual(list(prepared._ordered_goals(replacement,(2.,2.),'grid')),
+                             reference._ordered_goals(replacement,(2.,2.),'grid'))
+
     def test_preparation_preserves_goals_across_teams_fold_and_hull(self):
         rng=random.Random(1081)
         reference=SdkNavigator();prepared=PreparedNavigator()

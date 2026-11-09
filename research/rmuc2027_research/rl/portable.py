@@ -105,6 +105,9 @@ class SdkNavigator(NavigationBackend):
         self.reachability = {}
         self.precomputed_reachability = {}
 
+    def _ordered_goals(self, points, proposed, key):
+        return sorted(points, key=lambda p: ((p[0]-proposed[0])**2+(p[1]-proposed[1])**2, p))
+
     def resolve_goal(self, robot, proposed, arena):
         folded = robot.get('transform_progress', 0) >= .99
         # Use the same hull clearance as SDK command execution. Otherwise a
@@ -140,7 +143,7 @@ class SdkNavigator(NavigationBackend):
             self.graph_components[graph_key]=sorted(groups.items(),key=lambda item:-len(item[1]))
         groups=self.graph_components[graph_key]
         start_components={}
-        points = sorted(self.grids[key], key=lambda p: ((p[0]-proposed[0])**2+(p[1]-proposed[1])**2, p))
+        points = self._ordered_goals(self.grids[key], proposed, key)
         for goal in points:
             # Match the SDK's strict/relaxed static-route fallbacks. Dynamic
             # contacts may still obstruct a physically valid static route.
