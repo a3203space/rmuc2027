@@ -5,7 +5,7 @@ thread owns each world's small contact island, so pair updates cannot race.
 """
 import warp as wp
 from .motion import segment_box
-from .terrain import TerrainData, surface_height
+from .terrain import TerrainData, surface_height, smooth_sweep
 
 
 @wp.func
@@ -145,7 +145,7 @@ def resolve(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=wp.vec2)
                             right = -1
                             normal = direction
                             severity = -wp.dot(moves[i], direction)
-                if terrain_enabled != 0 and flight[i] == 0:
+                if terrain_enabled != 0 and flight[i] == 0 and smooth_sweep(scene,result[i],moves[i]*remaining,limits[i][2],steps[i])==0:
                     old_height = surface_height(scene, result[i])
                     blocked = int(0)
                     for k in range(1, 13):

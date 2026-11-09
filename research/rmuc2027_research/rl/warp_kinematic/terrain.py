@@ -61,6 +61,56 @@ def sample_heights(scene: TerrainData, points: wp.array(dtype=wp.vec2), result: 
     result[i]=surface_height(scene,points[i])
 
 
+@wp.func
+def smooth_sweep(scene: TerrainData, start: wp.vec2, delta: wp.vec2, radius: float, step: float):
+    """Sufficient condition for all twelve original samples to remain clear.
+
+    Reject possible discontinuity crossings. Within a fixed set of profiles,
+    their maximum has the largest local gradient bound; add a float32 allowance.
+    No new fields are added to the shared height-query scene structure.
+    """
+    end=start+delta
+    if delta[0]==0.0 and delta[1]==0.0 and step>=0.0:
+        if start[0]>=radius and start[0]<=scene.width-radius and start[1]>=radius and start[1]<=scene.height-radius:return int(1)
+    scale=wp.max(1.0,wp.max(wp.max(wp.abs(start[0]),wp.abs(start[1])),wp.max(wp.abs(end[0]),wp.abs(end[1]))))
+    margin=scale*.000001+1.e-6
+    lo=wp.vec2(wp.min(start[0],end[0])-margin,wp.min(start[1],end[1])-margin)
+    hi=wp.vec2(wp.max(start[0],end[0])+margin,wp.max(start[1],end[1])+margin)
+    if lo[0]<radius or hi[0]>scene.width-radius or lo[1]<radius or hi[1]>scene.height-radius:return int(0)
+    gradient=wp.abs(scene.floor_slope);height_scale=float(1.0)
+    for k in range(scene.bounds.shape[0]):
+        b=scene.bounds[k]
+        if hi[0]>=b[0] and lo[0]<=b[2] and hi[1]>=b[1] and lo[1]<=b[3]:
+            profile=scene.profiles[k];kind=scene.kinds[k];edge=scene.edge_ramps[k]
+            local_gradient=float(0.0)
+            height_scale=wp.max(height_scale,wp.max(wp.abs(profile[0]),wp.abs(profile[1])))
+            if kind==1:
+                ramp=scene.ramps[k];direction=wp.vec2(ramp[2]-ramp[0],ramp[3]-ramp[1])
+                local_gradient=wp.abs(profile[1]-profile[0])*wp.length(direction)/wp.max(1.e-9,wp.dot(direction,direction))
+            elif kind==2:
+                if profile[2]<=0.0:return int(0)
+                local_gradient=wp.abs(profile[3])*3.141593/profile[2]
+                height_scale=wp.max(height_scale,wp.abs(profile[1])+wp.abs(profile[3]))
+            elif edge>0.0:local_gradient=wp.abs(profile[1]-profile[0])/edge
+            gradient=wp.max(gradient,wp.abs(scene.floor_slope)+local_gradient*1.0001)
+            span=scene.ranges[k];crossing=int(0);rectangle=int(span[1]==4 and kind==0 and edge>0.0 and profile[0]==0.0);corners=int(0)
+            for j in range(span[1]):
+                a=scene.vertices[span[0]+j];c=scene.vertices[span[0]+(j+1)%span[1]]
+                if hi[0]>=wp.min(a[0],c[0]) and lo[0]<=wp.max(a[0],c[0]) and hi[1]>=wp.min(a[1],c[1]) and lo[1]<=wp.max(a[1],c[1]):crossing=1
+                # A zero-based rectangular bevel is continuous at its boundary.
+                # Require ordered axis-aligned edges, not merely four corner points.
+                if rectangle!=0:
+                    if not ((a[0]==b[0] or a[0]==b[2]) and (a[1]==b[1] or a[1]==b[3])):rectangle=0
+                    if not ((a[0]==c[0] and a[1]!=c[1]) or (a[1]==c[1] and a[0]!=c[0])):rectangle=0
+                    corner=int(a[0]==b[2])+2*int(a[1]==b[3])
+                    corners=corners | (1 << corner)
+            continuous=rectangle!=0 and corners==15 and kind==0 and edge>0.0 and profile[0]==0.0
+            if crossing!=0 and not continuous:return int(0)
+    error=wp.max(scale,height_scale)*.000008*(1.0+gradient)
+    if gradient*wp.length(delta)/12.0+error>step:return int(0)
+    return int(1)
+
+
 @wp.kernel
 def limit_terrain(scene: TerrainData, previous: wp.array(dtype=wp.vec2),
                   positions: wp.array(dtype=wp.vec2), velocities: wp.array(dtype=wp.vec2),
@@ -68,6 +118,11 @@ def limit_terrain(scene: TerrainData, previous: wp.array(dtype=wp.vec2),
                   heights: wp.array(dtype=float), flight: wp.array(dtype=wp.int32)):
     i=wp.tid()
     start=previous[i];end=positions[i];delta=end-start
+    if smooth_sweep(scene,start,delta,radii[i][2],steps[i])!=0:
+        # Reproduce the original final sample expression, including rounding.
+        accepted=start+delta
+        positions[i]=accepted;heights[i]=surface_height(scene,accepted)
+        return
     accepted=start
     old_height=surface_height(scene,start)
     blocked=int(0)

@@ -1,0 +1,498 @@
+{
+  "kind": "conservative-smooth-terrain-sweeps",
+  "reference_commit": "5e70cafa15f509e6707ea7a6c183cd85ce854e7c",
+  "reference_source_verified_against_git": true,
+  "unchanged_ast": [
+    "TerrainData",
+    "surface_height",
+    "Terrain"
+  ],
+  "oracle_audit": {
+    "records": [
+      {
+        "test": "test_bow_tie_corner_set_does_not_imply_a_solid_rectangle",
+        "samples": 1,
+        "accepted_smooth": 0,
+        "fallback": 1,
+        "classification_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+      },
+      {
+        "test": "test_flat_and_continuous_bevel_paths_can_skip_samples",
+        "samples": 4,
+        "accepted_smooth": 4,
+        "fallback": 0,
+        "classification_sha256": "1b897dddd4c151e2a2e6e3e91b7ea0f7fc4fd5ed00ef1c9669e8566393a02586"
+      },
+      {
+        "test": "test_large_height_quantization_keeps_exhaustive_samples",
+        "samples": 2,
+        "accepted_smooth": 0,
+        "fallback": 2,
+        "classification_sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+      },
+      {
+        "test": "test_stationary_boundary_and_negative_step_keep_original_behavior",
+        "samples": 3,
+        "accepted_smooth": 2,
+        "fallback": 1,
+        "classification_sha256": "d05796eb3a889d209cc6e6e6a1429bbd9d218df2b58146a51be1fcafc3164042"
+      },
+      {
+        "test": "test_stock_map_random_and_boundary_sweeps_are_bit_exact",
+        "samples": 57520,
+        "accepted_smooth": 39049,
+        "fallback": 18471,
+        "classification_sha256": "985fbe9c1ba27a85ea4c18110d9aecc969afff2c5e8d755e3f37a7b9216a6cb7"
+      },
+      {
+        "test": "test_thin_steps_concavity_overlap_steep_and_fast_waves_fall_back",
+        "samples": 10000,
+        "accepted_smooth": 5352,
+        "fallback": 4648,
+        "classification_sha256": "e3912d1754ccf299b360a7db532431983ae00fceae741752ae6c3f1f91bd159d"
+      },
+      {
+        "test": "test_thin_steps_concavity_overlap_steep_and_fast_waves_fall_back",
+        "samples": 4,
+        "accepted_smooth": 0,
+        "fallback": 4,
+        "classification_sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+      }
+    ],
+    "oracle_body_matches_original_ast": true,
+    "test_sha256": "4b807f85285df4b5f043217cbf4cb135fc3481460758d19f4543c9b0ec6a9c90",
+    "total_sweeps": 67534
+  },
+  "paired": {
+    "results": [
+      {
+        "reference": true,
+        "seconds": 15.188235723999242,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      },
+      {
+        "reference": false,
+        "seconds": 12.87633721400016,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      },
+      {
+        "reference": false,
+        "seconds": 12.968670108999504,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      },
+      {
+        "reference": true,
+        "seconds": 15.333350115999565,
+        "simulated_seconds": [
+          64.0,
+          64.0
+        ],
+        "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+        "rust_digests": [
+          "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+          "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+        ]
+      }
+    ],
+    "median_seconds": {
+      "True": 15.260792919999403,
+      "False": 12.922503661499832
+    },
+    "ppo_included": false,
+    "scope": "Old/new/new/old; both paths use current buffers/map and same host wrapper. Reference replaces terrain limiter and contact solver by original exhaustive-sampling kernels; initialization/warmup excluded, navigation precomputation reused within process."
+  },
+  "sources": {
+    "sources": {
+      "config": {
+        "seed": 42,
+        "team": "red",
+        "slot": 7,
+        "map": "rmuc2027",
+        "duration": 420,
+        "episode_seconds": 420,
+        "rl_seconds": 0.5,
+        "grid_m": 0.25,
+        "recover_enter": 0.25,
+        "recover_exit": 0.8,
+        "friendly": "examples/claude_opus55_xhigh_2027_squad",
+        "opponent": "examples/claude_opus55_xhigh_2027_hold",
+        "controllers": {
+          "red:7": {
+            "kind": "learning"
+          }
+        },
+        "rewards": {
+          "control": 0.01,
+          "outcome": 10.0,
+          "capture_seconds": 0.001,
+          "death": -0.1
+        },
+        "ppo": {
+          "n_steps": 64,
+          "batch_size": 64,
+          "n_epochs": 4,
+          "learning_rate": 0.0003,
+          "gamma": 0.995,
+          "gae_lambda": 0.95,
+          "ent_coef": 0.01
+        },
+        "sim_backend": "warp_kinematic",
+        "sim_device": "cuda:0",
+        "policy_timeout_s": 5.0,
+        "learning_control_hz": 2,
+        "drones_enabled": false,
+        "navigation_mode": "legacy",
+        "timed_assembly": true,
+        "github_backup_repo": "a3203space/rmuc2027",
+        "fixed_policy_hz": 10,
+        "training_summary": true,
+        "action_trace": false,
+        "navigation_precompute": null,
+        "github_backup_seconds": 300.0
+      },
+      "sources": {
+        "friendly": {
+          "version": "dba14ab0764239ed",
+          "manifest": {
+            "api_version": 3,
+            "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+            "mode": "squad",
+            "robot": null,
+            "entries": {
+              "1": "robot_1.py",
+              "3": "robot_3.py",
+              "4": "robot_4.py",
+              "6": "robot_6.py",
+              "7": "robot_7.py"
+            },
+            "hashes": {
+              "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            },
+            "version": "dba14ab0764239ed"
+          },
+          "hashes": {
+            "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+          }
+        },
+        "opponent": {
+          "version": "90c6cba4ea0ca924",
+          "manifest": {
+            "api_version": 3,
+            "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+            "mode": "team",
+            "robot": null,
+            "entries": {
+              "team": "strategy.py"
+            },
+            "hashes": {
+              "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            },
+            "team_lineup": {
+              "1": 2711,
+              "3": 2731,
+              "4": 2732,
+              "6": 2761,
+              "7": 2771
+            },
+            "version": "90c6cba4ea0ca924"
+          },
+          "hashes": {
+            "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+          }
+        }
+      },
+      "sdk_hash": "e912f7f89f4ae91b97746dcb2e65d19975b7fb732b3d02290c22d2aa99e9efc7",
+      "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+      "navigation": {
+        "precompute": true,
+        "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+      },
+      "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+      "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+      "simulation": {
+        "backend": "warp_kinematic",
+        "device": "cuda:0",
+        "dt": 0.008333333333333333,
+        "experimental": true,
+        "frame_encoder": "orjson-numpy",
+        "pipe_reader": "posix-select",
+        "policy_observation_cache": true,
+        "transport_sha256": "7fb6c826ac10df23af2f01cfc38915571a8505ee6af029df0575ac9a79d7c82f",
+        "files": {
+          "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+          "arena.py": "9e0433366c3af175509e2154bb6b369a6613cef34db9d31a345467fe756a93e3",
+          "motion.py": "cfe10413bd91abe68a937543638db1744581b2e6aff58e8ced2cd155aed58641",
+          "contacts.py": "e89e7ca1bae415f14e4822b5f4d5ae0d846f2dcde21077dfdc82fd537173280d",
+          "terrain.py": "c2b0d226d6d828b217ca9463c648c1048c7dd9980e4b3db03b3692855114162c",
+          "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+          "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+          "protocol.py": "79602c7753c94f99347226c48e66ee945a1581f47a700ff94ed1580a7a4d8c6b",
+          "batching.py": "cf94942d32a34b974b4dc6a7370117cf67a328c6fe9baaa37a47953d2e0e92ba",
+          "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+        },
+        "dependencies": {
+          "warp-lang": "1.19.0",
+          "orjson": "3.13.0"
+        }
+      }
+    },
+    "reference_sha256": {
+      "reference_contacts.py": "0ddf63300b71d02468c36299c2edbd8847eccc9f9383308e8df52ded509fb694",
+      "reference_terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+      "reference_limit.py": "b802875f0343c88941948e93d7fe61c8d5d55f94d8ae3d1bbe79acdc83a6fb51"
+    }
+  },
+  "regression_tests": 75,
+  "discarded_metadata_prototype": {
+    "paired": {
+      "results": [
+        {
+          "reference": true,
+          "seconds": 15.32705623000038,
+          "simulated_seconds": [
+            64.0,
+            64.0
+          ],
+          "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+          "rust_digests": [
+            "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+            "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+          ]
+        },
+        {
+          "reference": false,
+          "seconds": 13.907699929000955,
+          "simulated_seconds": [
+            64.0,
+            64.0
+          ],
+          "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+          "rust_digests": [
+            "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+            "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+          ]
+        },
+        {
+          "reference": false,
+          "seconds": 14.017170336999698,
+          "simulated_seconds": [
+            64.0,
+            64.0
+          ],
+          "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+          "rust_digests": [
+            "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+            "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+          ]
+        },
+        {
+          "reference": true,
+          "seconds": 15.283317221001198,
+          "simulated_seconds": [
+            64.0,
+            64.0
+          ],
+          "digest": "9124d6b8a802166d5fd82fe3e4831aa1b1322af244529992e622cadbdfd3b202",
+          "rust_digests": [
+            "4d5d6cb6c0dff0736794ac6d19d7a006c32e09a69656dfa2b77826d9d3aad630",
+            "76a1771d4a411528b24abd21244a52d97f2841209e0d93c001ce17418e8ee011"
+          ]
+        }
+      ],
+      "median_seconds": {
+        "True": 15.30518672550079,
+        "False": 13.962435133000326
+      },
+      "ppo_included": false,
+      "scope": "Old/new/new/old; both paths use current buffers/map and same host wrapper. Reference replaces terrain limiter and contact solver by original exhaustive-sampling kernels; initialization/warmup excluded, navigation precomputation reused within process."
+    },
+    "sources": {
+      "sources": {
+        "config": {
+          "seed": 42,
+          "team": "red",
+          "slot": 7,
+          "map": "rmuc2027",
+          "duration": 420,
+          "episode_seconds": 420,
+          "rl_seconds": 0.5,
+          "grid_m": 0.25,
+          "recover_enter": 0.25,
+          "recover_exit": 0.8,
+          "friendly": "examples/claude_opus55_xhigh_2027_squad",
+          "opponent": "examples/claude_opus55_xhigh_2027_hold",
+          "controllers": {
+            "red:7": {
+              "kind": "learning"
+            }
+          },
+          "rewards": {
+            "control": 0.01,
+            "outcome": 10.0,
+            "capture_seconds": 0.001,
+            "death": -0.1
+          },
+          "ppo": {
+            "n_steps": 64,
+            "batch_size": 64,
+            "n_epochs": 4,
+            "learning_rate": 0.0003,
+            "gamma": 0.995,
+            "gae_lambda": 0.95,
+            "ent_coef": 0.01
+          },
+          "sim_backend": "warp_kinematic",
+          "sim_device": "cuda:0",
+          "policy_timeout_s": 5.0,
+          "learning_control_hz": 2,
+          "drones_enabled": false,
+          "navigation_mode": "legacy",
+          "timed_assembly": true,
+          "github_backup_repo": "a3203space/rmuc2027",
+          "fixed_policy_hz": 10,
+          "training_summary": true,
+          "action_trace": false,
+          "navigation_precompute": null,
+          "github_backup_seconds": 300.0
+        },
+        "sources": {
+          "friendly": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "opponent": {
+            "version": "90c6cba4ea0ca924",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "team",
+              "robot": null,
+              "entries": {
+                "team": "strategy.py"
+              },
+              "hashes": {
+                "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+              },
+              "team_lineup": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2771
+              },
+              "version": "90c6cba4ea0ca924"
+            },
+            "hashes": {
+              "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+            }
+          }
+        },
+        "sdk_hash": "e912f7f89f4ae91b97746dcb2e65d19975b7fb732b3d02290c22d2aa99e9efc7",
+        "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+        "navigation": {
+          "precompute": true,
+          "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+        },
+        "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+        "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "simulation": {
+          "backend": "warp_kinematic",
+          "device": "cuda:0",
+          "dt": 0.008333333333333333,
+          "experimental": true,
+          "frame_encoder": "orjson-numpy",
+          "pipe_reader": "posix-select",
+          "policy_observation_cache": true,
+          "transport_sha256": "7fb6c826ac10df23af2f01cfc38915571a8505ee6af029df0575ac9a79d7c82f",
+          "files": {
+            "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+            "arena.py": "9e0433366c3af175509e2154bb6b369a6613cef34db9d31a345467fe756a93e3",
+            "motion.py": "cfe10413bd91abe68a937543638db1744581b2e6aff58e8ced2cd155aed58641",
+            "contacts.py": "e89e7ca1bae415f14e4822b5f4d5ae0d846f2dcde21077dfdc82fd537173280d",
+            "terrain.py": "f6809af91dbf2f054816865f6a9e8aa06fbee858bffd471623d122b6ca69e633",
+            "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+            "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+            "protocol.py": "79602c7753c94f99347226c48e66ee945a1581f47a700ff94ed1580a7a4d8c6b",
+            "batching.py": "cf94942d32a34b974b4dc6a7370117cf67a328c6fe9baaa37a47953d2e0e92ba",
+            "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+          },
+          "dependencies": {
+            "warp-lang": "1.19.0",
+            "orjson": "3.13.0"
+          }
+        }
+      },
+      "reference_sha256": {
+        "reference_contacts.py": "0ddf63300b71d02468c36299c2edbd8847eccc9f9383308e8df52ded509fb694",
+        "reference_terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "reference_limit.py": "b802875f0343c88941948e93d7fe61c8d5d55f94d8ae3d1bbe79acdc83a6fb51"
+      }
+    },
+    "reason": "Final implementation keeps the original shared scene structure and rejects unordered four-corner shapes. Prototype timings are not final production acceptance."
+  },
+  "limits": [
+    "A conservative sufficient test only; uncertain borders, steep/high-frequency profiles and float32 quantization retain the original samples.",
+    "No changes to public heights, navigation targets/tactics, controller frequencies, combat or 120Hz clock.",
+    "Short paired sampling is not full-match or PPO acceptance. Current-source full sampling is running separately.",
+    "Remaining physical timing and transfer gaps have not been solved by this query optimization; no formal gradients trained."
+  ]
+}
