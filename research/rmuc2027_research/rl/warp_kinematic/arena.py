@@ -168,7 +168,12 @@ class ArenaMotion:
         self.grounded=wp.empty((6,n),dtype=wp.int32,device=m.device)
         self.legged=array([int(d.get('chassis_type')=='wheel_legged') for d in self.designs],wp.int32)
         self.heading=wp.zeros(n,dtype=float,device=m.device);self.fold=wp.zeros(n,dtype=float,device=m.device)
+        m.heading=self.heading;m.legged=self.legged
+        m.motors.assign(np.asarray([[d.get('velocity_gain_per_s',4.),d.get('motor_force_max_n',95.),
+                                   d.get('tire_friction',1.),d.get('lateral_friction_ratio',1.)]
+                                   for d in self.designs],dtype=np.float32))
         self.requested=wp.zeros(n,dtype=wp.vec2,device=m.device);self.targets=wp.zeros(n,dtype=wp.vec2,device=m.device)
+        m.raw_commands=self.requested
         self.flags=wp.zeros(n,dtype=wp.vec3i,device=m.device);self.last_z=wp.zeros(n,dtype=float,device=m.device)
         self.packed=wp.zeros((6,n,25 if self.carry_state else 9),dtype=float,device=m.device)
         m.resistance.assign(np.asarray([[d.get('rolling_resistance',0),d.get('drag_area_m2',0)] for d in self.designs],dtype=np.float32))

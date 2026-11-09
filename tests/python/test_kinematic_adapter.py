@@ -15,6 +15,16 @@ def request(model=2732,fold=0.,roof=False):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_folded_small_drive_does_not_become_an_active_brake(self):
+        speeds=[]
+        for moving in (True,False):
+            adapter=ArenaMotion();command=request(fold=1.)
+            command['robots'][0].update(transform=True,velocity=[1.,0.,0.],
+                move=[.015 if moving else 0.,0.],coast=moving)
+            try:speeds.append(adapter.step(command)['velocities'][-1][0][0])
+            finally:adapter.close()
+        self.assertGreater(speeds[0],speeds[1]+.05)
+
     def test_coast_flag_reaches_motion_and_releasing_it_brakes(self):
         adapter=ArenaMotion();command=request()
         robot=command['robots'][0];robot.update(coast=True,velocity=[2.,0.,0.])
@@ -28,7 +38,7 @@ class AdapterTests(unittest.TestCase):
         finally:adapter.close()
 
     def test_fully_folded_drive_uses_original_half_speed_rule(self):
-        speeds=[]
+        speeds=[];commands=[]
         for folded in (False,True):
             adapter=ArenaMotion();command=request(fold=float(folded))
             robot=command['robots'][0];robot.update(move=[.2,0.],transform=folded)
@@ -38,9 +48,14 @@ class AdapterTests(unittest.TestCase):
                     robot.update(pos=frame['positions'][-1][0],velocity=frame['velocities'][-1][0],
                         heading=frame['headings'][-1][0],folded=frame['folded'][-1][0])
                 speeds.append(robot['velocity'][0])
+                commands.append(adapter.motion.commands.numpy()[0,0])
             finally:adapter.close()
         self.assertGreater(speeds[0],.7)
-        self.assertAlmostEqual(speeds[1],speeds[0]*.5,places=6)
+        # The request halves; additive rolling resistance means the actual
+        # equilibrium velocity need not halve exactly.
+        self.assertAlmostEqual(commands[1],commands[0]*.5,places=6)
+        self.assertGreater(speeds[1],0.)
+        self.assertLess(speeds[1],speeds[0])
 
     def test_real_engine_gpu_frame_updates_position_and_fold(self):
         adapter=ArenaMotion()

@@ -45,11 +45,12 @@ def segment_box(p: wp.vec2, d: wp.vec2, lo: wp.vec2, hi: wp.vec2):
 
 @wp.kernel
 def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
-              commands: wp.array(dtype=wp.vec2), limits: wp.array(dtype=wp.vec3),
+              commands: wp.array(dtype=wp.vec2), raw_commands: wp.array(dtype=wp.vec2), limits: wp.array(dtype=wp.vec3),
               enabled: wp.array(dtype=wp.int32), boxes: wp.array(dtype=wp.vec4),
               angles: wp.array(dtype=float), wall_z: wp.array(dtype=wp.vec2),
               body_z: wp.array(dtype=wp.vec2), masks: wp.array2d(dtype=wp.int32),
               drive: wp.array(dtype=wp.vec3), resistance: wp.array(dtype=wp.vec2), coast: wp.array(dtype=wp.int32),
+              motors: wp.array(dtype=wp.vec4), heading: wp.array(dtype=float), legged: wp.array(dtype=wp.int32),
               flight: wp.array(dtype=wp.int32), goal: wp.array(dtype=wp.vec2), dt: float, output: wp.array(dtype=wp.vec2)):
     i = wp.tid()
     p = pos[i]
@@ -63,7 +64,31 @@ def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
         # efficiency; passive resistance still acts when commanded power is zero.
         old_speed=wp.length(vel[i]);spec=drive[i]
         loss=(resistance[i][0]*spec[0]*9.81+0.6125*resistance[i][1]*old_speed*old_speed)*old_speed
-        if coast[i]!=0 and wp.length(command)<.01:
+        motor=motors[i]
+        if motor[0]>0.0:
+            forward=wp.vec2(wp.cos(heading[i]),wp.sin(heading[i]))
+            side=wp.vec2(-forward[1],forward[0])
+            force=change*spec[0]*motor[0]
+            if legged[i]!=0:force=forward*wp.dot(force,forward)
+            magnitude=wp.length(force)
+            lateral=wp.abs(wp.dot(force,side))/wp.max(magnitude,1.e-9)
+            normal_load=spec[0]*9.81
+            grip=normal_load*motor[2]*(1.0-lateral*(1.0-motor[3]))
+            available=wp.min(motor[1],wp.min(grip,wp.max(0.0,spec[2]-3.0)*spec[1]/wp.max(old_speed,.55)))
+            force=force*wp.min(1.0,available/wp.max(magnitude,1.e-9))
+            if wp.length(raw_commands[i])<.01:
+                force=wp.vec2(0.0,0.0)
+                if coast[i]==0:
+                    force=-vel[i]*spec[0]*6.0
+                    brake_limit=wp.min(limits[i][1]*spec[0],normal_load*motor[2])
+                    force=force*wp.min(1.0,brake_limit/wp.max(wp.length(force),1.e-9))
+            if legged[i]!=0:
+                slip=wp.dot(vel[i],side)*spec[0]*8.0
+                force=force-side*wp.clamp(slip,-normal_load*motor[2],normal_load*motor[2])
+            if old_speed>.01:
+                force=force-vel[i]*(resistance[i][0]*normal_load+.6125*resistance[i][1]*old_speed*old_speed)/old_speed
+            v=vel[i]+force*(dt/spec[0])
+        elif coast[i]!=0 and wp.length(command)<.01:
             # Powered free wheels exert no velocity-controller braking force.
             # Rolling/aerodynamic resistance still dissipates momentum.
             drag=resistance[i][0]*9.81+0.6125*resistance[i][1]*old_speed*old_speed/spec[0]
@@ -135,6 +160,7 @@ class MotionBatch:
         self.pos = wp.array(p,dtype=wp.vec2,device=self.device)
         self.vel = wp.zeros(self.count,dtype=wp.vec2,device=self.device)
         self.commands = wp.zeros(self.count,dtype=wp.vec2,device=self.device)
+        self.raw_commands = self.commands
         self.enabled = wp.ones(self.count,dtype=wp.int32,device=self.device)
         self.limits = wp.array(values,dtype=wp.vec3,device=self.device)
         self.boxes = wp.array(walls,dtype=wp.vec4,device=self.device)
@@ -142,6 +168,9 @@ class MotionBatch:
         self.drive = wp.array([[1.,1.,1.e9]]*self.count,dtype=wp.vec3,device=self.device)
         self.resistance = wp.zeros(self.count,dtype=wp.vec2,device=self.device)
         self.coast = wp.zeros(self.count,dtype=wp.int32,device=self.device)
+        self.motors = wp.zeros(self.count,dtype=wp.vec4,device=self.device)
+        self.heading = wp.zeros(self.count,dtype=float,device=self.device)
+        self.legged = wp.zeros(self.count,dtype=wp.int32,device=self.device)
         self.angles = wp.zeros(len(walls),dtype=float,device=self.device)
         self.wall_z = wp.array([[-1.e6,1.e6]]*len(walls),dtype=wp.vec2,device=self.device)
         self.body_z = wp.array([[0.,1.]]*self.count,dtype=wp.vec2,device=self.device)
@@ -167,8 +196,9 @@ class MotionBatch:
             launch(update_body_height,self.count,inputs=[self.heights,self.height_offsets,self.body_z],device=self.device)
         from .traversal import jump_envelope
         launch(jump_envelope,self.count,inputs=[self.flight,self.flight_z,self.body_z],device=self.device)
-        launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.limits,
-                  self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,self.wall_masks,self.drive,self.resistance,self.coast,self.flight,self.flight_goal,float(dt),self.output],device=self.device)
+        launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.raw_commands,self.limits,
+                  self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,self.wall_masks,self.drive,self.resistance,self.coast,
+                  self.motors,self.heading,self.legged,self.flight,self.flight_goal,float(dt),self.output],device=self.device)
 
         if self.terrain is not None:
             from .terrain import limit_terrain

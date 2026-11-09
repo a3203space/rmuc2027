@@ -73,7 +73,7 @@ def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
                 if tick%2==0:
                     stream.write(json.dumps(dict(time=frame['time'],robots=[dict(
                         {k:r.get(k) for k in ('id','x','y','z','vx','vy','vz','grounded','transform_progress','upright','tipped')},
-                        public_ground_z=sdk.terrain_height(arena,r['x'],r['y'])) for r in controlled.values()],state=states),allow_nan=False)+'\n')
+                        public_ground_z=sdk.terrain_height(arena,r['x'],r['y'])) for r in controlled.values()],state=states,held_commands=commands),allow_nan=False)+'\n')
                 if all(m['hold_complete'] for m in metrics.values()) or tick==round(horizon/DT):break
                 if tick%interval==0:
                     commands={}

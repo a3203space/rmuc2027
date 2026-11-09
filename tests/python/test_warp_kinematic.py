@@ -6,6 +6,28 @@ from rmuc2027_research.rl.warp_kinematic.terrain import Terrain
 
 
 class CudaMotionTests(unittest.TestCase):
+    def test_motor_force_caps_acceleration_independently_of_brake_force(self):
+        sim=MotionBatch([[0.,0.]],[[10.,8.,.2]],[])
+        sim.drive.assign(np.asarray([[20.,.75,1.e6]],dtype=np.float32))
+        sim.motors.assign(np.asarray([[4.,10.,1.,1.]],dtype=np.float32))
+        for _ in range(120):sim.step([[1.,0.]],dt=1/120)
+        self.assertAlmostEqual(sim.state()[1][0,0],.5,places=5)
+
+    def test_force_model_limits_power_and_directional_tyre_grip(self):
+        sim=MotionBatch([[0.,0.]],[[10.,8.,.2]],[])
+        sim.drive.assign(np.asarray([[20.,.75,23.]],dtype=np.float32))
+        sim.motors.assign(np.asarray([[4.,170.,1.,1.]],dtype=np.float32))
+        sim.vel.assign(np.asarray([[2.,0.]],dtype=np.float32))
+        sim.step([[1.,0.]],dt=1/120)
+        self.assertAlmostEqual(sim.state()[1][0,0],2.+(20.*.75/2.)/20./120.,places=6)
+        grip=MotionBatch([[0.,0.]]*2,[[10.,8.,.2]]*2,[],worlds=[0,1])
+        grip.drive.assign(np.asarray([[20.,.75,1.e6]]*2,dtype=np.float32))
+        grip.motors.assign(np.asarray([[100.,1.e6,.1,.5]]*2,dtype=np.float32))
+        grip.step([[1.,0.],[0.,1.]],dt=1/120)
+        velocity=grip.state()[1]
+        self.assertAlmostEqual(velocity[0,0],.1*9.81/120.,places=6)
+        self.assertAlmostEqual(velocity[1,1],.05*9.81/120.,places=6)
+
     def test_powered_coast_preserves_momentum_with_only_passive_drag(self):
         sim=MotionBatch([[0.,0.]]*2,[[3.,4.,.2]]*2,[],worlds=[0,1])
         sim.vel.assign(np.asarray([[2.,0.]]*2,dtype=np.float32))
