@@ -28,11 +28,13 @@ def surface_height(scene: TerrainData, p: wp.vec2):
             inside=int(0)
             on_edge=int(0)
             edge_distance=float(1.e10)
+            measure_edge_distance=scene.kinds[k]!=1 and scene.kinds[k]!=2 and scene.edge_ramps[k]>0.0
             for j in range(span[1]):
                 a=scene.vertices[span[0]+j]
                 c=scene.vertices[span[0]+(j+1)%span[1]]
                 cross=(p[0]-a[0])*(c[1]-a[1])-(p[1]-a[1])*(c[0]-a[0])
-                edge_distance=wp.min(edge_distance,wp.abs(cross)/wp.max(1.e-8,wp.length(c-a)))
+                if measure_edge_distance:
+                    edge_distance=wp.min(edge_distance,wp.abs(cross)/wp.max(1.e-8,wp.length(c-a)))
                 if wp.abs(cross)<1.e-7 and p[0]>=wp.min(a[0],c[0]) and p[0]<=wp.max(a[0],c[0]) and p[1]>=wp.min(a[1],c[1]) and p[1]<=wp.max(a[1],c[1]):
                     on_edge=1
                 if (a[1]>p[1]) != (c[1]>p[1]):
