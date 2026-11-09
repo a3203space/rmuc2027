@@ -1,54 +1,52 @@
 {
-  "elapsed_wall_seconds": 428.394135,
-  "process_exists": true,
+  "elapsed_wall_seconds": 1092.1392,
+  "process_exists": false,
   "run": "/home/lx/rmuc2027/data/research/sentry-kinematic-30min-16env-20261109-211805",
-  "update_rounds": 12,
+  "update_rounds": 28,
   "progress": {
     "kind": "training-progress",
-    "total_samples": 12640,
-    "elapsed_seconds": 412.9324811759998,
-    "samples_per_second": 30.61033117085451,
-    "gradient_epochs": 48,
-    "rollout_samples": 352,
+    "total_samples": 29392,
+    "elapsed_seconds": 946.7611568259999,
+    "samples_per_second": 31.044788633424886,
+    "gradient_epochs": 112,
+    "rollout_samples": 720,
     "rollout_capacity": 1024
   },
   "latest_update": {
     "kind": "ppo-update",
-    "total_samples": 12288,
-    "gradient_epochs": 48,
-    "optimization_seconds": 0.15771166399827052,
+    "total_samples": 28672,
+    "gradient_epochs": 112,
+    "optimization_seconds": 0.16767787500066333,
     "learning_rate": 0.0003,
     "behavior": {
       "samples": 1024,
-      "moving_commands": 905,
+      "moving_commands": 989,
       "modes": {
-        "policy": 910,
-        "dead": 105,
-        "recover": 9
+        "policy": 1024
       }
     },
     "losses": {
       "train/learning_rate": 0.0003,
-      "train/entropy_loss": -2.856759436428547,
-      "train/policy_gradient_loss": -0.00583956805348862,
-      "train/value_loss": 0.003001865627084044,
-      "train/approx_kl": 0.005570113193243742,
-      "train/clip_fraction": 0.0361328125,
-      "train/loss": -0.030875660479068756,
-      "train/explained_variance": -1.1068766117095947,
-      "train/std": 1.010185718536377,
-      "train/n_updates": 48.0,
+      "train/entropy_loss": -2.8748974800109863,
+      "train/policy_gradient_loss": -0.003948786892578937,
+      "train/value_loss": 0.10770747065544128,
+      "train/approx_kl": 0.005630939267575741,
+      "train/clip_fraction": 0.059814453125,
+      "train/loss": 0.01878318190574646,
+      "train/explained_variance": 0.13052940368652344,
+      "train/std": 1.0182867050170898,
+      "train/n_updates": 112.0,
       "train/clip_range": 0.2
     }
   },
-  "recent_kl_mean": 0.00422023655846715,
-  "recent_clip_mean": 0.031103515625,
-  "complete_episodes": 0,
-  "wins": 0,
-  "losses": 0,
+  "recent_kl_mean": 0.004995539737865329,
+  "recent_clip_mean": 0.03974609375,
+  "complete_episodes": 32,
+  "wins": 6,
+  "losses": 26,
   "draws": 0,
-  "episode_mean_capture_seconds": null,
-  "episode_mean_deaths": null,
+  "episode_mean_capture_seconds": 11.400000000000007,
+  "episode_mean_deaths": 0.59375,
   "backup_statuses": [
     {
       "status": "uploaded",
@@ -56,7 +54,45 @@
       "ref": "refs/heads/backup/rl-checkpoints/rl-run-9c41286f32670af2",
       "detail": "",
       "commit": "6a79ee9f6c485d71a49d428f949bd7abd87fde46"
+    },
+    {
+      "status": "uploaded",
+      "transport": "ssh-git",
+      "ref": "refs/heads/backup/rl-checkpoints/rl-run-9c41286f32670af2",
+      "detail": "",
+      "commit": "280237e7f207838b1f86a5d0e38100f40cf6c7b6"
+    },
+    {
+      "status": "uploaded",
+      "transport": "ssh-git",
+      "ref": "refs/heads/backup/rl-checkpoints/rl-run-9c41286f32670af2",
+      "detail": "",
+      "commit": "bbb3d1841542cc2b8dba8c2c16bb138c96ce56d3"
+    },
+    {
+      "status": "uploaded",
+      "transport": "ssh-git",
+      "ref": "refs/heads/backup/rl-checkpoints/rl-run-9c41286f32670af2",
+      "detail": "",
+      "commit": "1ad6bc18a97ddde37ef43105129ec6f8be4168b1"
     }
   ],
-  "final_report": null
+  "final_report": null,
+  "status": "paused_by_user",
+  "pause_report": {
+    "status": "paused_by_user",
+    "checkpoint": "/home/lx/rmuc2027/data/research/sentry-kinematic-30min-16env-20261109-211805/interrupted.zip",
+    "checkpoint_sha256": "eae0d82accc65d3e8d6a35302f6833b54697b39a3fe33657a062a14d8a030ea3",
+    "total_samples": 29632,
+    "completed_rollout_rounds": 28,
+    "gradient_epochs": 112,
+    "optimizer_state_restored": true,
+    "weights_finite": true,
+    "learning_rate": 0.0003,
+    "elapsed_before_pause_seconds": 955.601396,
+    "requested_wall_seconds": 1800,
+    "remaining_wall_seconds": 844.398604,
+    "pause_requested_at": "2026-11-09T21:34:01.071249+08:00"
+  },
+  "elapsed_training_seconds": 955.601396
 }
