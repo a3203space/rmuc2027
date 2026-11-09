@@ -217,6 +217,12 @@ class ArenaMotion:
         self.angles=wp.empty((6,n),dtype=float,device=m.device);self.folds=wp.empty((6,n),dtype=float,device=m.device)
 
     def step(self,request):
+        return self.step_frame(request).response(request['sequence'])
+
+    def step_encoded(self,request):
+        return self.step_frame(request).encoded_response(request['sequence'])
+
+    def step_frame(self,request):
         if self.closed:raise RuntimeError('Adapter closed')
         if request.get('op')!='kinematic_frame' or request.get('version')!=1 or request.get('sequence')!=self.next_sequence or request.get('substeps')!=6 or abs(request.get('dt',0)-DT)>1e-12:
             raise ValueError('Invalid motion request identity')
@@ -271,10 +277,9 @@ class ArenaMotion:
         else:
             frame=MotionFrame(self.ids,self.positions.numpy(),self.velocities.numpy(),self.angles.numpy(),self.folds.numpy(),
                               self.grounded.numpy().astype(bool))
-        reply=frame.response(request['sequence'])
         self.expected_positions=frame.positions[-1].copy()
         self.next_sequence+=1
-        return reply
+        return frame
 
     def _launch(self,*args,**kwargs):
         if not self.reuse_commands:
@@ -290,7 +295,9 @@ class ArenaMotion:
         self.launch_index=0
         from .terrain import sample_heights
         for index in range(6):
-            self._launch(sample_heights,m.count,inputs=[self.terrain.data,m.pos,m.heights],device=m.device)
+            # Refresh authority/cache-slot changes once. Each movement stage
+            # already samples its final resolved positions for the next stage.
+            if index==0:self._launch(sample_heights,m.count,inputs=[self.terrain.data,m.pos,m.heights],device=m.device)
             self._launch(controls,m.count,inputs=[m.pos,m.heights,self.heading,self.fold,self.requested,self.targets,self.flags,
                       self.params,self.legged,m.enabled,m.limits,m.boxes,m.angles,m.wall_z,m.wall_masks,
                       self.stance,self.support,self.ride,self.leg_goal,self.leg_command,self.base,m.flight,m.height_offsets,m.commands],device=m.device)
@@ -299,7 +306,9 @@ class ArenaMotion:
                 self.capable,self.jump_command,self.gates,self.destinations,m.boxes,m.angles,m.wall_z,m.wall_masks,m.worlds,
                 self.jump_start,self.jump_end,self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,
                 m.flight,m.flight_goal,m.flight_z,self.fall_speed,DT],device=m.device)
-            m._advance(DT,launch=self._launch)
+            # Six (even) substeps return these buffers to their original
+            # addresses before the next public frame or graph launch.
+            m._advance(DT,launch=self._launch,heights_ready=True,ping_pong=True)
             self._launch(finish_jump,m.count,inputs=[m.pos,m.vel,m.flight,m.flight_z,m.heights,self.base,self.jump_end,
                 self.jump_elapsed,self.jump_duration,self.jump_cooldown,self.jump_status,m.flight_goal,self.fall_speed],device=m.device)
             self._launch(record,m.count,inputs=[m.pos,m.vel,m.heights,m.height_offsets,self.heading,self.fold,self.last_z,

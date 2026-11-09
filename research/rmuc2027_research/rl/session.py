@@ -133,12 +133,18 @@ def provenance(config):
             'dependencies': {n: version(n) for n in ('mujoco', 'mujoco-warp', 'warp-lang')}}
     elif config.get('sim_backend') == 'warp_kinematic':
         from importlib.metadata import version
+        from .warp_kinematic.protocol import FRAME_ENCODER
+        from rmuc2027_core import engine as transport
         folder=Path(__file__).with_name('warp_kinematic')
         result['simulation']={'backend':'warp_kinematic','device':config.get('sim_device','cuda:0'),
             'dt':1/120,'experimental':True,
+            'frame_encoder':FRAME_ENCODER,
+            'pipe_reader':'posix-select' if transport._DIRECT_PIPE_READER else 'threaded',
+            'transport_sha256':hashlib.sha256((ROOT/'packages/core/rmuc2027_core/engine.py').read_bytes()).hexdigest(),
             'files':{name:hashlib.sha256((folder/name).read_bytes()).hexdigest()
                      for name in ('__init__.py','arena.py','motion.py','terrain.py','traversal.py','pose.py','protocol.py','batching.py','vector.py')},
             'dependencies':{'warp-lang':version('warp-lang')}}
+        if FRAME_ENCODER=='orjson-numpy':result['simulation']['dependencies']['orjson']=version('orjson')
     else:
         result['simulation'] = {'backend': 'rapier', 'dt': 1/120}
     return result

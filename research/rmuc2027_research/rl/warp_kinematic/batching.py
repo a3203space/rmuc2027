@@ -41,6 +41,12 @@ class BatchClient:
         self.scene_signature=None;self.design_signature=None
 
     def step(self,request):
+        return self.step_frame(request).response(request['sequence'])
+
+    def step_encoded(self,request):
+        return self.step_frame(request).encoded_response(request['sequence'])
+
+    def step_frame(self,request):
         if self.closed:raise RuntimeError('Adapter closed')
         if (request.get('op')!='kinematic_frame' or request.get('version')!=1 or
             request.get('sequence')!=self.next_sequence or request.get('substeps')!=6 or abs(request.get('dt',0)-DT)>1e-12):
@@ -70,7 +76,7 @@ class WorldBatch:
         self.engine=ArenaMotion(device,carry_state=True)
         self.upload=None;self.restore_command=None
 
-    def step_many(self,items):
+    def step_many(self,items,frames=False):
         engine=self.engine;robots=[];slices=[]
         for world,(client,request) in enumerate(items):
             start=len(robots)
@@ -119,15 +125,13 @@ class WorldBatch:
         # Previous use of this cache slot may have contained different clients.
         # Per-client authority correction was applied above instead.
         engine.expected_positions=None
-        response=engine.step(combined)
-        positions=np.asarray(response['positions']);velocities=np.asarray(response['velocities'])
-        headings=np.asarray(response['headings']);folded=np.asarray(response['folded']);grounded=np.asarray(response['grounded'])
+        response=engine.step_frame(combined)
         results=[]
         for (client,request),span in zip(items,slices):
-            frame=MotionFrame(client.ids,positions[:,span],velocities[:,span],headings[:,span],folded[:,span],grounded[:,span])
+            frame=MotionFrame(client.ids,response.positions[:,span],response.velocities[:,span],response.headings[:,span],response.folded[:,span],response.grounded[:,span])
             client.state=engine.last_state[span].copy()
             client.expected_positions=frame.positions[-1].copy()
-            results.append(frame.response(request['sequence']))
+            results.append(frame if frames else frame.response(request['sequence']))
         return results
 
     def close(self):
@@ -195,7 +199,7 @@ class PhysicsService:
                         self.engines[key]=WorldBatch(device)
                     self.engines.move_to_end(key)
                     started=time.perf_counter()
-                    results=self.engines[key].step_many([(c,r) for c,r,_ in items])
+                    results=self.engines[key].step_many([(c,r) for c,r,_ in items],frames=True)
                     self.integration_seconds+=time.perf_counter()-started
                     self.batches+=1;self.world_steps+=len(items);self.max_batch=max(self.max_batch,len(items))
                     self.batch_histogram[len(items)]+=1

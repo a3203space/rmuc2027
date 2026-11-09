@@ -5,8 +5,38 @@ import json
 import os
 from pathlib import Path
 import queue
+import select
 import subprocess
 import threading
+import time
+
+_DIRECT_PIPE_READER=os.name=='posix'
+
+
+class _PosixLineReader:
+    """Bounded, deadline-aware pipe reads without a forwarding thread."""
+    def __init__(self, stream):
+        self.fd=stream.fileno();self.pending=bytearray()
+        os.set_blocking(self.fd,False)
+
+    def read_line(self,timeout=10.,maximum=4*1024*1024):
+        deadline=time.monotonic()+timeout
+        while True:
+            newline=self.pending.find(b'\n')
+            if newline>=0:
+                if newline+1>maximum:raise RuntimeError('Rust engine response exceeds size limit')
+                line=bytes(self.pending[:newline+1]);del self.pending[:newline+1]
+                return line
+            if len(self.pending)>=maximum:raise RuntimeError('Rust engine response exceeds size limit')
+            remaining=deadline-time.monotonic()
+            if remaining<=0. or not select.select([self.fd],[],[],remaining)[0]:
+                raise RuntimeError('Rust engine response timed out')
+            try:chunk=os.read(self.fd,min(65536,maximum-len(self.pending)))
+            except BlockingIOError:continue
+            if not chunk:
+                line=bytes(self.pending);self.pending.clear()
+                return line
+            self.pending.extend(chunk)
 
 try:
     import orjson as _response_json
@@ -69,8 +99,11 @@ class Match:
         self._responses = queue.Queue()
         # The reader must not retain Match itself: callers also use temporary
         # Match().observation(...) instances whose destructor closes the engine.
-        self._reader = threading.Thread(target=self._read_output, args=(self.process.stdout, self._responses), daemon=True)
-        self._reader.start()
+        self._reader = None
+        self._direct_reader=_PosixLineReader(self.process.stdout) if _DIRECT_PIPE_READER else None
+        if self._direct_reader is None:
+            self._reader=threading.Thread(target=self._read_output,args=(self.process.stdout,self._responses),daemon=True)
+            self._reader.start()
         try:
             self._frame = self._request({"op": "init", "seed": int(seed), "duration": duration, "map": map_name, "lineups": lineups, "battle_settings": battle_settings})
             self._static = {key: self._frame[key] for key in STATIC_FRAME_KEYS if key in self._frame}
@@ -99,8 +132,15 @@ class Match:
                 while value.get('op') in ('external_physics', 'kinematic_frame'):
                     if self.external_physics is None:
                         raise RuntimeError('Unexpected external physics request')
-                    result = self.external_physics.step(value)
-                    self.process.stdin.write(json.dumps(result, allow_nan=False,separators=(",", ":")).encode()+b'\n')
+                    encoded=getattr(self.external_physics,'step_encoded',None)
+                    if value.get('op')=='kinematic_frame' and callable(encoded):
+                        payload=encoded(value)
+                        if not isinstance(payload,bytes) or not payload.endswith(b'\n') or payload.count(b'\n')!=1:
+                            raise ValueError('Encoded physics response must be one newline-terminated JSON frame')
+                    else:
+                        result = self.external_physics.step(value)
+                        payload=json.dumps(result,allow_nan=False,separators=(",", ":")).encode()+b'\n'
+                    self.process.stdin.write(payload)
                     self.process.stdin.flush()
                     line = self._read_line()
                     value = _response_json.loads(line)
@@ -125,10 +165,13 @@ class Match:
             responses.put(b"")
 
     def _read_line(self):
-        try:
-            line = self._responses.get(timeout=10)
-        except queue.Empty:
-            raise RuntimeError("Rust engine response timed out") from None
+        if self._direct_reader is not None:
+            line=self._direct_reader.read_line()
+        else:
+            try:
+                line = self._responses.get(timeout=10)
+            except queue.Empty:
+                raise RuntimeError("Rust engine response timed out") from None
         if not line:
             raise RuntimeError("Rust engine exited unexpectedly")
         return line
@@ -167,7 +210,11 @@ class Match:
         with self.lock:
             header = self._request({"op": "observations", "requests": [{"team": team, "slots": slots} for team, slots in viewers]})
             # The engine builds every observation before replying, so the lines follow at once.
-            return header["controlled_ids"], [self._read_line() for _ in viewers]
+            try:
+                return header["controlled_ids"], [self._read_line() for _ in viewers]
+            except BaseException:
+                self._broken=True
+                raise
 
     def snapshot(self):
         return self._request({"op": "snapshot"}) if self.training_summary else copy.deepcopy(self._frame)
@@ -192,6 +239,10 @@ class Match:
             return
         self.closed = True
         try:
+            if self._broken:
+                # Do this before closing buffered stdin: its pending flush
+                # could otherwise block behind an unread response tail.
+                self.process.kill()
             try:
                 self.process.stdin.close()
             except (OSError, ValueError):
@@ -202,7 +253,7 @@ class Match:
                 self.process.kill()
                 self.process.wait()
         finally:
-            self._reader.join(timeout=2)
+            if self._reader is not None:self._reader.join(timeout=2)
             self.process.stdout.close()
 
     def __enter__(self):

@@ -51,9 +51,11 @@ def integrate(pos: wp.array(dtype=wp.vec2), vel: wp.array(dtype=wp.vec2),
               body_z: wp.array(dtype=wp.vec2), masks: wp.array2d(dtype=wp.int32),
               drive: wp.array(dtype=wp.vec3), resistance: wp.array(dtype=wp.vec2), coast: wp.array(dtype=wp.int32),
               motors: wp.array(dtype=wp.vec4), heading: wp.array(dtype=float), legged: wp.array(dtype=wp.int32),
-              flight: wp.array(dtype=wp.int32), goal: wp.array(dtype=wp.vec2), dt: float, output: wp.array(dtype=wp.vec2)):
+              flight: wp.array(dtype=wp.int32), goal: wp.array(dtype=wp.vec2), dt: float, output: wp.array(dtype=wp.vec2),
+              previous: wp.array(dtype=wp.vec2), store_previous: int):
     i = wp.tid()
     p = pos[i]
+    if store_previous!=0:previous[i]=p
     v = wp.vec2(0.0, 0.0)
     if enabled[i] != 0:
         command = commands[i]
@@ -188,17 +190,19 @@ class MotionBatch:
         self.commands.assign(values)
         self._advance(dt)
 
-    def _advance(self, dt, launch=wp.launch):
-        wp.copy(self.previous,self.pos)
+    def _advance(self, dt, launch=wp.launch, heights_ready=False, ping_pong=False):
+        if not ping_pong:wp.copy(self.previous,self.pos)
         if self.terrain is not None:
             from .terrain import sample_heights, update_body_height
-            launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
+            if not heights_ready:
+                launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
             launch(update_body_height,self.count,inputs=[self.heights,self.height_offsets,self.body_z],device=self.device)
         from .traversal import jump_envelope
         launch(jump_envelope,self.count,inputs=[self.flight,self.flight_z,self.body_z],device=self.device)
         launch(integrate,self.count,inputs=[self.pos,self.vel,self.commands,self.raw_commands,self.limits,
                   self.enabled,self.boxes,self.angles,self.wall_z,self.body_z,self.wall_masks,self.drive,self.resistance,self.coast,
-                  self.motors,self.heading,self.legged,self.flight,self.flight_goal,float(dt),self.output],device=self.device)
+                  self.motors,self.heading,self.legged,self.flight,self.flight_goal,float(dt),self.output,
+                  self.previous,int(ping_pong)],device=self.device)
 
         if self.terrain is not None:
             from .terrain import limit_terrain
@@ -208,8 +212,12 @@ class MotionBatch:
                   self.worlds,self.body_z,self.enabled,self.flight,self.boxes,self.angles,self.wall_z,self.wall_masks,
                   self.terrain.data if self.terrain is not None else self.flat_scene,int(self.terrain is not None),
                   self.step_limits,self.resolved,self.resolved_velocity],device=self.device)
-        wp.copy(self.pos,self.resolved)
-        wp.copy(self.vel,self.resolved_velocity)
+        if ping_pong:
+            self.pos,self.resolved=self.resolved,self.pos
+            self.vel,self.resolved_velocity=self.resolved_velocity,self.vel
+        else:
+            wp.copy(self.pos,self.resolved)
+            wp.copy(self.vel,self.resolved_velocity)
         if self.terrain is not None:
             from .terrain import sample_heights
             launch(sample_heights,self.count,inputs=[self.terrain.data,self.pos,self.heights],device=self.device)
