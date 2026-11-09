@@ -1,0 +1,62 @@
+{
+  "elapsed_wall_seconds": 428.394135,
+  "process_exists": true,
+  "run": "/home/lx/rmuc2027/data/research/sentry-kinematic-30min-16env-20261109-211805",
+  "update_rounds": 12,
+  "progress": {
+    "kind": "training-progress",
+    "total_samples": 12640,
+    "elapsed_seconds": 412.9324811759998,
+    "samples_per_second": 30.61033117085451,
+    "gradient_epochs": 48,
+    "rollout_samples": 352,
+    "rollout_capacity": 1024
+  },
+  "latest_update": {
+    "kind": "ppo-update",
+    "total_samples": 12288,
+    "gradient_epochs": 48,
+    "optimization_seconds": 0.15771166399827052,
+    "learning_rate": 0.0003,
+    "behavior": {
+      "samples": 1024,
+      "moving_commands": 905,
+      "modes": {
+        "policy": 910,
+        "dead": 105,
+        "recover": 9
+      }
+    },
+    "losses": {
+      "train/learning_rate": 0.0003,
+      "train/entropy_loss": -2.856759436428547,
+      "train/policy_gradient_loss": -0.00583956805348862,
+      "train/value_loss": 0.003001865627084044,
+      "train/approx_kl": 0.005570113193243742,
+      "train/clip_fraction": 0.0361328125,
+      "train/loss": -0.030875660479068756,
+      "train/explained_variance": -1.1068766117095947,
+      "train/std": 1.010185718536377,
+      "train/n_updates": 48.0,
+      "train/clip_range": 0.2
+    }
+  },
+  "recent_kl_mean": 0.00422023655846715,
+  "recent_clip_mean": 0.031103515625,
+  "complete_episodes": 0,
+  "wins": 0,
+  "losses": 0,
+  "draws": 0,
+  "episode_mean_capture_seconds": null,
+  "episode_mean_deaths": null,
+  "backup_statuses": [
+    {
+      "status": "uploaded",
+      "transport": "ssh-git",
+      "ref": "refs/heads/backup/rl-checkpoints/rl-run-9c41286f32670af2",
+      "detail": "",
+      "commit": "6a79ee9f6c485d71a49d428f949bd7abd87fde46"
+    }
+  ],
+  "final_report": null
+}
