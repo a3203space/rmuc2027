@@ -260,7 +260,9 @@ research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.viewer \
   --device cuda:0 --seed 42 --duration 420 --speed 1
 ```
 
-此入口代码明确选择 `physics_backend='mjwarp'`，当前观看的是完整 MJWarp 后端的固定策略对局，没有自动加载 RL 权重。即使给它传入其他后端的配置，也不能据此认为窗口正在显示 `warp_kinematic`。`--speed 1` 是显示节奏目标，计算不够快时不能保证实时。
+此入口明确选择 `physics_backend='mjwarp'`。默认观看固定策略对局；可以用 `--red`、`--blue` 选择其他策略，也可以用 `--rl-model 检查点.zip --rl-team red` 只让红方 7 号哨兵运行冻结 RL，其余机器人仍执行固定策略。RL 本方的其他机器人沿用训练时的队伍，对手可另选。模型会临时导出，窗口关闭后清理；不会启动训练。完整命令见 [研究工具说明](research.md#mjwarp-完整-5v5-哨兵训练场景)。
+
+即使传入其他后端的训练配置，原生窗口仍显示完整 MJWarp，而非 `warp_kinematic`；跨后端观看需要另行判断策略迁移效果。`--speed 1` 是显示节奏目标，计算不够快时不能保证实时。
 
 ### Arena 网页界面
 

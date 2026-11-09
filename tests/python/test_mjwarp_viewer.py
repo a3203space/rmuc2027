@@ -53,6 +53,11 @@ class NativeViewerTests(unittest.TestCase):
         self.assertEqual(scene.geoms[2].label,'BLUE OUTPOST | HP 0/1000 | DEAD')
         self.assertGreater(scene.geoms[0].rgba[0],scene.geoms[0].rgba[2])
         self.assertGreater(scene.geoms[2].rgba[2],scene.geoms[2].rgba[0])
+        view.rl_team='red'
+        view.update_labels(frame)
+        view._draw_labels()
+        self.assertTrue(scene.geoms[0].label.endswith(' | RL'))
+        self.assertNotIn(' | RL',scene.geoms[1].label)
         frame['robots'][0].update(x=3,hp=0,alive=False)
         view.update_labels(frame)
         view._draw_labels()

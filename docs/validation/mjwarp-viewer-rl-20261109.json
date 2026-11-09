@@ -1,0 +1,28 @@
+{
+  "backend": "mjwarp",
+  "device": "cuda:0",
+  "real_gpu_physics": true,
+  "real_checkpoint_export": true,
+  "native_rendering": "mocked; existing renderer unit tests pass",
+  "sides": [
+    "red",
+    "blue"
+  ],
+  "duration_per_side": 1,
+  "seconds": 12.517848077000053,
+  "tests": {
+    "viewer_unit_tests": 8,
+    "passed": true
+  },
+  "current_source_sha256": {
+    "research/rmuc2027_research/rl/mjwarp/viewer.py": "be184b7b0bf8c979d6f5fd089c2f31e7581bd7d11a5b5d3c2d0be80149d77fe2",
+    "tests/python/test_mjwarp_viewer.py": "60aac43e0e1feca9a62dd6dbb55b27fc99acfe125655e4499a5ef8ebeb747b75",
+    "tests/python/test_mjwarp_viewer_strategies.py": "7ad55ae100cb7fb9c072cc508c83df0439ad1818489592634e4ad6321d31d247"
+  },
+  "checkpoint": "data/research/parallel-sweep-20261109/ppo-recheck16/model.zip",
+  "limitations": [
+    "Performance-probe checkpoint, not a validated trained strategy.",
+    "Real GPU physics and policy execution were exercised; native desktop window was replaced for automated smoke test.",
+    "Final CLI and label refinements are covered by unit tests and repeated real checkpoint export."
+  ]
+}

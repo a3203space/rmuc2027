@@ -84,7 +84,46 @@ research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.viewer \
   --config configs/rl/sentry-mjwarp-hour.json --device cuda:0 --duration 420
 ```
 
-在 Ubuntu 桌面终端运行。窗口使用 MuJoCo 原生查看器，呈现实际 MJWarp 场地和机器人碰撞几何，而非 Arena 网页的外观模型或操作手 HUD。双方使用配置中的固定 AI 策略，不加载 RL 检查点。空格暂停/继续，鼠标旋转、平移、缩放；关闭窗口停止，比赛结束窗口关闭。终端输出比赛仿真时间和双方基地血量。默认按不超过 1 倍实时节奏展示；`--speed 4` 提高播放目标速度，实际推进仍取决于仿真性能。可视化有额外开销，性能基准应使用无窗口 benchmark。此入口尚待桌面 GPU 实机窗口验证。
+在 Ubuntu 桌面终端运行。窗口使用 MuJoCo 原生查看器，呈现实际 MJWarp 场地和机器人碰撞几何，而非 Arena 网页的外观模型或操作手 HUD。不传 `--rl-model` 时，默认双方使用配置中的固定 AI 策略。空格暂停/继续，鼠标旋转、平移、缩放；关闭窗口停止，比赛结束窗口关闭。终端输出比赛仿真时间和双方基地血量。默认按不超过 1 倍实时节奏展示；`--speed 4` 提高播放目标速度，实际推进仍取决于仿真性能。可视化有额外开销，性能基准应使用无窗口 benchmark。
+
+选择其他固定策略，直接指定红蓝双方提交目录（支持 `team`、`squad`、`distributed`）：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.viewer \
+  --red examples/claude_opus55_xhigh_2027_squad \
+  --blue examples/claude_opus55_xhigh_2027_hold \
+  --device cuda:0 --duration 420
+```
+
+`examples/名字` 对应 `research/strategies/examples/名字`，也可以填写自己导出的策略目录。未指定的一方沿用配置。没有显式配置阵容时，按两个提交各自登记的阵容运行，可以比较不同底盘。
+
+**只让红方 7 号哨兵使用训练后的 RL，其他机器人使用固定策略：** 将下面模型路径替换为实际训练目录中的 `model.zip` 或 `latest.zip`，同目录需保留 `experiment.json`。
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.viewer \
+  --rl-model "data/research/你的训练目录/model.zip" \
+  --rl-team red \
+  --blue examples/claude_opus55_xhigh_2027_hold \
+  --device cuda:0 --seed 42 --duration 420
+```
+
+观看蓝方 RL 哨兵对抗指定红方策略：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.viewer \
+  --rl-model "data/research/你的训练目录/model.zip" \
+  --rl-team blue \
+  --red examples/claude_opus55_xhigh_2027_squad \
+  --device cuda:0 --seed 42 --duration 420
+```
+
+- RL 一方的 7 号使用确定性 actor 推理；1、3、4、6 号沿用检查点训练时 `friendly` 队伍的固定策略，不参与学习。另一方使用命令指定的固定策略，或检查点配置中的 `opponent`。窗口在 RL 哨兵的血量文字后标记 `RL`。
+- 不指定 `--rl-team` 时沿用训练阵营；不指定 `--config` 时自动读取检查点配置。更换阵营时同步交换配置中的双方阵容。不能再用 `--red`/`--blue` 覆盖 RL 所在的同一方，其余机器人来源由训练队伍确定。
+- 模型会通过已有导出接口临时转成可部署 squad，只替换哨兵条目；窗口结束后清理临时文件，不修改权重或原策略。导出会检查 SDK、观测格式、固定策略来源等兼容性，旧检查点不兼容时直接给出原因。
+- 学习目标与控制间隔保留训练设置，例如当前模型为 2 Hz。这里仅观看冻结策略，不进行梯度更新。可将 `warp_kinematic` 训练的兼容模型放到完整 MJWarp 中观察，但这是跨后端测试，不保证行为完全一致。
+- 只支持一方的单个 RL 哨兵；非哨兵检查点或双方都含 RL 的配置会被拒绝。也可通过 `--red` 或 `--blue` 直接选择此前导出的单哨兵 RL squad，界面会读取其元数据识别阵营。
+
+已完成真实检查点导出、红蓝两侧各 1 仿真秒的真实 CUDA MJWarp 短测，以及原生渲染状态、标签和参数解析测试。GPU 短测使用无窗口显示替身；完整桌面窗口与长期策略效果需在 Ubuntu 桌面观看验证。测速目录中的两轮 PPO 检查点只用于功能演示，不代表已训练出有效战术。
 
 
 先确认实际执行训练的环境能访问 GPU：

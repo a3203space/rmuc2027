@@ -1,8 +1,11 @@
 """Native MuJoCo window showing live MJWarp physics and full Arena rules."""
 import argparse
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
+import json
 import math
 import os
+from pathlib import Path
+import tempfile
 import time
 
 
@@ -15,6 +18,7 @@ class NativeView:
         self.paused = False
         self.labels_enabled = labels
         self.labels = []
+        self.rl_team = None
 
     def update_labels(self, frame):
         """Cache display-only facts from the last completed referee frame."""
@@ -39,6 +43,8 @@ class NativeView:
         hp, maximum = unit.get('hp', 0), unit.get('max_hp', 0)
         dead = not unit.get('alive', hp > 0)
         text = f"{team.upper()} {name} | HP {max(0, hp):.0f}/{maximum:.0f}"
+        if team == self.rl_team and name == '7':
+            text += ' | RL'
         if dead:
             text += ' | DEAD'
         color = (1., .3, .3, 1.) if team == 'red' else (.3, .65, 1., 1.)
@@ -102,9 +108,80 @@ class NativeView:
         self.model = None
 
 
+def prepare_match(args, stack):
+    """Resolve scripted teams and, optionally, one exported frozen sentry actor."""
+    from ..session import load_config, resource
+    from rmuc2027_core.submissions import load_submission
+    metadata = None
+    if args.rl_model:
+        model = Path(args.rl_model).expanduser().resolve()
+        if not model.is_file():
+            raise ValueError(f'RL checkpoint does not exist: {model}')
+        metadata = json.loads((model.parent/'experiment.json').read_text())
+        if metadata['config']['slot'] != 7:
+            raise ValueError('--rl-model must be a sentry (slot 7) checkpoint')
+    source = args.config or (metadata['config'] if metadata else 'configs/rl/sentry-mjwarp-hour.json')
+    cfg = load_config(source)
+    original_team = cfg['team']
+    side = args.rl_team or original_team
+    if args.rl_team and not args.rl_model:
+        raise ValueError('--rl-team requires --rl-model')
+    if metadata and getattr(args, side):
+        raise ValueError(f'--{side} cannot accompany an RL model for {side}; its other robots come from the training squad')
+    sources = {side: resource(cfg['friendly']), 'blue' if side == 'red' else 'red': resource(cfg['opponent'])}
+    for team in ('red', 'blue'):
+        if getattr(args, team):
+            sources[team] = resource(getattr(args, team))
+    if metadata:
+        from ..exporting import export_model
+        directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix='rmuc-viewer-rl-')))/'squad'
+        exported = export_model(model, directory)
+        if exported['learned_slots'] != [7]:
+            raise ValueError('Native sentry viewing requires exactly one learned slot: 7')
+        sources[side] = directory
+        other = 'blue' if side == 'red' else 'red'
+        other_metadata = sources[other]/'rl-metadata.json'
+        if other_metadata.exists() and json.loads(other_metadata.read_text()).get('learned_slots'):
+            raise ValueError('The opposing team must be scripted when --rl-model selects a single RL sentry')
+        # Preserve the learned action/control cadence even when a separate
+        # display configuration is supplied. The exported actor also latches it.
+        cfg['learning_control_hz'] = metadata['config'].get('learning_control_hz', 10)
+        cfg['rl_seconds'] = metadata['config']['rl_seconds']
+        if cfg.get('lineups') and side != original_team:
+            cfg['lineups'] = {'red': cfg['lineups']['blue'], 'blue': cfg['lineups']['red']}
+        if cfg.get('lineups'):
+            from rmuc2027_core.models import normalize_team_lineup
+            trained = normalize_team_lineup(load_submission(directory)[0].get('team_lineup'), '2027')
+            if cfg['lineups'][side] != trained:
+                raise ValueError('The RL side lineup must match its checkpoint; use the checkpoint configuration')
+    # The viewer is a development match and can compare registered asymmetric
+    # lineups. Without explicit lineups, honor each chosen submission's roster.
+    if not cfg.get('lineups'):
+        from rmuc2027_core.models import normalize_team_lineup
+        cfg['lineups'] = {team: normalize_team_lineup(load_submission(path)[0].get('team_lineup'), '2027')
+                         for team, path in sources.items()}
+    cfg['team'] = side
+    cfg['sim_backend'] = 'mjwarp'
+    cfg['sim_device'] = args.device
+    learned_side = side if metadata else None
+    for team, path in sources.items():
+        info = path/'rl-metadata.json'
+        slots = json.loads(info.read_text()).get('learned_slots', []) if info.exists() else []
+        if slots:
+            if slots != [7] or (learned_side is not None and learned_side != team):
+                raise ValueError('This viewer mode supports only one RL sentry on one team')
+            learned_side = team
+    cfg['team'] = learned_side or side
+    return cfg, sources, learned_side
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config', default='configs/rl/sentry-mjwarp-hour.json')
+    parser.add_argument('--config', help='Defaults to checkpoint configuration with --rl-model, otherwise sentry-mjwarp-hour.json')
+    parser.add_argument('--red', help='Red scripted strategy submission directory')
+    parser.add_argument('--blue', help='Blue scripted strategy submission directory')
+    parser.add_argument('--rl-model', help='Frozen sentry PPO checkpoint (.zip); no training occurs')
+    parser.add_argument('--rl-team', choices=('red', 'blue'), help='RL sentry side; defaults to training/config side')
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--duration', type=int, default=420)
@@ -118,19 +195,31 @@ def main():
         parser.error('duration must be in [1, 420]')
     if not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
         parser.error('Run from an Ubuntu desktop terminal with DISPLAY or WAYLAND_DISPLAY available')
-    from ..session import load_config, resource
+    with ExitStack() as stack:
+        try:
+            cfg, sources, rl_team = prepare_match(args, stack)
+        except (ValueError, OSError, KeyError) as exc:
+            parser.error(str(exc))
+        description = f'{rl_team}:7 frozen RL; other robots scripted' if rl_team else 'scripted AI; no RL model loaded'
+        print(f'Native MJWarp viewer: {description}; space pauses, mouse rotates/zooms.', flush=True)
+        print(f"RED={sources['red']} BLUE={sources['blue']}", flush=True)
+        run_view(args, cfg, sources, rl_team)
+
+
+def run_view(args, cfg, sources, rl_team=None):
     from ...strategies.battle import Battle
     from rmuc2027_core.engine import DT
-    cfg = load_config(args.config)
-    sources = (resource(cfg['friendly']), resource(cfg['opponent']))
-    red, blue = sources if cfg['team'] == 'red' else sources[::-1]
-    print('Native MJWarp viewer: full 5v5 scripted AI; space pauses, mouse rotates/zooms. No RL policy is loaded.', flush=True)
     view = NativeView(labels=not args.no_labels)
-    with Battle(red, blue, args.seed, args.duration, cfg['map'], sandbox='trusted-local', side_lineups=cfg.get('lineups'),
+    view.rl_team = rl_team
+    with Battle(sources['red'], sources['blue'], args.seed, args.duration, cfg['map'], sandbox='trusted-local', side_lineups=cfg.get('lineups'),
                 timeout=cfg['policy_timeout_s'], record_replay=False,
                 navigation_mode=cfg['navigation_mode'], battle_settings={'drones_enabled': cfg['drones_enabled'], 'timed_assembly': cfg['timed_assembly']},
-                fixed_policy_hz=cfg['fixed_policy_hz'],
+                fixed_policy_hz=cfg['fixed_policy_hz'], learning_control_hz=cfg['learning_control_hz'],
                 physics_backend='mjwarp', sim_device=args.device) as battle:
+        if rl_team:
+            battle.metadata['frozen_rl'] = {'team': rl_team, 'slot': 7,
+                'submission': str(sources[rl_team]),
+                'model': str(Path(args.rl_model).resolve()) if args.rl_model else None}
         from .diagnose import MotionTrace
         trace = MotionTrace(args.trace_dir, battle, cfg) if args.trace_dir else None
         view.update_labels(battle.frames[0])
