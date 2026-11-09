@@ -1,6 +1,6 @@
 {
   "kind": "planar-contact-impulses",
-  "status": "regressions-and-full-ability-complete-performance-retry-after-navigation-cache-fix",
+  "status": "current-source-full-ability-and-sampler-complete-performance-gate-failed",
   "old_code_commit": "395c81cbe737c32ad57af4caec66f4c2e1e38ee1",
   "before_push_probe": [
     {
@@ -11560,5 +11560,6 @@
     "parallel_eviction_cases": 1024,
     "algorithm_changed": false,
     "scope": "Locks protect cache lookup, eviction and insertion; Dijkstra remains outside the lock. Two added concurrency tests, prepared navigation parity, RL interface and zero-update model export/recovery passed."
-  }
+  },
+  "current_full_sampler_artifact": "contact-sampler-20261109.json"
 }
