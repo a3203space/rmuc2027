@@ -148,7 +148,7 @@ class TraversalTests(unittest.TestCase):
         # real roster's design values so the test covers collision feedback.
         blocker['design']['muzzle_z_m']=2.
         command['robots'].append(blocker)
-        states=[];path=[]
+        states=[];path=[];clearance=[]
         for tick in range(45):
             command['sequence']=tick
             if tick==3:
@@ -156,12 +156,17 @@ class TraversalTests(unittest.TestCase):
                 command['robots'][0]['jump']=0.
             frame=adapter.step(command)
             states.append(int(adapter.jump_status.numpy()[0]))
-            path.extend(np.asarray(frame['positions'])[:,0,:].tolist())
+            samples=np.asarray(frame['positions'])
+            path.extend(samples[:,0,:].tolist())
+            if tick>=3:clearance.extend((samples[:,1,0]-samples[:,0,0]).tolist())
             for index,robot in enumerate(command['robots']):
                 robot.update(pos=frame['positions'][-1][index],velocity=frame['velocities'][-1][index],
                     heading=frame['headings'][-1][index],folded=frame['folded'][-1][index])
         self.assertIn(4,states)
         self.assertEqual(states[-1],3)
-        self.assertLessEqual(np.asarray(path)[:,0].max(),9.3+.001)
+        # A movable blocker receives an impulse now. Check the actual pair
+        # clearance, not the blocker's pre-impact world coordinate.
+        self.assertGreaterEqual(min(clearance),.5-1.e-4)
+        self.assertFalse(adapter.motion.contact_exhausted.numpy().any())
         self.assertLess(np.abs(np.diff(np.asarray(path)[:,2])).max(),.08)
         adapter.close()

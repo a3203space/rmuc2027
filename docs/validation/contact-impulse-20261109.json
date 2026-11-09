@@ -1,0 +1,824 @@
+{
+  "kind": "planar-contact-impulses",
+  "status": "regressions-passed-full-ability-and-performance-pending",
+  "old_code_commit": "395c81cbe737c32ad57af4caec66f4c2e1e38ee1",
+  "before_push_probe": [
+    {
+      "backend": "rapier",
+      "final": {
+        "time": 4.0,
+        "robots": [
+          {
+            "id": "red-1",
+            "x": 3.8468882406320395,
+            "y": 7.501086207999321,
+            "z": 0.17262379252133875,
+            "vx": 0.0,
+            "vy": -1.042512326019285e-06,
+            "grounded": true
+          },
+          {
+            "id": "red-3",
+            "x": 4.588645264503852,
+            "y": 6.491491427418961,
+            "z": 0.14500496284939055,
+            "vx": 5.382034195529738e-05,
+            "vy": 0.00014149350340247598,
+            "grounded": true
+          },
+          {
+            "id": "red-4",
+            "x": 3.2,
+            "y": 8.846200793279124,
+            "z": 0.14314880862572368,
+            "vx": 0.0,
+            "vy": 4.237235319743512e-14,
+            "grounded": true
+          },
+          {
+            "id": "red-6",
+            "x": 13.010051,
+            "y": 8.489949,
+            "z": 1.770472,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": false
+          },
+          {
+            "id": "red-7",
+            "x": 7.010064753878326,
+            "y": 5.914429685193898,
+            "z": 0.13687786545492894,
+            "vx": 2.6214396852283737,
+            "vy": -0.06664552733796908,
+            "grounded": true
+          }
+        ]
+      }
+    },
+    {
+      "backend": "warp_kinematic",
+      "final": {
+        "time": 4.0,
+        "robots": [
+          {
+            "id": "red-1",
+            "x": 3.8499999046325684,
+            "y": 7.5,
+            "z": 0.1783944070339203,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": true
+          },
+          {
+            "id": "red-3",
+            "x": 3.200000047683716,
+            "y": 6.150000095367432,
+            "z": 0.13604341447353363,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": true
+          },
+          {
+            "id": "red-4",
+            "x": 3.200000047683716,
+            "y": 8.850000381469727,
+            "z": 0.1430433988571167,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": true
+          },
+          {
+            "id": "red-6",
+            "x": 13.010051,
+            "y": 8.489949,
+            "z": 1.770472,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": false
+          },
+          {
+            "id": "red-7",
+            "x": 2.5345048904418945,
+            "y": 6.150000095367432,
+            "z": 0.1430434137582779,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": true
+          }
+        ]
+      }
+    }
+  ],
+  "first_impulse_probe": [
+    {
+      "backend": "rapier",
+      "final": {
+        "time": 4.0,
+        "robots": [
+          {
+            "id": "red-1",
+            "x": 3.8468882406320395,
+            "y": 7.501086207999321,
+            "z": 0.17262379252133875,
+            "vx": 0.0,
+            "vy": -1.042512326019285e-06,
+            "grounded": true
+          },
+          {
+            "id": "red-3",
+            "x": 4.588645264503852,
+            "y": 6.491491427418961,
+            "z": 0.14500496284939055,
+            "vx": 5.382034195529738e-05,
+            "vy": 0.00014149350340247598,
+            "grounded": true
+          },
+          {
+            "id": "red-4",
+            "x": 3.2,
+            "y": 8.846200793279124,
+            "z": 0.14314880862572368,
+            "vx": 0.0,
+            "vy": 4.237235319743512e-14,
+            "grounded": true
+          },
+          {
+            "id": "red-6",
+            "x": 13.010051,
+            "y": 8.489949,
+            "z": 1.770472,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": false
+          },
+          {
+            "id": "red-7",
+            "x": 7.010064753878326,
+            "y": 5.914429685193898,
+            "z": 0.13687786545492894,
+            "vx": 2.6214396852283737,
+            "vy": -0.06664552733796908,
+            "grounded": true
+          }
+        ],
+        "contact_exhausted": null
+      }
+    },
+    {
+      "backend": "warp_kinematic",
+      "final": {
+        "time": 4.0,
+        "robots": [
+          {
+            "id": "red-1",
+            "x": 3.8499999046325684,
+            "y": 7.5,
+            "z": 0.1783944070339203,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": true
+          },
+          {
+            "id": "red-3",
+            "x": 5.659287929534912,
+            "y": 6.150000095367432,
+            "z": 0.13604341447353363,
+            "vx": 0.662274181842804,
+            "vy": 0.0,
+            "grounded": true
+          },
+          {
+            "id": "red-4",
+            "x": 3.200000047683716,
+            "y": 8.850000381469727,
+            "z": 0.1430433988571167,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": true
+          },
+          {
+            "id": "red-6",
+            "x": 13.010051,
+            "y": 8.489949,
+            "z": 1.770472,
+            "vx": 0.0,
+            "vy": 0.0,
+            "grounded": false
+          },
+          {
+            "id": "red-7",
+            "x": 4.993793487548828,
+            "y": 6.150000095367432,
+            "z": 0.1430434137582779,
+            "vx": 0.662274181842804,
+            "vy": 0.0,
+            "grounded": true
+          }
+        ],
+        "contact_exhausted": 0
+      }
+    }
+  ],
+  "final_chain_audit": [
+    {
+      "count": 3,
+      "wall_enabled": false,
+      "exhausted": false,
+      "minimum_gap": 0.3999951481819153,
+      "max_wall_penetration": 0.0,
+      "positions": [
+        [
+          0.3333434462547302,
+          0.0
+        ],
+        [
+          0.7333385944366455,
+          0.0
+        ],
+        [
+          1.1333481073379517,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          1.3333740234375,
+          0.0
+        ],
+        [
+          1.33331298828125,
+          0.0
+        ],
+        [
+          1.33331298828125,
+          0.0
+        ]
+      ]
+    },
+    {
+      "count": 5,
+      "wall_enabled": false,
+      "exhausted": false,
+      "minimum_gap": 0.39998000860214233,
+      "max_wall_penetration": 0.0,
+      "positions": [
+        [
+          0.2000262439250946,
+          0.0
+        ],
+        [
+          0.600030243396759,
+          0.0
+        ],
+        [
+          1.0000102519989014,
+          0.0
+        ],
+        [
+          1.4000192880630493,
+          0.0
+        ],
+        [
+          1.8000133037567139,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          0.8001452088356018,
+          0.0
+        ],
+        [
+          0.8000392317771912,
+          0.0
+        ],
+        [
+          0.8000392317771912,
+          0.0
+        ],
+        [
+          0.7999332547187805,
+          0.0
+        ],
+        [
+          0.7998430728912354,
+          0.0
+        ]
+      ]
+    },
+    {
+      "count": 10,
+      "wall_enabled": false,
+      "exhausted": false,
+      "minimum_gap": 0.39997124671936035,
+      "max_wall_penetration": 0.0,
+      "positions": [
+        [
+          0.1000705435872078,
+          0.0
+        ],
+        [
+          0.5000795722007751,
+          0.0
+        ],
+        [
+          0.900054931640625,
+          0.0
+        ],
+        [
+          1.3000640869140625,
+          0.0
+        ],
+        [
+          1.7000412940979004,
+          0.0
+        ],
+        [
+          2.1000514030456543,
+          0.0
+        ],
+        [
+          2.500030755996704,
+          0.0
+        ],
+        [
+          2.9000258445739746,
+          0.0
+        ],
+        [
+          3.3000197410583496,
+          0.0
+        ],
+        [
+          3.7000129222869873,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          0.4004274308681488,
+          0.0
+        ],
+        [
+          0.40030866861343384,
+          0.0
+        ],
+        [
+          0.4001983106136322,
+          0.0
+        ],
+        [
+          0.40009433031082153,
+          0.0
+        ],
+        [
+          0.3999936282634735,
+          0.0
+        ],
+        [
+          0.3999936282634735,
+          0.0
+        ],
+        [
+          0.3998929262161255,
+          0.0
+        ],
+        [
+          0.3997955024242401,
+          0.0
+        ],
+        [
+          0.39969831705093384,
+          0.0
+        ],
+        [
+          0.3995972275733948,
+          0.0
+        ]
+      ]
+    },
+    {
+      "count": 3,
+      "wall_enabled": true,
+      "exhausted": false,
+      "minimum_gap": 0.39998659491539,
+      "max_wall_penetration": 0.0,
+      "positions": [
+        [
+          0.010027557611465454,
+          0.0
+        ],
+        [
+          0.4100233316421509,
+          0.0
+        ],
+        [
+          0.8100199699401855,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          0.00020090487669222057,
+          0.0
+        ],
+        [
+          0.00010045243834611028,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "count": 5,
+      "wall_enabled": true,
+      "exhausted": false,
+      "minimum_gap": 0.39997464418411255,
+      "max_wall_penetration": 0.0,
+      "positions": [
+        [
+          0.010072191245853901,
+          0.0
+        ],
+        [
+          0.4100639820098877,
+          0.0
+        ],
+        [
+          0.81007319688797,
+          0.0
+        ],
+        [
+          1.2100478410720825,
+          0.0
+        ],
+        [
+          1.6100399494171143,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          0.0003959225141443312,
+          0.0
+        ],
+        [
+          0.0002966323518194258,
+          0.0
+        ],
+        [
+          0.00019765172328334302,
+          0.0
+        ],
+        [
+          9.882586164167151e-05,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "count": 10,
+      "wall_enabled": true,
+      "exhausted": false,
+      "minimum_gap": 0.3999718427658081,
+      "max_wall_penetration": 1.7318726008852536e-08,
+      "positions": [
+        [
+          0.010193206369876862,
+          0.0
+        ],
+        [
+          0.4102023243904114,
+          0.0
+        ],
+        [
+          0.8101813793182373,
+          0.0
+        ],
+        [
+          1.2101905345916748,
+          0.0
+        ],
+        [
+          1.610162377357483,
+          0.0
+        ],
+        [
+          2.0101370811462402,
+          0.0
+        ],
+        [
+          2.4101459980010986,
+          0.0
+        ],
+        [
+          2.8101212978363037,
+          0.0
+        ],
+        [
+          3.210097074508667,
+          0.0
+        ],
+        [
+          3.6100900173187256,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          0.0009369333274662495,
+          0.0
+        ],
+        [
+          0.0008285896619781852,
+          0.0
+        ],
+        [
+          0.000719270552508533,
+          0.0
+        ],
+        [
+          0.000610816408880055,
+          0.0
+        ],
+        [
+          0.0005043713608756661,
+          0.0
+        ],
+        [
+          0.0004003665526397526,
+          0.0
+        ],
+        [
+          0.00029862337396480143,
+          0.0
+        ],
+        [
+          0.00019853173580486327,
+          0.0
+        ],
+        [
+          9.926586062647402e-05,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ]
+    }
+  ],
+  "sources": {
+    "config": {
+      "seed": 42,
+      "team": "red",
+      "slot": 7,
+      "map": "rmuc2027",
+      "duration": 420,
+      "episode_seconds": 60,
+      "rl_seconds": 1.0,
+      "grid_m": 0.25,
+      "recover_enter": 0.25,
+      "recover_exit": 0.8,
+      "friendly": "examples/claude_opus55_xhigh_2027_squad",
+      "opponent": "examples/claude_opus55_xhigh_2027_hold",
+      "controllers": {
+        "red:7": {
+          "kind": "learning"
+        }
+      },
+      "rewards": {
+        "control": 0.01,
+        "outcome": 10.0,
+        "capture_seconds": 0.001,
+        "death": -0.1
+      },
+      "ppo": {
+        "n_steps": 64,
+        "batch_size": 64,
+        "n_epochs": 4,
+        "learning_rate": 0.0003,
+        "gamma": 0.995,
+        "gae_lambda": 0.95,
+        "ent_coef": 0.01
+      },
+      "sim_backend": "warp_kinematic",
+      "policy_timeout_s": 5.0,
+      "navigation_mode": "legacy",
+      "timed_assembly": false,
+      "drones_enabled": true,
+      "fixed_policy_hz": 10,
+      "learning_control_hz": 10,
+      "training_summary": true,
+      "action_trace": false,
+      "navigation_precompute": null,
+      "github_backup_seconds": 300.0
+    },
+    "sources": {
+      "friendly": {
+        "version": "dba14ab0764239ed",
+        "manifest": {
+          "api_version": 3,
+          "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+          "mode": "squad",
+          "robot": null,
+          "entries": {
+            "1": "robot_1.py",
+            "3": "robot_3.py",
+            "4": "robot_4.py",
+            "6": "robot_6.py",
+            "7": "robot_7.py"
+          },
+          "hashes": {
+            "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+            "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+          },
+          "version": "dba14ab0764239ed"
+        },
+        "hashes": {
+          "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+          "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+        }
+      },
+      "opponent": {
+        "version": "90c6cba4ea0ca924",
+        "manifest": {
+          "api_version": 3,
+          "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+          "mode": "team",
+          "robot": null,
+          "entries": {
+            "team": "strategy.py"
+          },
+          "hashes": {
+            "strategy.py": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+          },
+          "team_lineup": {
+            "1": 2711,
+            "3": 2731,
+            "4": 2732,
+            "6": 2761,
+            "7": 2771
+          },
+          "version": "90c6cba4ea0ca924"
+        },
+        "hashes": {
+          "team": "572354b97b33414fdeba0e9d9512f0e3f8bc5863a5208b385bc0d049d9be08c7"
+        }
+      }
+    },
+    "sdk_hash": "aa163eb957a70ad270af1089f8587d8fca147bd380f9271173ad886de0fe9e6e",
+    "runtime_hash": "5a764c0559ddc6de1eab7aa316070c2a96a514822c20b48eb409dfe074993d44",
+    "navigation": {
+      "precompute": true,
+      "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+    },
+    "engine_binary_sha256": "393d05ad13e4226d59b7be64cd900747d2e19eb3628eb2c4bff08e1f16918ba6",
+    "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+    "simulation": {
+      "backend": "warp_kinematic",
+      "device": "cuda:0",
+      "dt": 0.008333333333333333,
+      "experimental": true,
+      "frame_encoder": "orjson-numpy",
+      "pipe_reader": "posix-select",
+      "policy_observation_cache": true,
+      "transport_sha256": "7fb6c826ac10df23af2f01cfc38915571a8505ee6af029df0575ac9a79d7c82f",
+      "files": {
+        "__init__.py": "cb4f5954c90ee92c0c497b2c1145081879df1d6b207a7ae385652f31641ec373",
+        "arena.py": "9e0433366c3af175509e2154bb6b369a6613cef34db9d31a345467fe756a93e3",
+        "motion.py": "03933090ccd8aa198988624dad85b6328cb92270c51e193d7e05079a8cba2df8",
+        "contacts.py": "ff1caff1c7d0c65660090fdfa7309d13038fbff0f3eb3738acaa69f16963ef3a",
+        "terrain.py": "0655bf14489b0ac6640529cfce4da4260ee168ab89f659a80f706c5d8fd701d1",
+        "traversal.py": "7666b3b40b5213d727f0ece6eae4d3c1f81f535388809afc1af676001250a3ed",
+        "pose.py": "d45364d6e10de44d0f28d5f4e72fa5343ec6ad95d8778cff6bf7b48f74e778aa",
+        "protocol.py": "79602c7753c94f99347226c48e66ee945a1581f47a700ff94ed1580a7a4d8c6b",
+        "batching.py": "cf94942d32a34b974b4dc6a7370117cf67a328c6fe9baaa37a47953d2e0e92ba",
+        "vector.py": "649a7814548026558fdcf9bb675f136610af427ba3924bac9fd593e6615b550f"
+      },
+      "dependencies": {
+        "warp-lang": "1.19.0",
+        "orjson": "3.13.0"
+      }
+    }
+  },
+  "tests": {
+    "total": 65,
+    "contact_tests": 9,
+    "zero_gradient_export_recovery": true
+  },
+  "failed_development_checks": {
+    "128_event_budget_failed_dense_chains": true,
+    "1024_event_budget_failed_ten_body_wall": {
+      "count": 10,
+      "wall_enabled": true,
+      "exhausted": true,
+      "minimum_gap": 0.4000069797039032,
+      "max_wall_penetration": 1.7318726008852536e-08,
+      "positions": [
+        [
+          0.010020763613283634,
+          0.0
+        ],
+        [
+          0.41002774238586426,
+          0.0
+        ],
+        [
+          0.8100350499153137,
+          0.0
+        ],
+        [
+          1.2100424766540527,
+          0.0
+        ],
+        [
+          1.6100499629974365,
+          0.0
+        ],
+        [
+          2.0100600719451904,
+          0.0
+        ],
+        [
+          2.410067081451416,
+          0.0
+        ],
+        [
+          2.810075044631958,
+          0.0
+        ],
+        [
+          3.2100820541381836,
+          0.0
+        ],
+        [
+          3.6100900173187256,
+          0.0
+        ]
+      ],
+      "velocities": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ]
+    }
+  },
+  "limits": [
+    "Circle footprints still differ from native compound hulls; no yaw collision impulse, tangential tyre contact friction or general robot stacking.",
+    "Power-disabled bodies retain the previous immovable planar behavior; full passive coasting and leg collapse remain incomplete.",
+    "No PPO gradients or formal training performed.",
+    "Initial three-seed navigation trials precede final contact skin, priority, event-budget and wall-interior safeguards; full current-source validation is separate."
+  ]
+}

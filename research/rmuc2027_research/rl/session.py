@@ -143,7 +143,7 @@ def provenance(config):
             'policy_observation_cache':transport._CACHE_POLICY_OBSERVATIONS,
             'transport_sha256':hashlib.sha256((ROOT/'packages/core/rmuc2027_core/engine.py').read_bytes()).hexdigest(),
             'files':{name:hashlib.sha256((folder/name).read_bytes()).hexdigest()
-                     for name in ('__init__.py','arena.py','motion.py','terrain.py','traversal.py','pose.py','protocol.py','batching.py','vector.py')},
+                     for name in ('__init__.py','arena.py','motion.py','contacts.py','terrain.py','traversal.py','pose.py','protocol.py','batching.py','vector.py')},
             'dependencies':{'warp-lang':version('warp-lang')}}
         if FRAME_ENCODER=='orjson-numpy':result['simulation']['dependencies']['orjson']=version('orjson')
     else:

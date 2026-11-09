@@ -19,6 +19,18 @@ def segment_box(p: wp.vec2, d: wp.vec2, lo: wp.vec2, hi: wp.vec2):
             p[axis]=lo[axis]
         elif wp.abs(p[axis]-hi[axis])<1.e-5:
             p[axis]=hi[axis]
+    # Authority correction or roundoff may start inside an expanded wall.
+    # Permit escape through the nearest face, but never move further inward.
+    if p[0]>lo[0] and p[0]<hi[0] and p[1]>lo[1] and p[1]<hi[1]:
+        margin=float(1.e20);outward=wp.vec2(0.0,0.0)
+        for axis in range(2):
+            if p[axis]-lo[axis]<margin:
+                margin=p[axis]-lo[axis];outward=wp.vec2(0.0,0.0);outward[axis]=-1.0
+            if hi[axis]-p[axis]<margin:
+                margin=hi[axis]-p[axis];outward=wp.vec2(0.0,0.0);outward[axis]=1.0
+        result=wp.vec3(1.0,0.0,0.0)
+        if wp.dot(d,outward)<0.0:result=wp.vec3(0.0,outward[0],outward[1])
+        return result
     enter = float(0.0)
     leave = float(1.0)
     normal = wp.vec2(0.0, 0.0)
@@ -182,6 +194,9 @@ class MotionBatch:
         self.heights = wp.zeros(self.count,dtype=float,device=self.device)
         self.step_limits = wp.array([.04]*self.count,dtype=float,device=self.device)
         self.output = wp.empty(self.count,dtype=wp.vec2,device=self.device)
+        self.dynamic_contacts = False
+        self.contact_touched = wp.zeros(self.count,dtype=wp.int32,device=self.device)
+        self.contact_exhausted = wp.zeros(self.count,dtype=wp.int32,device=self.device)
 
     def step(self, commands, dt=.05):
         values = np.asarray(commands,dtype=np.float32)
@@ -208,7 +223,14 @@ class MotionBatch:
             from .terrain import limit_terrain
             launch(limit_terrain,self.count,inputs=[self.terrain.data,self.previous,self.pos,
                       self.vel,self.limits,self.step_limits,self.heights,self.flight],device=self.device)
-        launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
+        if self.dynamic_contacts:
+            from .contacts import resolve
+            launch(resolve,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
+                  self.worlds,self.body_z,self.enabled,self.flight,self.drive,self.boxes,self.angles,self.wall_z,self.wall_masks,
+                  self.terrain.data if self.terrain is not None else self.flat_scene,int(self.terrain is not None),
+                  self.step_limits,self.resolved,self.resolved_velocity,self.output,self.contact_touched,self.contact_exhausted],device=self.device)
+        else:
+            launch(resolve_agents,self.count,inputs=[self.previous,self.pos,self.vel,self.limits,
                   self.worlds,self.body_z,self.enabled,self.flight,self.boxes,self.angles,self.wall_z,self.wall_masks,
                   self.terrain.data if self.terrain is not None else self.flat_scene,int(self.terrain is not None),
                   self.step_limits,self.resolved,self.resolved_velocity],device=self.device)

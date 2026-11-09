@@ -175,6 +175,7 @@ class ArenaMotion:
                            d.get('transform_time_s',0) if d.get('transform_allowed') else 0.,3.])
         m=self.motion=MotionBatch([r['pos'][:2] for r in robots],limits,boxes,self.device,
             worlds=[len(robots)+i if r['role']=='aerial' else r.get('_world',0) for i,r in enumerate(robots)])
+        m.dynamic_contacts=True
         m.terrain=self.terrain
         m.angles.assign(np.asarray([w.get('rotation',0) for w in obstacles],dtype=np.float32))
         m.wall_z.assign(np.asarray([[w.get('bottom',0),w.get('bottom',0)+w['height']] for w in obstacles],dtype=np.float32))
