@@ -252,6 +252,7 @@ def evaluate_pair(root,backend,side,deadline_unix):
     from .scenarios import ScenarioSpec
     from .portable import own_robot
     from .asymmetric_ppo import AsymmetricPPO
+    from .v4_evaluation import detect_tunnel_passages
     root=Path(root);folder=root/'main';deadline=monotonic_deadline(deadline_unix)
     cfg=json.loads((folder/'experiment.json').read_text())['config']
     cfg.update(sim_backend=backend,episode_seconds=60,scenario_sampling=False,evaluation=True,
@@ -261,7 +262,7 @@ def evaluate_pair(root,backend,side,deadline_unix):
     for member,checkpoint in enumerate(('initialized.zip','model.zip')):
         member_deadline=time.monotonic()+max(0.,deadline-time.monotonic())/(2-member)
         model=AsymmetricPPO.load(folder/checkpoint,device='cpu')
-        env=SentryEnv(cfg);started=time.monotonic();steps=folds=0;max_fold=0.;info=None
+        env=SentryEnv(cfg);started=time.monotonic();steps=folds=0;max_fold=0.;info=None;trace=[]
         try:
             obs,info=env.reset(seed=81001 if side=='red' else 81002)
             robot=own_robot(env.session.obs,7)
@@ -273,13 +274,15 @@ def evaluate_pair(root,backend,side,deadline_unix):
                     robot=own_robot(env.session.obs,7)
                     max_fold=max(max_fold,robot.get('transform_progress',0.))
                     folds+=int(action[2]>.3)
-                    stream.write(json.dumps(dict(time=info['time'],position=[robot[k] for k in ('x','y','z')],
-                        fold=robot.get('transform_progress'),action=action.tolist(),navigation=info['action_trace']['navigation']))+'\n')
+                    frame=dict(time=info['time'],position=[robot[k] for k in ('x','y','z')],
+                        fold=robot.get('transform_progress'),action=action.tolist(),navigation=info['action_trace']['navigation'])
+                    trace.append(frame);stream.write(json.dumps(frame)+'\n')
                     if done or truncated:break
+            passage=detect_tunnel_passages(trace)
             row=dict(backend=backend,side=side,checkpoint=checkpoint,steps=steps,simulation_seconds=info['time'],
                 horizon_completed=info['time']>=60-1e-8,censored=info['time']<60-1e-8,full_match=False,metrics=info['metrics'],
                 control=info['control'],fold_requests=folds,max_fold=max_fold,
-                passed_tunnel=bool(max_fold>.8 and (robot['x'] if side=='red' else 28-robot['x'])>10.5),
+                passed_tunnel=passage['passed_tunnel'],passed_tunnel_evidence=passage,
                 final_position=[robot[k] for k in ('x','y','z')],wall_seconds=time.monotonic()-started)
             reports.append(row);print(json.dumps({'kind':'paired-trial',**row}),flush=True)
         finally:env.close()
