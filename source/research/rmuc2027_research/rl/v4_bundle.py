@@ -253,15 +253,7 @@ exec "$python_bin" -m rmuc2027_research.rl.''' + bundle_module + ''' preflight "
             'run-results.json describes finite evidence/censoring. replays/training and replays/evaluation are recorded\n'
             'web replays; there is no live training stream. Release ZIP SHA, relocated verification and Git records\n'
             'belong in the OUTSIDE release-index.json, never inside a self-referential ZIP.\n'
-            '\nConcrete target continuation (run from the extracted bundle root; no automatic run by extraction):\n'
-            '  python3 -m venv .venv\n'
-            '  .venv/bin/python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -r run-state/requirements-runtime.txt\n'
-            '  cargo build --release --manifest-path source/packages/simulation/Cargo.toml\n'
-            '  export PYTHONPATH="$PWD/source/packages/core:$PWD/source/research:$PWD/source/apps/server"\n'
-            '  export RMUC_RESOURCE_ROOT="$PWD/source"\n'
-            '  PYTHON_BIN="$PWD/.venv/bin/python" bash preflight-ubuntu24.sh\n'
-            '  .venv/bin/python -m rmuc2027_research.rl.v6_campaign run --resume-bundle "$PWD" --resume-generation baseline --output /absolute/path/to/new-v6-round\n'
-            'The run command starts a NEW bounded two-hour experiment, including physical load measurement.\n'
+            '\nThe explicit run command below starts a NEW bounded two-hour experiment, including physical load measurement.\n'
             'Resume materialization preserves all three optimizer states and RNG/sampler history, releases only\n'
             'interrupted leases, and makes the explicitly restored complete generation the new paired baseline.\n'
             'Recommended --resume-generation baseline requires models/main/checkpoints/baseline with all six\n'
@@ -269,8 +261,88 @@ exec "$python_bin" -m rmuc2027_research.rl.''' + bundle_module + ''' preflight "
             '--resume-generation current retains the legacy current model for research; it may be an unpromoted\n'
             'or regressed candidate. Never replace only model.zip/selected.zip while retaining another generation\n'
             "of Adam/RNG/sampler state. Neither mode resumes unfinished rollouts or silently retrains helpers.\n"
+            'IMPORTANT: baseline selects a complete generation, not automatically the selected deployment actor.\n'
+            'The eight-hour final materializes an accepted continuation generation as its complete baseline,\n'
+            'then uses the original inference anchor as initialized.zip for the final comparison. If selection\n'
+            'chooses initialized, --resume-generation baseline still restores the complete final baseline;\n'
+            'baseline/current can even be identical when final adds no gradients. Read selection.json,\n'
+            'run-results.json and generation hashes before choosing. To continue the ORIGINAL anchor with its\n'
+            'original Adam/RNG, use the original 0333 bundle baseline with the NEW CLI, or that anchor complete\n'
+            'generation. Do not splice selected.zip into another generation of optimizer/sampler state.\n'
             'The older sealed sentry-v6-20261111-0333 bundle predates --resume-generation; use current reviewed\n'
             'source or a later bundle for this option. Its original bundled CLI supports only legacy current.\n').encode()
+        generated['RESUME.txt'] += r'''
+Target setup: run from the extracted bundle root. Read source/docs/research/sentry-v6-web-and-backup.md
+for the complete procedure. Prepare Python 3.12 with venv/pip, compatible Rust/Cargo, NVIDIA driver,
+Node, Bun 1.3.14 and /usr/bin/google-chrome. No virtualenv, wheel mirror, native build, browser or
+node_modules is embedded. Python CUDA packages do not install the kernel driver. Setup/build and
+package preflight happen BEFORE explicitly starting the new run; nothing below restarts eight hours.
+Preserve the original frozen lock. Derive a third-party copy because old locks can include duplicate
+local rmuc2027 distributions; those local packages must come from this bundle, not a public index.
+
+python3 -m venv .venv
+.venv/bin/python - <<'PY'
+from pathlib import Path
+import re
+local = {'rmuc2027', 'rmuc2027-core', 'rmuc2027-research', 'rmuc2027-server'}
+lines = Path('run-state/requirements-runtime.txt').read_text().splitlines()
+def name(line):
+    token = re.split(r'[\s<>=!~;\[]', line.strip(), maxsplit=1)[0]
+    return re.sub(r'[-_.]+', '-', token).lower()
+kept = [line for line in lines if name(line) not in local]
+Path('.venv/requirements-third-party.txt').write_text('\n'.join(kept) + '\n')
+PY
+.venv/bin/python -m pip install --index-url https://pypi.org/simple \
+  --extra-index-url https://download.pytorch.org/whl/cpu \
+  -r .venv/requirements-third-party.txt
+.venv/bin/python -m pip install --no-index --no-deps --no-build-isolation \
+  -e ./source/packages/core -e ./source/research -e ./source/apps/server
+cargo build --locked --release --manifest-path source/packages/simulation/Cargo.toml
+export PYTHONPATH="$PWD/source/packages/core:$PWD/source/research:$PWD/source/apps/server"
+export RMUC_RESOURCE_ROOT="$PWD/source"
+nvidia-smi
+PYTHON_BIN="$PWD/.venv/bin/python" bash preflight-ubuntu24.sh
+
+Pinned versions must remain available on the specified official indexes. Stop on unavailable versions
+or driver incompatibility; do not silently replace Torch/SB3/physics. This host's Rust/Cargo is 1.99.1;
+destination compatibility requires its actual locked build and preflight. CPU Torch plus Warp CUDA
+is supported. Package preflight checks native initialization/dependencies/inference, not throughput;
+do not begin training when training_ready is false. No target 5600X/5070 Ti validation is claimed.
+The external SQLite is unnecessary for v6 continuation; only a future ETL needs the matching source DB.
+
+Build the original web application and install the independently versioned browser harness:
+(cd source && bun install --frozen-lockfile && bun run build:arena-web)
+npm install --prefix "$PWD/.browser-tools" --save-exact playwright-core@1.65.0
+node -e 'console.log(require(process.argv[1]).chromium ? "Playwright ready" : "missing")' \
+  "$PWD/.browser-tools/node_modules/playwright-core"
+/usr/bin/google-chrome --version
+
+The static build is source/build/arena-web. playwright-core does not install Chrome; the watcher
+currently requires /usr/bin/google-chrome and does not forward a --chrome option.
+
+Only when a NEW two-hour run is intended, choose an output that does not exist:
+new_run="$PWD/source/data/research/new-v6-round"
+.venv/bin/python -m rmuc2027_research.rl.v6_campaign run \
+  --resume-bundle "$PWD" --resume-generation baseline --output "$new_run"
+
+This output location is deliberate: the default web catalog reads source/data/research, regardless
+of RMUC_USER_DATA. The campaign alone does not start its web watcher. After budget.json exists,
+open a SECOND terminal at this same extracted bundle root and run:
+new_run="$PWD/source/data/research/new-v6-round"
+export PYTHONPATH="$PWD/source/packages/core:$PWD/source/research:$PWD/source/apps/server"
+export RMUC_RESOURCE_ROOT="$PWD/source"
+.venv/bin/python source/scripts/v6_web_watch.py --run "$new_run" \
+  --start-service --port 8768 \
+  --playwright-module "$PWD/.browser-tools/node_modules/playwright-core"
+
+Port 8768 must be free; existing services are never stopped. The watcher reads the persisted absolute
+deadline and waits for web_acceptance plus its marker before one frozen 20-second Rapier match and
+a saved full-frame replay. It waits for 3D assets and cleans up only its own processes, within at most
+eight minutes and the existing budget. No watcher means missing web acceptance, not a complete pass.
+The separate longrun orchestrator already starts its final watcher; do not create a duplicate.
+The ZIP has no .git/SSH credentials. Configure source as a Git workspace with HEAD/origin and authorized
+noninteractive SSH before relying on periodic backups. Check backup receipts separately from local ZIPs.
+'''.encode()
         generated['RESUME.txt'] += (
             '\nOptional explicit target 1/2/4/8 load probe (real physics, no optimizer updates):\n'
             '  .venv/bin/python -m rmuc2027_research.rl.v6_campaign initialize-resume --resume-bundle "$PWD" --resume-generation baseline --output /absolute/path/to/target-probe-run\n'

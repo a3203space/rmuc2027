@@ -37,10 +37,13 @@ def difference(current, baseline, field):
 
 
 def coverage(current, baseline):
+    if 'counts' not in current:
+        return dict(cumulative_unique=None, run_unique_with_new_activity=None,
+                    registered_scenarios_are_not_completed_coverage=True)
     counts = current.get('counts', {})
     old = baseline.get('counts', {})
-    deltas = {key: {field: row.get(field, 0) - old.get(key, {}).get(field, 0)
-                    for field in FIELDS} for key, row in counts.items()}
+    deltas = {key: {field: counts.get(key, {}).get(field, 0) - old.get(key, {}).get(field, 0)
+                    for field in FIELDS} for key in counts.keys() | old.keys()}
     valid = all(value >= 0 for row in deltas.values() for value in row.values())
     return dict(
         cumulative_unique={field: sum(row.get(field, 0) > 0 for row in counts.values()) for field in FIELDS},

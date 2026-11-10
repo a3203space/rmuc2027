@@ -28,6 +28,19 @@ def run_directory(master,suffix):
     return master.parent/(master.name+'-'+suffix)
 
 
+class InPlaceResumeUnsupported(FileExistsError):
+    """A duplicate launch must not rewrite the existing experiment's state."""
+
+
+def require_fresh_run(master):
+    for suffix in ('r01','final'):
+        path=run_directory(master,suffix)
+        if path.exists() or path.is_symlink():
+            raise InPlaceResumeUnsupported(
+                'Existing long-run output: '+str(path)+
+                '; in-place resume is not supported (不支持原地resume). Existing state is unchanged.')
+
+
 def budget_from_authorization(record):
     raw=[record[key] for key in ('authorization_start_unix','deadline_unix','wall_budget_seconds')]
     if any(isinstance(v,bool) or not isinstance(v,(int,float)) for v in raw):
@@ -195,6 +208,34 @@ def configure_training(root,cfg,rejections):
 
 def final_training_summary(final,rounds,anchor):
     """Account for accepted ancestry separately from rejected research work."""
+    import zipfile
+    anchor_sha=sha(anchor)
+    def published(root,ready):
+        root=Path(root).resolve();folder=(root/ready['directory']).resolve()
+        if root/'main/checkpoints' not in folder.parents:
+            raise ValueError('Rollback accounting generation escapes main/checkpoints')
+        if json.loads((folder/'complete.json').read_text())!=ready:
+            raise ValueError('Rollback accounting generation is not completely published')
+        names={'model.zip','resume-state.pt','samplers.json','actor.json','experiment.json','coordinator-state.json'}
+        if set(ready.get('sha256',{}))!=names:
+            raise ValueError('Rollback accounting requires all six generation members')
+        for name,digest in ready['sha256'].items():
+            if sha(folder/name)!=digest:
+                raise ValueError('Rollback accounting generation SHA mismatch: '+name)
+        with zipfile.ZipFile(folder/'model.zip') as archive:data=json.loads(archive.read('data'))
+        # Only the original migrated anchor (or an exact copy) predates this
+        # lazy counter. A trained candidate must explicitly store its value.
+        if 'rejected_actor_steps' not in data:
+            if ready['sha256']['model.zip']!=anchor_sha:
+                raise ValueError('Trained published generation lacks rollback counter')
+            data['rejected_actor_steps']=0
+        for field in ('num_timesteps','optimizer_steps','completed_updates','rejected_actor_steps'):
+            if type(data.get(field)) is not int or data[field]<0:
+                raise ValueError('Invalid published rollback counter: '+field)
+        if any(data[field]!=ready[key] for field,key in (
+                ('num_timesteps','samples'),('optimizer_steps','optimizer_steps'),('completed_updates','update_id'))):
+            raise ValueError('Rollback accounting generation counters disagree')
+        return data['rejected_actor_steps'],ready['sha256']['model.zip']
     old=checkpoint_counters(anchor);new=checkpoint_counters(Path(final)/'main/model.zip')
     accepted=[row for row in rounds if row['accepted_for_continuation']]
     fields={'published_samples':'num_timesteps','published_accepted_actor_steps':'optimizer_steps',
@@ -203,6 +244,28 @@ def final_training_summary(final,rounds,anchor):
     if any(value<0 or value!=sum(row['training'][key] for row in accepted)
            for key,value in differences.items()):
         raise ValueError('Accepted lineage counters disagree with final checkpoint')
+    anchor=Path(anchor).resolve();anchor_ready=json.loads((anchor.parent/'complete.json').read_text())
+    anchor_count,previous_hash=published(anchor.parents[3],anchor_ready)
+    if sha(anchor)!=previous_hash:raise ValueError('Rollback accounting anchor model mismatch')
+    rollback_rows=[];rollback_total=0
+    for row in accepted:
+        root=Path(row['path'])
+        baseline=json.loads((root/'main/checkpoints/baseline/complete.json').read_text())
+        before,before_hash=published(root,baseline)
+        after,after_hash=published(root,row['checkpoint'])
+        if before_hash!=previous_hash or after<before:
+            raise ValueError('Rollback accounting accepted lineage is discontinuous')
+        delta=after-before;rollback_total+=delta;previous_hash=after_hash
+        rollback_rows.append(dict(round=row['round'],source_run=str(root.resolve()),
+            baseline_directory=baseline['directory'],baseline_model_sha256=before_hash,
+            candidate_directory=row['checkpoint']['directory'],candidate_model_sha256=after_hash,
+            baseline_cumulative=before,candidate_cumulative=after,published_delta=delta))
+    final=Path(final)
+    final_ready=json.loads((final/'main/checkpoint-ready.json').read_text())
+    final_count,final_hash=published(final,final_ready)
+    if (sha(final/'main/model.zip')!=final_hash or final_hash!=previous_hash
+            or final_count-anchor_count!=rollback_total):
+        raise ValueError('Rollback accounting final checkpoint differs from accepted lineage')
     return dict(status='accepted_lineage_frozen_for_evaluation',
         actual_samples=sum(row['training'].get('actual_samples',0) for row in accepted),
         observed_samples_all_branches=sum(row['training'].get('actual_samples',0) for row in rounds),
@@ -210,7 +273,12 @@ def final_training_summary(final,rounds,anchor):
         total_samples=new['num_timesteps'],anchor_samples=old['num_timesteps'],
         accepted_actor_steps=differences['published_accepted_actor_steps'],
         completed_updates=differences['published_completed_updates'],
-        rejected_actor_steps=sum(row['training'].get('rejected_actor_steps',0) for row in accepted),
+        rejected_actor_steps=rollback_total,
+        rejected_actor_steps_provenance=dict(version=1,basis='published_complete_generation_counter_deltas',
+            anchor_model_sha256=sha(anchor),anchor_cumulative=anchor_count,
+            final_model_sha256=final_hash,final_cumulative=final_count,rounds=rollback_rows,
+            unpublished_and_rejected_branch_rollbacks_excluded=True,
+            absent_counter_zero_only_for_original_anchor_sha256=anchor_sha),
         skill_unchanged=all(row['training']['published_skill_unchanged'] for row in accepted),
         demonstration_updates_during_ppo=0,physics_steps_in_final_run_training=0,
         published_checkpoint_sha256=sha(Path(final)/'main/model.zip'),**differences)
@@ -360,9 +428,11 @@ def evaluate(root,case,member,deadline,label=None):
 
 
 def run(args):
+    root=args.output.resolve()
+    require_fresh_run(root)
     from .v6_evaluation import required_cases,select_candidate
     from rmuc2027_core.paths import ROOT
-    root=args.output.resolve();authorization=json.loads((root/'authorization.json').read_text())
+    authorization=json.loads((root/'authorization.json').read_text())
     budget=budget_from_authorization(authorization);deadline=budget['deadline_unix'];cutoff=budget['training_deadline_unix']
     if time.time()>=cutoff-600:raise TimeoutError('Authorization leaves insufficient training time')
     write_json(root/'budget.json',budget)
@@ -541,6 +611,10 @@ def main():
     signal.signal(signal.SIGTERM,interrupt)
     signal.signal(signal.SIGINT,interrupt)
     try:run(args)
+    except InPlaceResumeUnsupported:
+        # This is a rejected invocation, not a failure of the existing run.
+        # In particular, do not replace its campaign/error/budget evidence.
+        raise
     except BaseException as error:
         args.output.mkdir(parents=True,exist_ok=True)
         failure=dict(error=type(error).__name__+': '+str(error),time_unix=time.time())

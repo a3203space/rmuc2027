@@ -1,31 +1,31 @@
 {
   "run_id": "sentry-v6-extension-20261111-0457-r01",
-  "source_tree": "2640e52e4607267dc9ecc1bda723001af3d1e828",
-  "source_files": 1467,
+  "source_tree": "1cc884347bc192c3cfbcc14de81d03f986804b7d",
+  "source_files": 1469,
   "source_base": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
   "checkpoint": {
-    "sha256": "e197bf8a3bdc0be063600f4ade7ac518ad5803886d8fe67b5e12de18c3e3bc87",
+    "sha256": "6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87",
     "files": {
-      "actor.json": "d5cc2f51bdc34f4e711fb07930e46b596c40f7cf25c29da9738b4a4db40397fb",
-      "coordinator-state.json": "18e5ec530fcc74655b6a5886241289843bb1764219443df78609331464e9b6a1",
+      "actor.json": "d4b87dc2756b74fed176d43f4c5bd554ff2e05bc033fcdc17a22a6344171bf4a",
+      "coordinator-state.json": "cec404251e9b2b1461111a131870b5b744ac40eef2543b83b9c94171f7428d94",
       "experiment.json": "6be80422365bb8413b46841485321ad2e523417faba49eac64257e8846c88075",
-      "model.zip": "458364ebd5e084a0a9fa18b3ca8f93bd1fffd58a47c6114e82409d69bf0f9813",
-      "resume-state.pt": "2241fe65fbf3104b040d171fde00dfce1a93eb64e5b3b43619d27786cfa3c51c",
-      "samplers.json": "b2cefbd359b90762e28f6f94aa95819642153ba0b776a5dec6a0307f9eaed77b"
+      "model.zip": "3858cb9f8c613e5988459e96d0ee14a8790abefb4c6d532cdda8c3683cc68796",
+      "resume-state.pt": "634c6ee4c9361cbe977202bfa79898410076bf6ad4369b6404383834dfefa3e2",
+      "samplers.json": "743f6b7cc29b3b8b48016369650d755bad44929d89a68927d449f07c2cdb020c"
     },
-    "samples": 12294,
-    "update_id": 111,
-    "directory": "main/checkpoints/update-000111",
-    "path": "checkpoints/e197bf8a3bdc0be063600f4ade7ac518ad5803886d8fe67b5e12de18c3e3bc87",
+    "samples": 15238,
+    "update_id": 157,
+    "directory": "main/checkpoints/update-000157",
+    "path": "checkpoints/6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87",
     "parts": {
       "archive": "bundle.zip",
-      "bytes": 5638834,
-      "sha256": "e197bf8a3bdc0be063600f4ade7ac518ad5803886d8fe67b5e12de18c3e3bc87",
+      "bytes": 5650879,
+      "sha256": "6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87",
       "parts": [
         {
           "name": "bundle.part-0000",
-          "bytes": 5638834,
-          "sha256": "e197bf8a3bdc0be063600f4ade7ac518ad5803886d8fe67b5e12de18c3e3bc87"
+          "bytes": 5650879,
+          "sha256": "6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87"
         }
       ]
     }

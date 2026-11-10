@@ -18,6 +18,47 @@ from test_sentry_v6_training import make_model, fill_update
 
 
 class BudgetAndControlTests(unittest.TestCase):
+    def test_duplicate_launch_preserves_existing_state_bytes_and_mtime(self):
+        for suffix in ('r01','final'):
+            for entry in ('direct','main'):
+                with self.subTest(suffix=suffix,entry=entry),TemporaryDirectory() as folder:
+                    master=Path(folder)/'master';master.mkdir()
+                    run.run_directory(master,suffix).mkdir()
+                    for name in ('campaign.json','budget.json','orchestrator-error.json'):
+                        write(master/name,dict(original=name,status='training',rounds=[{'accepted':True}]))
+                    # No authorization exists: rejection must precede even its read.
+                    before={p.name:(p.read_bytes(),p.stat().st_mtime_ns) for p in master.iterdir()}
+                    args=SimpleNamespace(output=master,previous=Path(folder)/'old')
+                    with patch.object(run,'wait_previous') as wait,patch.object(run,'child') as child:
+                        with self.assertRaisesRegex(run.InPlaceResumeUnsupported,'不支持原地resume'):
+                            if entry=='direct':run.run(args)
+                            else:
+                                argv=['v6_longrun','--output',str(master),'--previous',str(args.previous),
+                                    '--playwright-module',str(Path(folder)/'unused-playwright')]
+                                with patch.object(run.sys,'argv',argv),patch.object(run.signal,'signal'):
+                                    run.main()
+                        wait.assert_not_called();child.assert_not_called()
+                    after={p.name:(p.read_bytes(),p.stat().st_mtime_ns) for p in master.iterdir()}
+                    self.assertEqual(before,after)
+
+    def test_first_launch_still_reaches_normal_initialization(self):
+        class StopBeforeWork(Exception):pass
+        with TemporaryDirectory() as folder:
+            master=Path(folder)/'master';master.mkdir()
+            write(master/'authorization.json',dict(authorization_start_unix=1000,
+                deadline_unix=29800,wall_budget_seconds=28800))
+            args=SimpleNamespace(output=master,previous=Path(folder)/'old')
+            with patch.object(run.time,'time',return_value=2000),\
+                    patch.object(run,'wait_previous',side_effect=StopBeforeWork) as wait,\
+                    patch.object(run,'child') as child:
+                with self.assertRaises(StopBeforeWork):run.run(args)
+                wait.assert_called_once_with(args.previous,29800)
+                child.assert_not_called()
+            self.assertEqual(json.loads((master/'budget.json').read_text())['deadline_unix'],29800)
+            self.assertEqual(json.loads((master/'campaign.json').read_text())['status'],'waiting_for_prior_run')
+            self.assertFalse(run.run_directory(master,'r01').exists())
+            self.assertFalse((master/'orchestrator-error.json').exists())
+
     def test_playable_rounds_and_final_are_top_level_catalog_siblings(self):
         with TemporaryDirectory() as folder:
             research=Path(folder);master=research/'authorized-master';master.mkdir()
@@ -85,26 +126,20 @@ class BudgetAndControlTests(unittest.TestCase):
                 stop.assert_called_once_with(child)
 
     def test_final_summary_counts_only_accepted_lineage_and_rejects_mixed_counters(self):
+        from test_v6_finalization_accounting import lineage_fixture
         with TemporaryDirectory() as folder:
-            root=Path(folder);(root/'main').mkdir()
-            def checkpoint(path,samples,steps,updates):
-                with zipfile.ZipFile(path,'w') as archive:
-                    archive.writestr('data',json.dumps(dict(num_timesteps=samples,optimizer_steps=steps,completed_updates=updates)))
-            anchor=root/'anchor.zip';checkpoint(anchor,100,20,5);checkpoint(root/'main/model.zip',116,24,7)
-            def row(accepted,observed,published,steps,updates):
-                return dict(accepted_for_continuation=accepted,training=dict(actual_samples=observed,
-                    published_samples=published,published_accepted_actor_steps=steps,published_completed_updates=updates,
-                    published_skill_unchanged=True,rejected_actor_steps=1))
-            rows=[row(True,10,8,2,1),row(False,100,96,12,7),row(True,8,8,2,1)]
-            report=run.final_training_summary(root,rows,anchor)
+            _,final,anchor,rows=lineage_fixture(Path(folder))
+            report=run.final_training_summary(final,rows,anchor)
             self.assertEqual(report['actual_samples'],18)
             self.assertEqual(report['observed_samples_all_branches'],118)
             self.assertEqual(report['rejected_branch_observed_samples'],100)
             self.assertEqual(report['published_samples'],16)
             self.assertEqual(report['accepted_actor_steps'],4)
+            self.assertEqual(report['rejected_actor_steps'],7)
             self.assertEqual(report['status'],'accepted_lineage_frozen_for_evaluation')
-            checkpoint(root/'main/model.zip',212,36,14)
-            with self.assertRaisesRegex(ValueError,'lineage counters'):run.final_training_summary(root,rows,anchor)
+            rows[0]['training']['published_samples']+=1
+            with self.assertRaisesRegex(ValueError,'lineage counters'):
+                run.final_training_summary(final,rows,anchor)
 
 
 class CanaryTests(unittest.TestCase):

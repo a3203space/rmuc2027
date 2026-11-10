@@ -20,6 +20,11 @@ class StatusTests(unittest.TestCase):
         self.assertEqual(report['run_unique_with_new_activity']['started'], 1)
         self.assertEqual(report['run_unique_with_new_activity']['full_completed'], 0)
 
+    def test_missing_or_reset_coverage_is_not_zero_new_work(self):
+        baseline = {'counts': {'old': {'started': 1, 'valid_steps': 100}}}
+        self.assertIsNone(status.coverage({}, baseline)['cumulative_unique'])
+        self.assertIsNone(status.coverage({'counts': {}}, baseline)['run_unique_with_new_activity'])
+
     def test_running_branch_is_not_accepted_and_reader_changes_no_files(self):
         with tempfile.TemporaryDirectory() as directory:
             master = Path(directory) / 'master'
