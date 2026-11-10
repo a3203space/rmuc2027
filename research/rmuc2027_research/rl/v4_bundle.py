@@ -173,7 +173,7 @@ def create_bundle(run_dir, output, *, preparation=None, source_root=None, extern
         if (run_dir/name).is_file():
             include(run_dir/name, "run-state/"+name)
     for dirname in ("evaluation", "radar-calibration-next", "selected-export", "aux-intervention",
-                    "radar-calibration-stratified-candidate", "radar-calibration-next-analysis", "report-tools", "review"):
+                    "radar-calibration-stratified-candidate", "radar-calibration-next-analysis", "report-tools", "review", "native-viewer-smoke"):
         if (run_dir/dirname).is_dir():
             for path, relative in _walk(run_dir/dirname):
                 include(path, dirname+"/"+relative)
