@@ -50,6 +50,14 @@ def _runtime_evidence(source):
     with zipfile.ZipFile(archive) as zipped:
         manifest_bytes=zipped.read('bundle-manifest.json')
         records=json.loads(manifest_bytes)['files']
+        dependency_bytes=zipped.read('run-state/requirements-runtime.txt')
+    _require(hashlib.sha256(dependency_bytes).hexdigest()==records['run-state/requirements-runtime.txt']['sha256'],
+             'sealed dependency inventory is inconsistent')
+    pinned={name.lower().replace('_','-'):version for name,version in
+            (line.split('==',1) for line in dependency_bytes.decode().splitlines() if '==' in line)}
+    backend_dependencies={name:importlib.metadata.version(name) for name in ('warp-lang','mujoco','mujoco-warp','orjson')}
+    for name,version in backend_dependencies.items():
+        _require(pinned.get(name)==version,'original physics dependency changed: '+name)
     files=[]
     files.extend((ROOT/'packages/core/rmuc2027_core').glob('*.py'))
     files.extend((ROOT/'research/rmuc2027_research/strategies').glob('*.py'))
@@ -70,7 +78,8 @@ def _runtime_evidence(source):
             allowed_deltas[relative]='exact optional v4_capture_reward insertion; effective evaluation value forced to 0'
         else:_require(actual==expected,'execution source changed: '+relative)
         hashes[relative]=actual
-    return dict(manifest_sha256=hashlib.sha256(manifest_bytes).hexdigest(),execution_sources=hashes,
+    return dict(manifest_sha256=hashlib.sha256(manifest_bytes).hexdigest(),execution_sources=hashes,sealed_files=records,
+                backend_dependencies=backend_dependencies,
                 allowed_source_deltas=allowed_deltas,
                 excluded_training_only_sources=['v4_campaign.py','v4_training.py','v4_anchor_reuse.py',
                     'aux_training.py','radar_calibration.py','v4_bundle.py'])
@@ -137,6 +146,16 @@ def validate_anchor_reuse(root, source_run, backend, side):
     evidence=_runtime_evidence(source)
     trace_path=source/'evaluation'/f'{backend}-{side}-initialized.zip.jsonl'
     trace_bytes=trace_path.read_bytes();trace=[json.loads(line) for line in trace_bytes.splitlines() if line.strip()]
+    sealed=evidence.get('sealed_files',{})
+    for relative,path in (
+        ('models/main/initialized.zip',source/'main/initialized.zip'),
+        ('models/main/experiment.json',source/'main/experiment.json'),
+        ('models/infantry/actor.json',source/'infantry/actor.json'),
+        ('models/heavy/actor.json',source/'heavy/actor.json'),
+        (f'evaluation/{backend}-{side}.json',summary),
+        (f'evaluation/{backend}-{side}-initialized.zip.jsonl',trace_path)):
+        _require(relative in sealed and digest(path)==sealed[relative]['sha256'],
+                 'source artifact differs from sealed evaluation: '+relative)
     _require(len(trace)==rows[0]['steps'] and len(trace)>0,'anchor trace length mismatch')
     previous=-math.inf
     for frame in trace:
@@ -152,6 +171,7 @@ def validate_anchor_reuse(root, source_run, backend, side):
         trace_sha256=hashlib.sha256(trace_bytes).hexdigest(),anchor_checkpoint_sha256=checkpoint_hash,
         evaluation_signature_sha256=hashlib.sha256(json.dumps(source_signature,sort_keys=True).encode()).hexdigest(),
         source_bundle_manifest_sha256=evidence['manifest_sha256'],
+        backend_dependencies=evidence.get('backend_dependencies',{}),
         allowed_source_deltas=evidence.get('allowed_source_deltas',{}),
         excluded_training_only_sources=evidence.get('excluded_training_only_sources',[]))
     return row,trace_bytes

@@ -55,7 +55,7 @@ def model_class(role):
     return PPO,AuxLayerNormPolicy
 
 
-def preflight_worker(root,deadline_unix):
+def preflight_worker(root,deadline_unix,resume_from=None):
     import numpy as np
     import torch
     import warp as wp
@@ -78,8 +78,36 @@ def preflight_worker(root,deadline_unix):
         editable_source_packages=sorted(editable),policy_device='cpu',freeze_file='requirements-runtime.txt',
         wheelhouse_embedded=False))
     torch.set_num_threads(1)
+    benchmark_model=None
+    benchmark=dict(benchmark_kind='scripted_environment_only',benchmark_measured_steps=8,
+        benchmark_warmup_steps=1,benchmark_includes_ppo_updates=False,
+        benchmark_scope='eight opening steps per environment; not full-match or optimization throughput',
+        benchmark_sources={})
+    if resume_from is not None:
+        from .v4_bundle import verify_bundle,load_runtime_config
+        from .asymmetric_ppo import AsymmetricPPO
+        bundle=Path(resume_from).resolve();verify_bundle(bundle)
+        base_cfg=load_runtime_config(bundle,'main')
+        if set(base_cfg.get('auxiliary_pool',{}))!={'infantry','heavy'}:
+            raise ValueError('Resume preflight requires both frozen auxiliary actors')
+        checkpoint=bundle/'models/main/model.zip'
+        benchmark_model=AsymmetricPPO.load(checkpoint,device='cpu')
+        benchmark.update(benchmark_kind='frozen_main_and_auxiliary_rollout',
+            benchmark_sources=dict(resume_bundle=str(bundle),main_checkpoint=dict(path=str(checkpoint),
+                sha256=hashlib.sha256(checkpoint.read_bytes()).hexdigest()),
+                helpers={role:dict(path=str(path),sha256=hashlib.sha256(Path(path).read_bytes()).hexdigest())
+                         for role,path in base_cfg['auxiliary_pool'].items()}))
+    else:base_cfg=configuration()
+
+    def actions_for(observation,count):
+        if benchmark_model is None:return np.zeros((count,policy_schema(base_cfg)['action_size']),dtype=np.float32)
+        with torch.no_grad():actions,_=benchmark_model.predict(observation,deterministic=False)
+        if not np.isfinite(actions).all():raise ValueError('Nonfinite resumed actor action')
+        return actions
+
     devices=dict(policy_device='cpu',torch_cuda_available=torch.cuda.is_available(),torch_cuda_devices=[],
                  warp_cuda_available=False,warp_cuda_devices=[],physics_device=None,gpu_name=None)
+    devices.update(benchmark)
     if devices['torch_cuda_available']:
         for index in range(torch.cuda.device_count()):
             free,total=torch.cuda.mem_get_info(index)
@@ -90,7 +118,7 @@ def preflight_worker(root,deadline_unix):
         for device in wp.get_cuda_devices():
             devices['warp_cuda_devices'].append(dict(device=str(device),name=device.name,architecture=device.arch,
                 is_cuda=bool(device.is_cuda),free_bytes=int(device.free_memory),memory_bytes=int(device.total_memory)))
-        selected=wp.get_device(configuration().get('sim_device','cuda:0'))
+        selected=wp.get_device(base_cfg.get('sim_device','cuda:0'))
         devices.update(warp_cuda_available=bool(selected.is_cuda),physics_device=str(selected),gpu_name=selected.name)
         if not selected.is_cuda:raise RuntimeError('The configured Warp physics device is not CUDA')
     except Exception as exc:
@@ -99,15 +127,15 @@ def preflight_worker(root,deadline_unix):
         raise RuntimeError('Warp CUDA physics is unavailable; CPU Torch is supported but physics cannot fall back') from exc
     for count in (2,4,8):
         if time.monotonic()>deadline-20:break
-        cfg=configuration();cfg.update(action_trace=False,episode_seconds=420)
+        cfg=copy.deepcopy(base_cfg);cfg.update(action_trace=False)
+        if resume_from is None:cfg['episode_seconds']=420
         started=time.monotonic();vec=None
         try:
             vec=vector_env(cfg,count);obs=vec.reset();init=time.monotonic()-started
-            actions=np.zeros((count,policy_schema(cfg)['action_size']),dtype=np.float32)
-            vec.step(actions);begin=time.monotonic();steps=0
+            obs,_,_,_=vec.step(actions_for(obs,count));begin=time.monotonic();steps=0
             for _ in range(8):
                 if time.monotonic()>deadline-5:break
-                obs,reward,done,infos=vec.step(actions);steps+=count
+                obs,reward,done,infos=vec.step(actions_for(obs,count));steps+=count
                 if not all(np.isfinite(v).all() for v in obs.values()) or not np.isfinite(reward).all():raise ValueError('Nonfinite preflight')
             # The actor/critic use CPU Torch. GPU allocation belongs to Warp's
             # physics context and must be measured through that device.
@@ -246,6 +274,32 @@ def train_stage(root,role,deadline_unix,num_envs):
         vec.close()
 
 
+def _evaluation_diagnostics(legal_obs,info,private_frame,robot):
+    """Copy post-step diagnostics into a trace only, never into observations.
+
+    RFID can retain an earlier contact; private occupants/raw contacts remain
+    explicitly separate so offline analysis can identify the actual cause.
+    """
+    def fields(value,names):return {name:copy.deepcopy(value[name]) for name in names if name in value}
+    referee=legal_obs.get('referee',{});sources=referee.get('sources',{})
+    raw=next((r for r in private_frame.get('robots',[]) if r.get('team')==robot.get('team')
+              and r.get('slot')==robot.get('slot')), {})
+    return dict(diagnostics_version=1,
+        legal_self=fields(robot,('id','team','slot','vx','vy','vz','quaternion','angular_velocity',
+            'grounded','upright','tipped','alive','powered','transform_progress','rfid')),
+        legal_referee=dict(sources={key:fields(sources.get(key,{}),('valid','age','source_time','receipt_time'))
+            for key in ('0x0209','0x0201','0x0101')},control=copy.deepcopy(referee.get('control'))),
+        evaluation_metrics=dict(capture_seconds=info.get('metrics',{}).get('capture_seconds'),
+            control=copy.deepcopy(info.get('control')),reward_terms=copy.deepcopy(info.get('reward_terms'))),
+        execution=fields(info.get('action_trace',{}),('execution_trace','executed_action')),
+        evaluation_ground_truth=dict(scope='post_step_trace_only_not_actor_input',time=private_frame.get('time'),
+            robot=fields(raw,('weak','invulnerable','zone_contacts','last_raw_zones')),
+            zones={key:fields(value,('owner','progress','occupants','contested'))
+                   for key,value in private_frame.get('zones',{}).items()},
+            positions={key:fields(value,('owner','kind','zones','control','controller','progress','active'))
+                       for key,value in private_frame.get('positions',{}).items()}))
+
+
 def evaluate_pair(root,backend,side,deadline_unix,reuse_anchor_from=None):
     import numpy as np
     from .env import SentryEnv
@@ -283,6 +337,7 @@ def evaluate_pair(root,backend,side,deadline_unix,reuse_anchor_from=None):
                     folds+=int(action[2]>.3)
                     frame=dict(time=info['time'],position=[robot[k] for k in ('x','y','z')],
                         fold=robot.get('transform_progress'),action=action.tolist(),navigation=info['action_trace']['navigation'])
+                    frame.update(_evaluation_diagnostics(env.session.obs,info,env.session.battle.match._frame,robot))
                     trace.append(frame);stream.write(json.dumps(frame)+'\n')
                     if done or truncated:break
             passage=detect_tunnel_passages(trace)
@@ -395,7 +450,9 @@ def run(output,seconds=7200,num_envs=2,resume_from=None):
     write_json(output/'budget.json',{key:report[key] for key in ('started_unix','deadline_unix','wall_budget_seconds','gradient_deadline_unix')})
     if preparation.exists():shutil.copytree(preparation,output/'preparation')
     preflight_end=started+600*scale
-    code=child(output,['preflight','--output',str(output),'--deadline-unix',str(preflight_end)],preflight_end,'preflight')
+    preflight_args=['preflight','--output',str(output),'--deadline-unix',str(preflight_end)]
+    if resume_from:preflight_args.extend(['--resume-from',str(resume_from)])
+    code=child(output,preflight_args,preflight_end,'preflight')
     report['stages'].append(dict(stage='preflight',exit_code=code))
     if code!=0:
         report.update(status='failed_preflight',finished_unix=time.time())
@@ -459,6 +516,7 @@ def main():
     packp=sub.add_parser('package');packp.add_argument('--output',type=Path,required=True)
     for name in ('preflight','initialize','train-stage','evaluate-pair'):
         p=sub.add_parser(name);p.add_argument('--output',type=Path,required=True);p.add_argument('--deadline-unix',type=float,required=True)
+        if name=='preflight':p.add_argument('--resume-from',type=Path)
         if name=='train-stage':p.add_argument('--role',choices=['main','infantry','heavy'],required=True);p.add_argument('--num-envs',type=int,default=2)
         if name=='evaluate-pair':
             p.add_argument('--backend',choices=['warp_kinematic','rapier','mjwarp'],required=True)
@@ -467,7 +525,7 @@ def main():
     args=parser.parse_args()
     if args.command=='run':run(args.output,args.wall_seconds,args.num_envs,args.resume_from)
     elif args.command=='package':package(args.output)
-    elif args.command=='preflight':preflight_worker(args.output,args.deadline_unix)
+    elif args.command=='preflight':preflight_worker(args.output,args.deadline_unix,args.resume_from)
     elif args.command=='initialize':initialization(args.output,args.deadline_unix)
     elif args.command=='train-stage':train_stage(args.output,args.role,args.deadline_unix,args.num_envs)
     else:evaluate_pair(args.output,args.backend,args.side,args.deadline_unix,args.reuse_anchor_from)

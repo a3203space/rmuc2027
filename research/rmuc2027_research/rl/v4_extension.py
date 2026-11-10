@@ -4,7 +4,6 @@ The parent campaign remains immutable. Frozen anchor trials may be reused only
 through v4_campaign's separately validated provenance checks.
 """
 import argparse
-import copy
 import hashlib
 import json
 from pathlib import Path
@@ -49,6 +48,8 @@ def prepare(parent, output, started, deadline, gradient_deadline):
         for name in ('guidance',):
             if (parent/role/name).is_dir():shutil.copytree(parent/role/name,destination/name)
         shutil.copy2(parent/role/'training.json', destination/'parent-training.json')
+    for role in ('main', 'infantry', 'heavy'):
+        destination=output/role
         metadata=json.loads((destination/'experiment.json').read_text())
         cfg=metadata['config']; cfg['auxiliary_pool']=pool_config(output)
         cfg['radar_classifier_path']=str(output/'radar-calibration/classifier.json')
