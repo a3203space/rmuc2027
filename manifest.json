@@ -1,6 +1,6 @@
 {
-  "captured_utc": "2026-11-10T17:24:18.054524+00:00",
-  "source_commit": "ab58869a43acc30d8cd038ca0d7f18add6eda28f",
+  "captured_utc": "2026-11-10T17:39:50.253749+00:00",
+  "source_commit": "ab7e8a4e49291e8853d5e6d5f58a906173da7e0d",
   "stages": {
     "main": {
       "role": "main",
@@ -65,8 +65,8 @@
   "validation": "六组短冻结对照完整，PPO整体改进未验证；selected初始化，resume PPO。未完成486阵容420秒全矩阵验收。",
   "milestone": {
     "kind": "original_two_hour_complete_extension_in_progress",
-    "recorded_utc": "2026-11-10T17:19:50.963075+00:00",
-    "description": "原两小时已完成：主哨兵10310 samples、317 optimizer_steps、20288 sample visits、206 gradient epochs，actor L2变化0.152359，PPO期间BC更新0；两场420秒训练对局结束。六组冻结对照全部完成：初始化锚点过洞5/6，PPO过洞6/6，但控制指标合计103.6降至71.0，故展示selected仍initialized.zip，续训model.zip。原412MiB可迁移包已通过异地解压/推理/Rust校验。另获授权的一小时是独立main-only追加运行，helpers冻结，绝对截止18:00:06UTC；不改原两小时历史，追加结果尚未验收。",
+    "recorded_utc": "2026-11-10T17:31:06.127022+00:00",
+    "description": "原两小时已完成：主哨兵10310 samples、317 optimizer_steps、20288 sample visits、206 gradient epochs，actor L2变化0.152359，PPO期间BC更新0；两场420秒训练对局结束。六组冻结对照全部完成：初始化锚点过洞5/6，PPO过洞6/6，但控制指标合计103.6降至71.0，故展示selected仍initialized.zip，续训model.zip。原412MiB可迁移包已通过异地解压/推理/Rust校验。另获授权的一小时是独立main-only追加运行，helpers冻结，绝对截止18:00:06UTC；不改原两小时历史，追加结果尚未验收。 未来preflight改为真实main+aux负载（5项测试）；future sampler拓扑与旧克隆独立迁移、祖先覆盖守恒（6项）；reward开关（4项）；evaluation diagnostics/reuse（13项）。这些修复面向后续启动/恢复，本次正在运行的进程未重置或迁移。新增review-notes/recovery-analysis.json由恢复包纳入。",
     "main_training": {
       "role": "main",
       "actual_samples": 10310,
@@ -84,8 +84,9 @@
     "completed_training_420s_episodes": 2,
     "frozen_pairs_status": "completed_six_pairs",
     "budget_extended": false,
-    "source_title": "备份：原两小时结果封存，主哨兵追加一小时进行中",
+    "source_title": "备份：追加训练期间的真实负载预检、采样迁移与评估诊断修复",
     "artifact_title": "备份：原两小时三策略稳定权重及六组冻结对照结论",
-    "validation": "六组短冻结对照完整，PPO整体改进未验证；selected初始化，resume PPO。未完成486阵容420秒全矩阵验收。"
+    "validation": "六组短冻结对照完整，PPO整体改进未验证；selected初始化，resume PPO。未完成486阵容420秒全矩阵验收。",
+    "source_changes": "未来preflight改为真实main+aux负载（5项测试）；future sampler拓扑与旧克隆独立迁移、祖先覆盖守恒（6项）；reward开关（4项）；evaluation diagnostics/reuse（13项）。这些修复面向后续启动/恢复，本次正在运行的进程未重置或迁移。新增review-notes/recovery-analysis.json由恢复包纳入。"
   }
 }
