@@ -1,0 +1,24 @@
+{
+  "status": "preflight",
+  "budget": {
+    "started_unix": 1794339204.825493,
+    "deadline_unix": 1794346404.825493,
+    "wall_budget_seconds": 7200,
+    "initialization_deadline_unix": 1794340404.825493,
+    "evaluation_deadline_unix": 1794345204.825493,
+    "web_deadline_unix": 1794345684.825493,
+    "other_workloads_may_continue": true,
+    "scope": "initialization, physics warmup, prefixes, PPO, evaluation, web acceptance, packaging and backup"
+  },
+  "parent_run": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312",
+  "resume_bundle": null,
+  "stages": [
+    {
+      "stage": "initialize",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "initialize.log"
+    }
+  ],
+  "evaluations": []
+}

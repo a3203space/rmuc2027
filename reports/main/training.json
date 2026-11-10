@@ -1,0 +1,8 @@
+{
+  "actual_samples": 0,
+  "total_samples": 10310,
+  "accepted_actor_steps": 0,
+  "skill_unchanged": true,
+  "status": "not_started",
+  "demonstration_updates_during_ppo": 0
+}

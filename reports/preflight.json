@@ -1,0 +1,182 @@
+{
+  "kind": "v6-frozen-policy-load",
+  "policy_device": "cpu",
+  "full_frame_recording": true,
+  "warmup_rl_steps": 1,
+  "measured_windows": 2,
+  "rl_steps_per_window": 30,
+  "protocol_actor_hz": 10,
+  "executor_hz": 20,
+  "benchmark_includes_initialization": false,
+  "benchmark_scope": "two short opening windows, not full-match/optimizer throughput",
+  "deadline_unix": 1794340399.825493,
+  "target_hardware_claimed": false,
+  "torch_cuda_available": false,
+  "warp_cuda_available": true,
+  "warp_cuda_devices": [
+    {
+      "device": "cuda:0",
+      "name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+      "architecture": 120,
+      "memory_bytes": 8055947264,
+      "free_bytes": 6769541120
+    }
+  ],
+  "physics_device": "cuda:0",
+  "training_ready": true,
+  "selected_num_envs": 1,
+  "recommended_num_envs": 1,
+  "evaluation_rates": {
+    "warp_kinematic": 0.22042417631874958,
+    "rapier": 0.3949075395376851
+  },
+  "parallelism_rule": "prefer 1 unless both complete 2-env windows have >5% conservative aggregate gain",
+  "required_completed_windows_per_single_env_backend": 2,
+  "benchmark_includes_ppo_updates": false,
+  "gradient_updates": 0,
+  "results": [
+    {
+      "backend": "warp_kinematic",
+      "num_envs": 1,
+      "windows": [
+        {
+          "index": 0,
+          "rl_steps": 30,
+          "decisions": 30,
+          "sum_simulation_seconds": 3.0,
+          "wall_seconds": 9.74822737899376,
+          "completed": true,
+          "r": 0.3077482585669507,
+          "single_world_rate": 0.3077482585669507
+        },
+        {
+          "index": 1,
+          "rl_steps": 30,
+          "decisions": 30,
+          "sum_simulation_seconds": 2.9999999999999996,
+          "wall_seconds": 13.61012231100176,
+          "completed": true,
+          "r": 0.22042417631874958,
+          "single_world_rate": 0.22042417631874958
+        }
+      ],
+      "completed": true,
+      "gradient_updates": 0,
+      "sources": {
+        "main": {
+          "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/main/initialized.zip",
+          "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00"
+        },
+        "helpers": {
+          "infantry": {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/infantry/actor.json",
+            "sha256": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2"
+          },
+          "heavy": {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/heavy/actor.json",
+            "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+          }
+        },
+        "capability_profiles": [
+          {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/capability-profiles/evaluation-red.json",
+            "sha256": "c5f404d47dc6c0912f49e4caaf4827d414ac8d0dba1ef44ad9d18227e906c949"
+          }
+        ]
+      },
+      "devices": {
+        "policy_device": "cpu",
+        "torch_cuda_available": false,
+        "warp_cuda_available": true,
+        "warp_cuda_devices": [
+          {
+            "device": "cuda:0",
+            "name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+            "architecture": 120,
+            "memory_bytes": 8055947264,
+            "free_bytes": 6769541120
+          }
+        ],
+        "physics_device": "cuda:0"
+      },
+      "warmup_steps": 1,
+      "full_frame_recording": true,
+      "measured_rl_steps": 60,
+      "initialization_seconds": 2.0617930849984987,
+      "censored": false,
+      "conservative_r": 0.22042417631874958,
+      "single_world_rate": 0.22042417631874958,
+      "gpu_free_bytes_after": 6734807040,
+      "training_counters_unchanged": true,
+      "worker_exit_code": 0,
+      "watchdog_timeout": false
+    },
+    {
+      "backend": "rapier",
+      "num_envs": 1,
+      "windows": [
+        {
+          "index": 0,
+          "rl_steps": 30,
+          "decisions": 30,
+          "sum_simulation_seconds": 3.0,
+          "wall_seconds": 7.137798609008314,
+          "completed": true,
+          "r": 0.42029765258630675,
+          "single_world_rate": 0.42029765258630675
+        },
+        {
+          "index": 1,
+          "rl_steps": 30,
+          "decisions": 30,
+          "sum_simulation_seconds": 2.9999999999999996,
+          "wall_seconds": 7.596714926010463,
+          "completed": true,
+          "r": 0.3949075395376851,
+          "single_world_rate": 0.3949075395376851
+        }
+      ],
+      "completed": true,
+      "gradient_updates": 0,
+      "sources": {
+        "main": {
+          "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/main/initialized.zip",
+          "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00"
+        },
+        "helpers": {
+          "infantry": {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/infantry/actor.json",
+            "sha256": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2"
+          },
+          "heavy": {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/heavy/actor.json",
+            "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+          }
+        },
+        "capability_profiles": [
+          {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/capability-profiles/evaluation-red.json",
+            "sha256": "c5f404d47dc6c0912f49e4caaf4827d414ac8d0dba1ef44ad9d18227e906c949"
+          }
+        ]
+      },
+      "devices": {
+        "policy_device": "cpu",
+        "torch_cuda_available": false,
+        "warp_cuda_available": false,
+        "warp_cuda_devices": [],
+        "physics_device": "native_rapier_cpu"
+      },
+      "warmup_steps": 1,
+      "full_frame_recording": true,
+      "measured_rl_steps": 60,
+      "initialization_seconds": 1.3845787340105744,
+      "censored": false,
+      "conservative_r": 0.3949075395376851,
+      "single_world_rate": 0.3949075395376851,
+      "training_counters_unchanged": true,
+      "worker_exit_code": 0,
+      "watchdog_timeout": false
+    }
+  ]
+}

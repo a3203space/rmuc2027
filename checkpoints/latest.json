@@ -1,0 +1,27 @@
+{
+  "sha256": "407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05",
+  "files": {
+    "actor.json": "cb48ab8d10ca55e3a52bd5b52c29865bbdb4c65e3e85be8574c563788fe9056f",
+    "coordinator-state.json": "a69c9484ade918aefaaa59b08143acc31aa0bf8dccc461ba8f54b765a3235078",
+    "experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
+    "model.zip": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+    "resume-state.pt": "50fb1485799e4a29722b860914f9ae8403feeedb6709116af10daefb35f73470",
+    "samplers.json": "5672a640709a23b760a7c57865ddf084eea5fc1fb45a0a18059f0f36a1545b4f"
+  },
+  "samples": 10310,
+  "update_id": 80,
+  "directory": "main/checkpoints/baseline",
+  "path": "checkpoints/407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05",
+  "parts": {
+    "archive": "bundle.zip",
+    "bytes": 5492759,
+    "sha256": "407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05",
+    "parts": [
+      {
+        "name": "bundle.part-0000",
+        "bytes": 5492759,
+        "sha256": "407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05"
+      }
+    ]
+  }
+}
