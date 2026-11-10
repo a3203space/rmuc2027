@@ -1,0 +1,64 @@
+{
+  "policy_device": "cpu",
+  "torch_cuda_available": false,
+  "torch_cuda_devices": [],
+  "warp_cuda_available": true,
+  "warp_cuda_devices": [
+    {
+      "device": "cuda:0",
+      "name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+      "architecture": 120,
+      "is_cuda": true,
+      "free_bytes": 6332612608,
+      "memory_bytes": 8055947264
+    }
+  ],
+  "physics_device": "cuda:0",
+  "gpu_name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+  "results": [
+    {
+      "num_envs": 2,
+      "initialization_seconds": 2.357818721997319,
+      "samples_per_second": 16.934308490876234,
+      "samples": 16,
+      "gpu_free_bytes": 6441205760,
+      "gpu_total_bytes": 8055947264,
+      "physics_device": "cuda:0",
+      "gpu_memory_source": "warp",
+      "success": true
+    },
+    {
+      "num_envs": 4,
+      "initialization_seconds": 2.54969835600059,
+      "samples_per_second": 16.01766933128582,
+      "samples": 32,
+      "gpu_free_bytes": 6441205760,
+      "gpu_total_bytes": 8055947264,
+      "physics_device": "cuda:0",
+      "gpu_memory_source": "warp",
+      "success": true
+    },
+    {
+      "num_envs": 8,
+      "initialization_seconds": 3.0128172660042765,
+      "samples_per_second": 14.475383356551676,
+      "samples": 64,
+      "gpu_free_bytes": 6430654464,
+      "gpu_total_bytes": 8055947264,
+      "physics_device": "cuda:0",
+      "gpu_memory_source": "warp",
+      "success": true
+    }
+  ],
+  "recommended_num_envs": 2,
+  "gradient_updates": 0,
+  "training_ready": true,
+  "dependencies": {
+    "torch": "2.15.0+cpu",
+    "numpy": "2.2.6",
+    "stable-baselines3": "2.9.0",
+    "warp-lang": "1.19.0",
+    "mujoco": "3.17.0",
+    "mujoco-warp": "3.17.0"
+  }
+}

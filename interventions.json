@@ -1,0 +1,44 @@
+[
+  {
+    "kind": "explicit_main_only_continuation",
+    "parent_run": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312",
+    "parent_bundle_sha256": "175134aac3c4bd5d0de97c81f2ffc357ec408bdb8402086c20ea56f2bf272abe",
+    "parent_model_sha256": "6102d347b9300c137ffeb040e22089c2b0379d1d7d593b9b391435e24f385cba",
+    "parent_main_training": {
+      "role": "main",
+      "actual_samples": 10310,
+      "total_samples": 10310,
+      "gradient_epochs": 206,
+      "optimized_samples": 20288,
+      "parameter_l2_change": 0.2638886187693432,
+      "actor_parameter_l2_change": 0.15235938295474596,
+      "optimizer_steps": 317,
+      "wall_seconds": 2395.1735575249986,
+      "deadline_unix": 1794328346.4470646,
+      "demonstration_updates_during_ppo": 0,
+      "checkpoint": "model.zip"
+    },
+    "previous": {
+      "learning_rate": 5e-05,
+      "target_kl": 0.012,
+      "ent_coef": 0.003,
+      "samples": 10310,
+      "optimizer_steps": 317
+    },
+    "learning_rate": 1e-05,
+    "target_kl": 0.006,
+    "ent_coef": 0.001,
+    "episode_seconds": 120,
+    "v4_capture_reward": 0.02,
+    "demonstration_updates": 0,
+    "optimizer_reset": false,
+    "num_envs": 2,
+    "helpers_frozen": true,
+    "reason": "Preserve improved folding; reduce goal drift and reward actual self occupancy. Short training episodes broaden opening coverage; they are not full matches.",
+    "inherited_preflight": {
+      "source": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/preflight.json",
+      "sha256": "7823d716712ef96902684f1b7b15c98f9ac74a5746096871e7426130f7cf8cab",
+      "reason": "Same host, devices, dependencies and two-worker topology; no redundant throughput benchmark."
+    }
+  }
+]

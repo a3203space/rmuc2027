@@ -1,0 +1,44 @@
+{
+  "captured_utc": "2026-11-10T17:15:41.329262+00:00",
+  "source_commit": "e968ea5c2fde7250bcfc176c0ecbc2bb0c82fb0c",
+  "stages": {
+    "main": {
+      "role": "main",
+      "captured_utc": "2026-11-10T17:15:37.239883+00:00",
+      "model_sha256": "2f1eb00676f5d6b5f9be1acfd699aaee0a2f8fddbb5a4606c16fe6ef4a905801",
+      "resume_sha256": "3f88187740ef1ea7aab82957a7121cf4d8db147bb5b9351db4ea80a8c888103f",
+      "num_timesteps": 11462,
+      "sb3_n_updates": 234,
+      "optimizer_steps": 364,
+      "completed_updates": 89,
+      "optimized_samples": 23296,
+      "partial_rollout_discarded": 0,
+      "checkpoint_resume_counts_match": true,
+      "source_files_stable": true,
+      "actor_export_may_lag_model": true,
+      "exact_bitwise_resume": false,
+      "reset_episode": true,
+      "discard_partial_rollout": true,
+      "archive_sha256": "0e89fca2e7b68f7bfeeca80fd1382f9aefbd40235fffffa027557f5bdfb611b8",
+      "bytes": 3495741
+    }
+  },
+  "gradient_deadline_unix": 1794332406.0,
+  "campaign_deadline_unix": 1794333606.0,
+  "database_included": false,
+  "validation": "训练中开发备份，未宣称收敛或全243/486矩阵420秒通过",
+  "frozen_helpers": {
+    "infantry": {
+      "commit": "1047ef3cae27b3b153d71a236b93f4bee945be64",
+      "archive": "infantry.zip",
+      "archive_sha256": "8740be39a80eb86e9247376177caeac691db106ec724ac0721a7743cabcaca88",
+      "url": "https://github.com/a3203space/rmuc2027/blob/1047ef3cae27b3b153d71a236b93f4bee945be64/infantry.zip"
+    },
+    "heavy": {
+      "commit": "1047ef3cae27b3b153d71a236b93f4bee945be64",
+      "archive": "heavy.zip",
+      "archive_sha256": "ce1e83b585f59d5bc213952961a5b2efce9ffb28b7b5ee3050b280010845c076",
+      "url": "https://github.com/a3203space/rmuc2027/blob/1047ef3cae27b3b153d71a236b93f4bee945be64/heavy.zip"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-42-generic-x86_64-with-glibc2.39",
+  "editable_source_packages": [
+    "rmuc2027-core",
+    "rmuc2027-research"
+  ],
+  "policy_device": "cpu",
+  "freeze_file": "requirements-runtime.txt",
+  "wheelhouse_embedded": false
+}

@@ -1,0 +1,7 @@
+{
+  "started_unix": 1794330006.0,
+  "deadline_unix": 1794333606.0,
+  "gradient_deadline_unix": 1794332406.0,
+  "wall_budget_seconds": 3600.0,
+  "authorization": "user: 再运行一个小时; from request receipt, not process start"
+}

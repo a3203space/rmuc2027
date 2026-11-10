@@ -1,0 +1,12 @@
+{
+  "status": "training",
+  "started_unix": 1794330006.0,
+  "deadline_unix": 1794333606.0,
+  "gradient_deadline_unix": 1794332406.0,
+  "wall_budget_seconds": 3600.0,
+  "parent_run": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312",
+  "parent_bundle_sha256": "175134aac3c4bd5d0de97c81f2ffc357ec408bdb8402086c20ea56f2bf272abe",
+  "num_envs": 2,
+  "stages": [],
+  "evaluations": []
+}
