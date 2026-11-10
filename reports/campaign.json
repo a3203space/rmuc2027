@@ -53,6 +53,90 @@
       "exit_code": -2,
       "timed_out": true,
       "log": "main-warp_kinematic-blue-baseline.log"
+    },
+    {
+      "case_id": "main-warp_kinematic-blue",
+      "member": "candidate",
+      "exit_code": -2,
+      "timed_out": true,
+      "log": "main-warp_kinematic-blue-candidate.log"
+    },
+    {
+      "case_id": "main-rapier-red",
+      "member": "baseline",
+      "exit_code": -2,
+      "timed_out": true,
+      "log": "main-rapier-red-baseline.log"
+    },
+    {
+      "case_id": "main-rapier-red",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "main-rapier-red-candidate.log"
+    },
+    {
+      "case_id": "main-rapier-blue",
+      "member": "baseline",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "main-rapier-blue-baseline.log"
+    },
+    {
+      "case_id": "main-rapier-blue",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "main-rapier-blue-candidate.log"
+    },
+    {
+      "case_id": "recovery-free_ready",
+      "member": "baseline",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-free_ready-baseline.log"
+    },
+    {
+      "case_id": "recovery-free_ready",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-free_ready-candidate.log"
+    },
+    {
+      "case_id": "recovery-paid_early",
+      "member": "baseline",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-paid_early-baseline.log"
+    },
+    {
+      "case_id": "recovery-paid_early",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-paid_early-candidate.log"
+    },
+    {
+      "case_id": "recovery-unavailable",
+      "member": "baseline",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-unavailable-baseline.log"
+    },
+    {
+      "case_id": "recovery-unavailable",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-unavailable-candidate.log"
+    },
+    {
+      "case_id": "recovery-alive_weak",
+      "member": "baseline",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-alive_weak-baseline.log"
     }
   ],
   "allocation": {

@@ -184,6 +184,7 @@ class _PrefixController:
         self.observation_profile = profile
         self.navigation, self.logs = {}, []
         self.fire_commands = 0
+        self.ammo_order_time = None
         self.guard_counts = {}
         self.navigation_phase_counts = {}
         self.last_diagnostic = {}
@@ -197,7 +198,10 @@ class _PrefixController:
         phase = self.navigation.get('phase', 'idle')
         self.navigation_phase_counts[phase] = self.navigation_phase_counts.get(phase, 0)+1
         fields = ('id', 'team', 'slot', 'model_slot', 'x', 'y', 'z', 'vx', 'vy',
-                  'hp', 'alive', 'tipped', 'grounded', 'transform_progress')
+                  'hp', 'alive', 'tipped', 'grounded', 'transform_progress',
+                  'ammo', 'heat', 'max_heat', 'weak', 'overheated',
+                  'heat_permanent_lock', 'overspeed_locked', 'overspeed_permanent_lock',
+                  'launcher_fault', 'red_card')
         self.last_diagnostic = dict(time=obs['time'], driver_phase=self.driver.phase,
             driver_engage=self.driver.engage, robot={k: robot.get(k) for k in fields},
             target=None if target is None else {k: target.get(k) for k in fields},
@@ -239,6 +243,19 @@ class _PrefixController:
             if target is not None: self._count('target_seen')
             if robot.get('alive'):
                 self._count('shooter_alive')
+                # Infantry starts with zero ammunition. Make one ordinary
+                # remote purchase, then wait for observed delivery before
+                # leaving spawn. Neither ammunition nor team coins are edited.
+                # Repeated 20 Hz commands must not purchase another batch while
+                # the first order is pending (normal delivery takes 6 seconds).
+                if robot.get('ammo', 0) <= 0:
+                    if self.ammo_order_time is None:
+                        action['buy_ammo'] = dict(remote=True, amount=100)
+                        self.ammo_order_time = float(obs['time'])
+                        self._count('ammo_order_sent')
+                    self._count('awaiting_actual_ammo')
+                    self._diagnose(obs, robot, action, target, goal)
+                    return {str(self.slot): action}, None
                 action = sdk.navigate_action(robot, goal, obs, self.navigation)
                 action['fire'] = False
                 if target is not None and target.get('alive'):
@@ -288,10 +305,10 @@ def prepare_recovery_prefix(session, kind, deadline=None):
                    else getattr(policy, 'observation_profile', None))
         replacements.append((team, slots, _PrefixController(driver, team, slot, profile)))
     error_count = len(battle.diagnostics)
-    report = dict(version=2, kind=kind, prepared=False, reason='simulation_limit',
+    report = dict(version=3, kind=kind, prepared=False, reason='simulation_limit',
         max_simulation_seconds=spec.max_simulation_seconds, learning_samples=0,
         bootstrap_excluded_from_policy_score=True, start_time=start,
-        preparation_controller='legal_script_prefix_v2')
+        preparation_controller='legal_script_prefix_v3')
     try:
         battle.policies = replacements
         battle._seat_policies = {(team, slots[0]): p for team, slots, p in replacements}
@@ -339,6 +356,7 @@ def prepare_recovery_prefix(session, kind, deadline=None):
             diagnostics=dict(driver_phase=driver.phase, driver_engage=driver.engage,
                 learner_goal=list(driver.goal), dead_seen=driver.dead_seen,
                 seats={team+':'+str(slots[0]): dict(guard_counts=p.guard_counts,
+                    ammo_order_time=p.ammo_order_time,
                     navigation_phase_counts=p.navigation_phase_counts,
                     last=p.last_diagnostic, samples=p.diagnostic_samples)
                     for team, slots, p in replacements}))

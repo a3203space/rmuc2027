@@ -141,7 +141,7 @@ class RecoveryPrefixTests(unittest.TestCase):
 class RecoveryPrefixV2Tests(unittest.TestCase):
     def controller_obs(self, *, team='blue', slot=3, target=True, alive=True, distance=5.):
         shooter=dict(team=team,slot=slot,id=team+'-'+str(slot),alive=True,
-                     x=16.3,y=6.5,z=0.,hp=300)
+                     x=16.3,y=6.5,z=0.,hp=300,ammo=100)
         opponent='red' if team=='blue' else 'blue'
         enemy=dict(team=opponent,slot=7,id=opponent+'-7',alive=alive,
                    x=16.3-distance,y=6.5,z=0.,hp=400 if alive else 0)
@@ -176,6 +176,38 @@ class RecoveryPrefixV2Tests(unittest.TestCase):
                 result,_=c.decide(self.controller_obs(target=target,alive=alive,distance=distance))
             self.assertFalse(result['3']['fire'])
 
+    def test_zero_ammo_orders_once_and_waits_for_actual_delivery(self):
+        c=recovery._PrefixController(self.driver(),'blue',3,'privileged_aux_2027_v1')
+        obs=self.controller_obs();obs['robots'][0]['ammo']=0
+        original=copy.deepcopy(obs)
+        with patch.object(recovery.sdk,'navigate_action',return_value=dict(move=[.2,0.])) as navigate, \
+             patch.object(recovery.sdk,'can_fire',return_value=True), \
+             patch.object(recovery.sdk,'ballistic_reachable',return_value=True), \
+             patch.object(recovery.sdk,'aim_at',return_value=0.), \
+             patch.object(recovery.sdk,'aim_pitch',return_value=0.):
+            first,_=c.decide(obs)
+            self.assertEqual(obs,original)
+            self.assertEqual(first['3']['buy_ammo'],dict(remote=True,amount=100))
+            for now in (.05,1.,5.95):
+                obs['time']=now
+                held,_=c.decide(obs)
+                self.assertNotIn('buy_ammo',held['3'])
+                self.assertFalse(held['3']['fire'])
+                self.assertEqual(held['3']['move'],[0.,0.])
+            navigate.assert_not_called()
+            obs['time']=6.;obs['robots'][0]['ammo']=100
+            delivered,_=c.decide(obs)
+            self.assertTrue(delivered['3']['fire'])
+            self.assertNotIn('buy_ammo',delivered['3'])
+            self.assertEqual(c.guard_counts['ammo_order_sent'],1)
+
+    def test_dead_helper_never_orders_ammunition(self):
+        c=recovery._PrefixController(self.driver(),'blue',3,'privileged_aux_2027_v1')
+        obs=self.controller_obs();obs['robots'][0].update(ammo=0,alive=False)
+        result,_=c.decide(obs)
+        self.assertNotIn('buy_ammo',result['3'])
+        self.assertIsNone(c.ammo_order_time)
+
     def test_caps_and_team_local_central_targets(self):
         expected={'free_ready':60.,'paid_beneficial':45.,'unavailable':45.,'alive_weak':60.}
         for kind,spec in recovery.SPECS.items():
@@ -196,7 +228,7 @@ class RecoveryPrefixV2Tests(unittest.TestCase):
         with patch.dict(recovery.SPECS,free_ready=recovery.RecoveryPrefixSpec('free_ready',.15,(11.7,8.5))), \
              patch.object(recovery.sdk,'navigate_action',return_value={'move':[0.,0.]}):
             report=recovery.prepare_recovery_prefix(session(b),'free_ready')
-        self.assertFalse(report['prepared']);self.assertEqual(report['version'],2)
+        self.assertFalse(report['prepared']);self.assertEqual(report['version'],3)
         d=report['diagnostics']['seats']['red:7']
         self.assertEqual(d['last']['driver_phase'],'travel')
         self.assertEqual(d['last']['robot']['hp'],300)
