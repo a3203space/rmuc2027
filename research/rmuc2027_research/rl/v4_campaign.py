@@ -246,7 +246,7 @@ def train_stage(root,role,deadline_unix,num_envs):
         vec.close()
 
 
-def evaluate_pair(root,backend,side,deadline_unix):
+def evaluate_pair(root,backend,side,deadline_unix,reuse_anchor_from=None):
     import numpy as np
     from .env import SentryEnv
     from .scenarios import ScenarioSpec
@@ -259,7 +259,14 @@ def evaluate_pair(root,backend,side,deadline_unix):
         scenario=ScenarioSpec(learner_side=side).to_dict(),navigation_precompute=False,
         auxiliary_pool=pool_config(root),action_trace=True)
     reports=[]
+    if reuse_anchor_from is not None:
+        from .v4_anchor_reuse import validate_anchor_reuse
+        cfg['v4_capture_reward']=0.
+        anchor,anchor_trace=validate_anchor_reuse(root,reuse_anchor_from,backend,side)
+        (root/'evaluation'/f'{backend}-{side}-initialized.zip.jsonl').write_bytes(anchor_trace)
+        reports.append(anchor)
     for member,checkpoint in enumerate(('initialized.zip','model.zip')):
+        if member==0 and reuse_anchor_from is not None:continue
         member_deadline=time.monotonic()+max(0.,deadline-time.monotonic())/(2-member)
         model=AsymmetricPPO.load(folder/checkpoint,device='cpu')
         env=SentryEnv(cfg);started=time.monotonic();steps=folds=0;max_fold=0.;info=None;trace=[]
@@ -284,6 +291,7 @@ def evaluate_pair(root,backend,side,deadline_unix):
                 control=info['control'],fold_requests=folds,max_fold=max_fold,
                 passed_tunnel=passage['passed_tunnel'],passed_tunnel_evidence=passage,
                 final_position=[robot[k] for k in ('x','y','z')],wall_seconds=time.monotonic()-started)
+            if reuse_anchor_from is not None:row['reused']=False
             reports.append(row);print(json.dumps({'kind':'paired-trial',**row}),flush=True)
         finally:env.close()
     write_json(root/'evaluation'/f'{backend}-{side}.json',reports)
@@ -452,14 +460,17 @@ def main():
     for name in ('preflight','initialize','train-stage','evaluate-pair'):
         p=sub.add_parser(name);p.add_argument('--output',type=Path,required=True);p.add_argument('--deadline-unix',type=float,required=True)
         if name=='train-stage':p.add_argument('--role',choices=['main','infantry','heavy'],required=True);p.add_argument('--num-envs',type=int,default=2)
-        if name=='evaluate-pair':p.add_argument('--backend',choices=['warp_kinematic','rapier','mjwarp'],required=True);p.add_argument('--side',choices=['red','blue'],required=True)
+        if name=='evaluate-pair':
+            p.add_argument('--backend',choices=['warp_kinematic','rapier','mjwarp'],required=True)
+            p.add_argument('--side',choices=['red','blue'],required=True)
+            p.add_argument('--reuse-anchor-from',type=Path)
     args=parser.parse_args()
     if args.command=='run':run(args.output,args.wall_seconds,args.num_envs,args.resume_from)
     elif args.command=='package':package(args.output)
     elif args.command=='preflight':preflight_worker(args.output,args.deadline_unix)
     elif args.command=='initialize':initialization(args.output,args.deadline_unix)
     elif args.command=='train-stage':train_stage(args.output,args.role,args.deadline_unix,args.num_envs)
-    else:evaluate_pair(args.output,args.backend,args.side,args.deadline_unix)
+    else:evaluate_pair(args.output,args.backend,args.side,args.deadline_unix,args.reuse_anchor_from)
 
 
 if __name__=='__main__':main()

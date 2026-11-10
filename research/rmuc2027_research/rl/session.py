@@ -47,6 +47,12 @@ def load_config(source=None):
         if 'opponent' not in supplied:config['opponent']=config['friendly']
     if config.get('policy_version') == 4:
         config['rewards'].update(control=.01,outcome=10.,death=-.1,capture_seconds=0.)
+        if 'v4_capture_reward' in config:
+            capture_reward = config['v4_capture_reward']
+            if (isinstance(capture_reward, bool) or not isinstance(capture_reward, (int, float))
+                    or not math.isfinite(capture_reward) or capture_reward < 0):
+                raise ValueError('v4_capture_reward must be finite and nonnegative')
+            config['rewards']['capture_seconds'] = float(capture_reward)
         config.setdefault('scenario_sampling',True)
         config.setdefault('capability_sampling',True)
     if config.get('policy_version') == 5:

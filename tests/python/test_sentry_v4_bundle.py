@@ -23,6 +23,9 @@ class BundleTests(unittest.TestCase):
         (root/'assets/manifest.json').write_text('{}')
         cache = root/'research/.cache'; cache.mkdir(parents=True)
         (cache/'compiled-kernel.bin').write_bytes(b'not source')
+        for name in ('fixture.egg-info','fixture-1.0.dist-info'):
+            metadata=root/'research'/name;metadata.mkdir()
+            (metadata/'PKG-INFO').write_text('generated installation metadata')
         (root/'scratch.sqlite').write_bytes(b'not source')
         baseline = root/'research/strategies/examples/base'
         baseline.mkdir(parents=True); (baseline/'strategy.py').write_text('def act(o,s): return {},s\n')
@@ -63,6 +66,7 @@ class BundleTests(unittest.TestCase):
                 self.assertIn('source/assets/web/assets/robot-2773.glb',z.namelist())
                 self.assertIn('source/assets/manifest.json',z.namelist())
                 self.assertFalse(any('/.cache/' in name for name in z.namelist()))
+                self.assertFalse(any('.egg-info/' in name or '.dist-info/' in name for name in z.namelist()))
                 self.assertFalse(any(name.endswith('.sqlite') for name in z.namelist()))
             moved = Path(directory)/'another-machine'
             extract_bundle(archive,moved)

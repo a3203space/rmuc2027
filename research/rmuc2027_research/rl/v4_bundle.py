@@ -41,6 +41,7 @@ def _walk(directory, *, source=False):
     for base, dirs, names in os.walk(directory):
         relative = Path(base).relative_to(directory)
         dirs[:] = sorted(d for d in dirs if d not in EXCLUDED_DIRS and not Path(base, d).is_symlink()
+                         and not (source and d.endswith((".egg-info", ".dist-info")))
                          and not (source and relative == Path('.') and d in {"data", "rmuc2026shuj"}))
         for name in sorted(names):
             path = Path(base, name)
