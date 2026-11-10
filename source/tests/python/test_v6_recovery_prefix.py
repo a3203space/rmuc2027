@@ -138,6 +138,15 @@ class RecoveryPrefixTests(unittest.TestCase):
         self.assertEqual(battle.match._frame['robots'][0]['hp'], before[0]['hp'])
 
 
+def purchase_observation(case, time=0., coins=0., ammo=0, pending=()):
+    obs = case.controller_obs()
+    obs.update(time=time, tick=round(time*20),
+               teams={'blue': {'resources': coins, 'purchased_17': 0}})
+    obs['robots'][0].update(ammo=ammo, pending_ammo=list(pending),
+                           last_shot_time=-1000., last_damage_time=-1000.)
+    return obs
+
+
 class RecoveryPrefixV2Tests(unittest.TestCase):
     def controller_obs(self, *, team='blue', slot=3, target=True, alive=True, distance=5.):
         shooter=dict(team=team,slot=slot,id=team+'-'+str(slot),alive=True,
@@ -177,29 +186,51 @@ class RecoveryPrefixV2Tests(unittest.TestCase):
             self.assertFalse(result['3']['fire'])
 
     def test_zero_ammo_orders_once_and_waits_for_actual_delivery(self):
-        c=recovery._PrefixController(self.driver(),'blue',3,'privileged_aux_2027_v1')
-        obs=self.controller_obs();obs['robots'][0]['ammo']=0
-        original=copy.deepcopy(obs)
-        with patch.object(recovery.sdk,'navigate_action',return_value=dict(move=[.2,0.])) as navigate, \
-             patch.object(recovery.sdk,'can_fire',return_value=True), \
-             patch.object(recovery.sdk,'ballistic_reachable',return_value=True), \
-             patch.object(recovery.sdk,'aim_at',return_value=0.), \
-             patch.object(recovery.sdk,'aim_pitch',return_value=0.):
-            first,_=c.decide(obs)
-            self.assertEqual(obs,original)
-            self.assertEqual(first['3']['buy_ammo'],dict(remote=True,amount=100))
-            for now in (.05,1.,5.95):
-                obs['time']=now
-                held,_=c.decide(obs)
-                self.assertNotIn('buy_ammo',held['3'])
-                self.assertFalse(held['3']['fire'])
-                self.assertEqual(held['3']['move'],[0.,0.])
-            navigate.assert_not_called()
-            obs['time']=6.;obs['robots'][0]['ammo']=100
-            delivered,_=c.decide(obs)
-            self.assertTrue(delivered['3']['fire'])
-            self.assertNotIn('buy_ammo',delivered['3'])
-            self.assertEqual(c.guard_counts['ammo_order_sent'],1)
+        c = recovery._PrefixController(self.driver(), 'blue', 3, 'privileged_aux_2027_v1')
+        for now in (0., .05, 1.):
+            obs = purchase_observation(self, now)
+            before = copy.deepcopy(obs)
+            action, _ = c.decide(obs)
+            self.assertNotIn('buy_ammo', action['3'])
+            self.assertEqual(obs, before)
+            self.assertIsNone(c.ammo_order_time)
+        action, _ = c.decide(purchase_observation(self, 1.05, 800.))
+        self.assertNotIn('buy_ammo', action['3'])  # odd source tick 21
+        action, _ = c.decide(purchase_observation(self, 1.1, 800.))
+        self.assertEqual(action['3']['buy_ammo'], {'remote': True, 'amount': 100})
+        for now in (1.15, 1.2, 7.):
+            action, _ = c.decide(purchase_observation(self, now, 650., pending=[(7.1, 100)]))
+            self.assertNotIn('buy_ammo', action['3'])
+            self.assertEqual(action['3']['move'], [0., 0.])
+            self.assertFalse(action['3']['fire'])
+        self.assertTrue(c.ammo_order_acknowledged)
+        with patch.object(recovery.sdk, 'navigate_action', return_value=dict(move=[.2, 0.])), \
+             patch.object(recovery.sdk, 'can_fire', return_value=True), \
+             patch.object(recovery.sdk, 'ballistic_reachable', return_value=True), \
+             patch.object(recovery.sdk, 'aim_at', return_value=0.), \
+             patch.object(recovery.sdk, 'aim_pitch', return_value=0.):
+            action, _ = c.decide(purchase_observation(self, 7.1, 650., ammo=100))
+        self.assertTrue(action['3']['fire'])
+        self.assertNotIn('buy_ammo', action['3'])
+        self.assertEqual(c.guard_counts['ammo_order_sent'], 1)
+
+    def test_existing_pending_order_is_never_duplicated(self):
+        c = recovery._PrefixController(self.driver(), 'blue', 3, 'privileged_aux_2027_v1')
+        action, _ = c.decide(purchase_observation(self, 2., 800., pending=[(7., 100)]))
+        self.assertNotIn('buy_ammo', action['3'])
+        self.assertTrue(c.ammo_order_acknowledged)
+
+    def test_combat_and_quota_guard(self):
+        for field in ('combat', 'quota'):
+            c = recovery._PrefixController(self.driver(), 'blue', 3, 'privileged_aux_2027_v1')
+            obs = purchase_observation(self, 2., 800.)
+            if field == 'combat':
+                obs['robots'][0]['last_damage_time'] = 1.
+            else:
+                obs['teams']['blue']['purchased_17'] = 1000
+            action, _ = c.decide(obs)
+            self.assertNotIn('buy_ammo', action['3'])
+            self.assertIsNone(c.ammo_order_time)
 
     def test_dead_helper_never_orders_ammunition(self):
         c=recovery._PrefixController(self.driver(),'blue',3,'privileged_aux_2027_v1')
@@ -228,7 +259,7 @@ class RecoveryPrefixV2Tests(unittest.TestCase):
         with patch.dict(recovery.SPECS,free_ready=recovery.RecoveryPrefixSpec('free_ready',.15,(11.7,8.5))), \
              patch.object(recovery.sdk,'navigate_action',return_value={'move':[0.,0.]}):
             report=recovery.prepare_recovery_prefix(session(b),'free_ready')
-        self.assertFalse(report['prepared']);self.assertEqual(report['version'],3)
+        self.assertFalse(report['prepared']);self.assertEqual(report['version'],4)
         d=report['diagnostics']['seats']['red:7']
         self.assertEqual(d['last']['driver_phase'],'travel')
         self.assertEqual(d['last']['robot']['hp'],300)

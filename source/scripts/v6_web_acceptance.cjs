@@ -105,6 +105,15 @@ async function main(argv=process.argv.slice(2)){
    assert(await page.locator('#viewport canvas').count()>0,'The original Arena canvas is absent');
    await page.screenshot({path:path.join(shots,'frozen-live.png'),fullPage:true,timeout:Math.min(15000,remaining())});
    result.live={match_id:ownedMatch,maximum_tick:maximumTick,simulation_seconds:state.frame.time,metadata:record.metadata,result:record.result,diagnostics:live};
+   // Preserve the actual canonical FrameLog inside the run before publishing the
+   // acceptance marker; the service journal itself lives outside the run bundle.
+   const liveReplay=await page.request.get(url.origin+'/api/replays/'+encodeURIComponent(ownedMatch),{timeout:Math.min(30000,remaining())});
+   assert(liveReplay.ok(),'Could not archive the owned frozen match replay');
+   const liveReplayBytes=await liveReplay.body();remaining();
+   const liveReplayPath=path.join(shots,'frozen-live-replay.json');
+   fs.writeFileSync(liveReplayPath+'.pending',liveReplayBytes);fs.renameSync(liveReplayPath+'.pending',liveReplayPath);
+   result.live.replay={path:path.relative(root,liveReplayPath).split(path.sep).join('/'),bytes:liveReplayBytes.length,sha256:crypto.createHash('sha256').update(liveReplayBytes).digest('hex'),format:'canonical-full-frames',source:'owned-frozen-ui-match'};
+   await liveReplay.dispose();
    result.checks.frozen_live_match=true;result.checks.test_match_no_elo=true;
    // A saved training/evaluation replay from the registered run is required.
    // Do not substitute the short web match we just created.

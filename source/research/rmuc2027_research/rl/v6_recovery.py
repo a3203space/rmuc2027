@@ -185,6 +185,7 @@ class _PrefixController:
         self.navigation, self.logs = {}, []
         self.fire_commands = 0
         self.ammo_order_time = None
+        self.ammo_order_acknowledged = False
         self.guard_counts = {}
         self.navigation_phase_counts = {}
         self.last_diagnostic = {}
@@ -201,7 +202,7 @@ class _PrefixController:
                   'hp', 'alive', 'tipped', 'grounded', 'transform_progress',
                   'ammo', 'heat', 'max_heat', 'weak', 'overheated',
                   'heat_permanent_lock', 'overspeed_locked', 'overspeed_permanent_lock',
-                  'launcher_fault', 'red_card')
+                  'launcher_fault', 'red_card', 'pending_ammo', 'last_shot_time', 'last_damage_time')
         self.last_diagnostic = dict(time=obs['time'], driver_phase=self.driver.phase,
             driver_engage=self.driver.engage, robot={k: robot.get(k) for k in fields},
             target=None if target is None else {k: target.get(k) for k in fields},
@@ -210,7 +211,10 @@ class _PrefixController:
             navigation_phase=phase, navigation_rejected=list(self.navigation.get('rejected', [])),
             trajectory=list(self.navigation.get('trajectory', [])),
             waiting_peer=self.navigation.get('wait_for_peer'),
-            move=list(action.get('move', (0., 0.))), fire=bool(action.get('fire', False)))
+            move=list(action.get('move', (0., 0.))), fire=bool(action.get('fire', False)),
+            buy_ammo=action.get('buy_ammo'), ammo_order_time=self.ammo_order_time,
+            ammo_order_acknowledged=self.ammo_order_acknowledged,
+            team_resources=obs.get('teams', {}).get(self.team, {}).get('resources'))
         second = int(obs['time'])
         if second != self.last_diagnostic_second:
             self.diagnostic_samples.append(dict(self.last_diagnostic))
@@ -249,10 +253,34 @@ class _PrefixController:
                 # Repeated 20 Hz commands must not purchase another batch while
                 # the first order is pending (normal delivery takes 6 seconds).
                 if robot.get('ammo', 0) <= 0:
-                    if self.ammo_order_time is None:
-                        action['buy_ammo'] = dict(remote=True, amount=100)
-                        self.ammo_order_time = float(obs['time'])
-                        self._count('ammo_order_sent')
+                    # Economy grants the initial coins at t=1, not t=0.
+                    # The engine consumes RPCs on even SOURCE ticks before
+                    # incrementing tick; never burn the one-shot latch on an
+                    # unfunded or odd-tick request. Both helpers cost 300 in
+                    # total, within the observed initial 800-coin team grant.
+                    account = obs.get('teams', {}).get(self.team, {})
+                    now = float(obs['time'])
+                    tick = obs.get('tick')
+                    pending = robot.get('pending_ammo', [])
+                    if pending:
+                        self.ammo_order_acknowledged = True
+                        self._count('ammo_order_acknowledged')
+                    if self.ammo_order_time is None and not pending:
+                        funded = account.get('resources', 0) >= 150
+                        quota = account.get('purchased_17', 0)+100 <= 1000
+                        disengaged = all(now-float(robot.get(k, now)) >= 6.-1e-8
+                                         for k in ('last_shot_time', 'last_damage_time'))
+                        source_even = isinstance(tick, int) and tick % 2 == 0
+                        if funded and quota and disengaged and source_even:
+                            action['buy_ammo'] = dict(remote=True, amount=100)
+                            self.ammo_order_time = now
+                            self._count('ammo_order_sent')
+                        else:
+                            for allowed, label in ((funded, 'awaiting_team_coins'),
+                                    (quota, 'ammo_quota_unavailable'),
+                                    (disengaged, 'awaiting_disengaged'),
+                                    (source_even, 'awaiting_rpc_tick')):
+                                if not allowed: self._count(label)
                     self._count('awaiting_actual_ammo')
                     self._diagnose(obs, robot, action, target, goal)
                     return {str(self.slot): action}, None
@@ -305,10 +333,10 @@ def prepare_recovery_prefix(session, kind, deadline=None):
                    else getattr(policy, 'observation_profile', None))
         replacements.append((team, slots, _PrefixController(driver, team, slot, profile)))
     error_count = len(battle.diagnostics)
-    report = dict(version=3, kind=kind, prepared=False, reason='simulation_limit',
+    report = dict(version=4, kind=kind, prepared=False, reason='simulation_limit',
         max_simulation_seconds=spec.max_simulation_seconds, learning_samples=0,
         bootstrap_excluded_from_policy_score=True, start_time=start,
-        preparation_controller='legal_script_prefix_v3')
+        preparation_controller='legal_script_prefix_v4')
     try:
         battle.policies = replacements
         battle._seat_policies = {(team, slots[0]): p for team, slots, p in replacements}

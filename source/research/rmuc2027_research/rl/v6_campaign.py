@@ -215,7 +215,7 @@ def refresh_manifest(root):
     return manifest
 
 
-def train(root,deadline_unix,num_envs):
+def train(root,deadline_unix,num_envs,training_control=None):
     import numpy as np
     import torch
     from stable_baselines3.common.callbacks import BaseCallback
@@ -231,6 +231,9 @@ def train(root,deadline_unix,num_envs):
     vec=vector_env(cfg,num_envs)
     model=HybridPPO.load(folder/'model.zip',env=vec,device='cpu')
     restore_state(folder,vec)
+    if training_control is not None:
+        from .v6_longrun import apply_training_control
+        write_json(folder/'training-control-applied.json',apply_training_control(model,cfg,training_control))
     initial_skill={name:value.detach().cpu().clone() for name,value in model.policy.state_dict().items()
                    if '.skill.' in name or name=='skill_log_std'}
     start_steps=model.num_timesteps;start_optimizer=getattr(model,'optimizer_steps',0)
@@ -470,6 +473,7 @@ def main():
     parser.add_argument('--resume-bundle',type=Path)
     parser.add_argument('--deadline-unix',type=float)
     parser.add_argument('--num-envs',type=int,default=2)
+    parser.add_argument('--training-control',type=Path)
     parser.add_argument('--case');parser.add_argument('--member',choices=('baseline','candidate'))
     args=parser.parse_args()
     if args.command=='run':run(args.output,args.parent,resume_bundle=args.resume_bundle)
@@ -481,7 +485,7 @@ def main():
     elif args.command=='preflight':
         from .v6_preflight import preflight
         preflight(args.output,args.deadline_unix)
-    elif args.command=='train':train(args.output,args.deadline_unix,args.num_envs)
+    elif args.command=='train':train(args.output,args.deadline_unix,args.num_envs,args.training_control)
     elif args.command=='evaluate':
         from .v6_evaluation import required_cases,trial
         trial(args.output,next(c for c in required_cases() if c['id']==args.case),args.member,args.deadline_unix)

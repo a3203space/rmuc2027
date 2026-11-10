@@ -887,3 +887,63 @@ fn operator_ammo_purchase_deducts_money_and_remote_delivery_arrives_once() {
     for _ in 0..4 { m.step(&json!({})); }
     assert_eq!(m.robots[i].ammo, 110);
 }
+
+
+mod recovery_purchase_tick_regression {
+//! Rule-only cadence test: no Engine.advance(), world.step(), GPU or simulation rollout.
+use super::*;
+fn rule_tick(m: &mut Engine, commands: &Value) {
+    m.events.clear();
+    let mut actions=Vec::new();
+    for i in 0..m.robots.len() {
+        let r=&m.robots[i];
+        let raw=commands.get(&r.team).and_then(|t|t.get(r.slot.to_string())).cloned().unwrap_or(json!({}));
+        actions.push(m.normalize(&raw,i));
+    }
+    m.before_step_2027(&actions);
+    // Exact source-tick convention from Engine.advance; deliberately omit physics.
+    m.tick+=1;
+}
+fn index(m:&Engine,id:&str)->usize {m.robots.iter().position(|r|r.id==id).unwrap()}
+#[test]
+fn v3_initial_request_is_unfunded_not_lost_by_tick_increment() {
+    let mut m=Engine::new(42,420.,"rmuc2027").unwrap(); let i=index(&m,"blue-3");
+    assert_eq!(m.tick,0); assert_eq!(m.teams["blue"].resources,0.);
+    rule_tick(&mut m,&json!({"blue":{"3":{"buy_ammo":{"remote":true,"amount":100}}}}));
+    assert!(m.robots[i].pending_ammo.is_empty());
+    for _ in 1..21 {rule_tick(&mut m,&json!({}));}
+    assert_eq!(m.teams["blue"].resources,800.);
+    for _ in 21..121 {rule_tick(&mut m,&json!({}));}
+    assert_eq!(m.robots[i].ammo,0);assert_eq!(m.teams["blue"].purchased_17,0);
+}
+#[test]
+fn funded_odd_tick_ignored_even_tick_purchases_and_delivers_exactly_once() {
+    let mut m=Engine::new(42,420.,"rmuc2027").unwrap();let i=index(&m,"blue-3");
+    for _ in 0..21 {rule_tick(&mut m,&json!({}));}
+    let buy=json!({"blue":{"3":{"buy_ammo":{"remote":true,"amount":100}}}});
+    assert_eq!(m.tick,21);rule_tick(&mut m,&buy);
+    assert_eq!(m.teams["blue"].resources,800.);assert!(m.robots[i].pending_ammo.is_empty());
+    assert_eq!(m.tick,22);rule_tick(&mut m,&buy);
+    assert_eq!(m.teams["blue"].resources,650.);assert_eq!(m.robots[i].pending_ammo.len(),1);
+    assert_eq!(m.robots[i].pending_ammo[0],(7.1,100));
+    assert_eq!(m.events.iter().filter(|e|e["type"]=="ammo_purchase").count(),1);
+    for _ in 23..142 {rule_tick(&mut m,&json!({}));}
+    assert_eq!(m.robots[i].ammo,0);assert_eq!(m.tick,142);
+    rule_tick(&mut m,&json!({}));assert_eq!(m.robots[i].ammo,100);
+    for _ in 143..160 {rule_tick(&mut m,&json!({}));}
+    assert_eq!(m.robots[i].ammo,100);assert!(m.robots[i].pending_ammo.is_empty());
+    assert_eq!(m.teams["blue"].resources,650.);assert_eq!(m.teams["blue"].purchased_17,100);
+}
+#[test]
+fn both_helpers_share_initial_budget_without_duplicate_debits() {
+    let mut m=Engine::new(42,420.,"rmuc2027").unwrap();
+    for _ in 0..22 {rule_tick(&mut m,&json!({}));}
+    rule_tick(&mut m,&json!({"blue":{"3":{"buy_ammo":{"remote":true,"amount":100}},"4":{"buy_ammo":{"remote":true,"amount":100}}}}));
+    assert_eq!(m.teams["blue"].resources,500.);assert_eq!(m.teams["blue"].purchased_17,200);
+    assert_eq!(m.events.iter().filter(|e|e["type"]=="ammo_purchase").count(),2);
+    for _ in 23..160 {rule_tick(&mut m,&json!({}));}
+    for id in ["blue-3","blue-4"] {let i=index(&m,id);assert_eq!(m.robots[i].ammo,100);assert!(m.robots[i].pending_ammo.is_empty());}
+    assert_eq!(m.teams["blue"].resources,500.);
+}
+
+}
