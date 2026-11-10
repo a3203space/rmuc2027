@@ -420,6 +420,12 @@ def preflight(directory, *, inference=True):
                 model = algorithm.load(directory/_relative(info["checkpoint"]), device="cpu")
                 relocate_model_runtime(model, directory, stage)
                 observation = model.observation_space.sample()
+                # Independently sampling each categorical mask bit can produce
+                # an impossible empty legal-action set. Inference preflight
+                # uses a finite synthetic observation with all heads enabled;
+                # actual environment masks are checked by the native tests.
+                if isinstance(observation, dict) and 'action_mask' in observation:
+                    observation['action_mask'] = np.ones_like(observation['action_mask'])
                 action, _ = model.predict(observation, deterministic=True)
                 row = dict(finite=bool(np.isfinite(action).all()), action_shape=list(np.asarray(action).shape),
                            algorithm=algorithm.__name__)
