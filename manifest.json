@@ -1,15 +1,15 @@
 {
-  "captured_utc": "2026-11-10T16:15:30.853902+00:00",
-  "source_commit": "2cf661411828757f7c94cccbfa5547d5fa1f9ab3",
+  "captured_utc": "2026-11-10T16:31:18.299078+00:00",
+  "source_commit": "6ef83eabd91b6218ad9ab5ffa15a48365722f8c2",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T16:15:22.235041+00:00",
-      "model_sha256": "5a12e44f5f04edc03390518eb74b140c335ce052a225ac16ef39624c15115f39",
-      "resume_sha256": "a685f144140eeac07adec9ac4c810d8d5416fc577097797defee3d113eb9a925",
-      "num_timesteps": 5888,
-      "sb3_n_updates": 124,
-      "optimized_samples": 12608,
+      "captured_utc": "2026-11-10T16:31:08.879834+00:00",
+      "model_sha256": "9307f8e648fef66c15981576d1408ca5b43573d49489959228ae7d510cd2a864",
+      "resume_sha256": "f9cf2ba2ca07529355b862bec26b10cdf80030ef0936e5486503fefc2a961bde",
+      "num_timesteps": 9984,
+      "sb3_n_updates": 202,
+      "optimized_samples": 19904,
       "partial_rollout_discarded": 0,
       "checkpoint_resume_counts_match": true,
       "source_files_stable": true,
@@ -17,8 +17,8 @@
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "c9ff14bb254aba49294f590bfb3de8a1bef379feb5e0aeeda943f3e775f6bfa0",
-      "bytes": 4420401
+      "archive_sha256": "0cc8253353c85d57e02bbe2dc9ae611e449ecbd7083007649b016938b001500f",
+      "bytes": 4467303
     },
     "infantry": {
       "role": "infantry",
