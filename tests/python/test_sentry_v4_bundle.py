@@ -142,6 +142,50 @@ class BundleTests(unittest.TestCase):
             self.assertEqual(set(report['inference']), {'main', 'infantry', 'heavy'})
             self.assertIn('Missing inference dependency', report['inference']['main']['error'])
 
+    def test_preflight_replaces_invalid_sampled_auxiliary_masks_before_predict(self):
+        import numpy as np
+        from rmuc2027_research.rl import privileged_aux as contract
+        from rmuc2027_research.rl import v4_bundle
+        stages=('main','infantry','heavy')
+        manifest={'stages':{stage:dict(checkpoint=f'models/{stage}/model.zip',
+            rng_state=True,sampler_state=True) for stage in stages}}
+        samples={'main':np.zeros(3,np.float32)}
+        for stage in ('infantry','heavy'):
+            samples[stage]=dict(actor=np.arange(contract.schema()['obs_size'],dtype=np.float32)/1000,
+                # A Box.sample() result has no guarantee that any categorical
+                # choice is legal. Make every categorical group empty here.
+                action_mask=np.zeros(contract.MASK_SIZE,np.float32))
+        observed={}
+        def make_model(stage):
+            def sample():
+                value=samples[stage]
+                return {k:v.copy() for k,v in value.items()} if isinstance(value,dict) else value.copy()
+            def predict(observation,deterministic):
+                self.assertTrue(deterministic)
+                if stage!='main':
+                    np.testing.assert_array_equal(observation['actor'],samples[stage]['actor'])
+                    offset=contract.N_CONT
+                    for name,choices in contract.CATEGORIES.items():
+                        self.assertTrue((observation['action_mask'][offset:offset+len(choices)]>.5).any(),name)
+                        offset+=len(choices)
+                    np.testing.assert_array_equal(observation['action_mask'],np.ones(contract.MASK_SIZE))
+                observed[stage]=observation
+                return np.zeros(contract.schema()['action_size'] if stage!='main' else 6,np.float32),None
+            return SimpleNamespace(observation_space=SimpleNamespace(sample=sample),predict=predict)
+        models={stage:make_model(stage) for stage in stages}
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(v4_bundle,'verify_bundle',return_value=manifest), \
+             patch.object(v4_bundle,'load_runtime_config',side_effect=lambda _,stage:{'policy_version':3 if stage=='main' else 5}), \
+             patch.object(v4_bundle,'relocate_model_runtime',return_value={}), \
+             patch('stable_baselines3.PPO.load',side_effect=lambda path,device:models[Path(path).parent.name]), \
+             patch('torch.cuda.is_available',return_value=False), \
+             patch('warp.init'), patch('warp.get_cuda_devices',return_value=[]):
+            report=preflight(directory)
+        self.assertEqual(set(observed),set(stages),report['inference'])
+        self.assertTrue(report['inference_ready'],report['inference'])
+        self.assertEqual(report['gradient_updates'],0)
+        self.assertFalse(report['training_ready'])  # No native simulator in this fixture.
+
     def test_zip_path_escape_rejected_before_extraction(self):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory)/'bad.zip'
