@@ -1,10 +1,10 @@
 {
-  "captured_utc": "2026-11-10T16:53:09.996308+00:00",
-  "source_commit": "f649924bf981b562da93c91da1eb03ed7281efbd",
+  "captured_utc": "2026-11-10T17:08:41.157330+00:00",
+  "source_commit": "e968ea5c2fde7250bcfc176c0ecbc2bb0c82fb0c",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T16:37:13.192812+00:00",
+      "captured_utc": "2026-11-10T17:08:31.500291+00:00",
       "model_sha256": "6102d347b9300c137ffeb040e22089c2b0379d1d7d593b9b391435e24f385cba",
       "resume_sha256": "600154c1e8fb4658bd333cd37cfbea22de4551570c3a5f43f779aa39ec567fd6",
       "num_timesteps": 10310,
@@ -19,8 +19,8 @@
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "7ab81a1cea516b8383bec1fa1f263a9ef9caf41e657192986b7524ef26a52a9b",
-      "bytes": 4470122
+      "archive_sha256": "82f94383178975e2b1e48798b51977cec1a07cd6c54671afc2f9199c6dd3c1f4",
+      "bytes": 5081688
     },
     "infantry": {
       "role": "infantry",
