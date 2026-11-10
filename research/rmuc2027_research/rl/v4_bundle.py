@@ -172,7 +172,8 @@ def create_bundle(run_dir, output, *, preparation=None, source_root=None, extern
                  "requirements-runtime.txt", "runtime-environment.json", "intervention-hold.json", "interventions.json"):
         if (run_dir/name).is_file():
             include(run_dir/name, "run-state/"+name)
-    for dirname in ("evaluation", "radar-calibration-next", "selected-export", "aux-intervention"):
+    for dirname in ("evaluation", "radar-calibration-next", "selected-export", "aux-intervention",
+                    "radar-calibration-stratified-candidate", "radar-calibration-next-analysis", "report-tools", "review"):
         if (run_dir/dirname).is_dir():
             for path, relative in _walk(run_dir/dirname):
                 include(path, dirname+"/"+relative)

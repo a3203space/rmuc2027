@@ -317,6 +317,16 @@ def package(root):
     from .exporting import export_model
     import tempfile
     root=Path(root).resolve()
+    renderer=root/'report-tools/render_review.py'
+    if renderer.exists():
+        import importlib.util
+        renderer_python=sys.executable if importlib.util.find_spec('matplotlib') else str(Path(sys.base_prefix)/'bin/python3')
+        with (root/'review-render.log').open('w') as stream:
+            try:
+                rendered=subprocess.run([renderer_python,str(renderer),'--allow-partial'],stdout=stream,stderr=subprocess.STDOUT,timeout=60)
+                render_report=dict(exit_code=rendered.returncode)
+            except (OSError,subprocess.TimeoutExpired) as exc:render_report=dict(error=str(exc))
+        write_json(root/'review-render.json',dict(**render_report,log='review-render.log',python=renderer_python))
     if (root/'main/selected.zip').exists():export_model(root/'main/selected.zip',root/'selected-export')
     database=ROOT/'rmuc2026shuj/rmuc_2026_region_dataset.sqlite'
     create_bundle(root,root.with_suffix('.zip'),preparation=root/'preparation',

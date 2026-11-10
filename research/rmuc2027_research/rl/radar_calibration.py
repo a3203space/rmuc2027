@@ -6,13 +6,83 @@ validation split groups entire episodes, including both radar viewpoints.
 """
 from collections import defaultdict
 import copy
+from fractions import Fraction
 import hashlib
+from itertools import combinations
 import json
 import math
 from pathlib import Path
 import statistics
 
 from rmuc2027_core.radar_inference import ChassisClassifier, ENEMY_SLOTS
+
+
+def stratified_groups(group_counts, *, minimum_tracks=4):
+    """Select complete match-seed groups using *only* class counts.
+
+    The objective and search budget are fixed before fitting. Small datasets
+    exhaust every partition; larger datasets use bounded deterministic prefix
+    candidates. Failure to find a feasible split never enables a classifier.
+    No trajectory features, predictions or validation metrics enter this API.
+    """
+    labels = ChassisClassifier.labels
+    names = sorted(group_counts)
+    vectors = {name: tuple(int(group_counts[name].get(c, 0)) for c in labels) for name in names}
+    totals = tuple(sum(v[i] for v in vectors.values()) for i in range(len(labels)))
+    method = 'exhaustive' if len(names) <= 16 else 'bounded_deterministic_prefixes'
+    manifest = dict(version=2, method=method, exhaustive=method == 'exhaustive',
+        target_validation_fraction='1/3', minimum_tracks_per_class_per_split=minimum_tracks,
+        group_counts={name:dict(zip(labels, vectors[name])) for name in names},
+        objective=['max_class_fraction_deviation', 'sum_class_fraction_deviation',
+                   'total_track_fraction_deviation', 'group_fraction_deviation', 'sha256_tie_break'],
+        candidates_evaluated=0, feasible_candidates=0, selection_inputs='match_seed_and_label_counts_only')
+    if minimum_tracks < 4: raise ValueError('At least four independent tracks per class required')
+    if len(names) < 2 or any(n < 2*minimum_tracks for n in totals):
+        return None, manifest | dict(reason='insufficient_grouped_class_support')
+    if any(sum(v[i] > 0 for v in vectors.values()) < 2 for i in range(len(labels))):
+        return None, manifest | dict(reason='insufficient_grouped_class_support')
+    best = None; heldout = None
+
+    def consider(selected, counts):
+        nonlocal best, heldout
+        manifest['candidates_evaluated'] += 1
+        if any(n < minimum_tracks or total-n < minimum_tracks for n,total in zip(counts,totals)): return
+        manifest['feasible_candidates'] += 1
+        deviations = [abs(Fraction(n,total)-Fraction(1,3)) for n,total in zip(counts,totals)]
+        selected = tuple(sorted(selected))
+        tie = hashlib.sha256(('radar-stratified-v2/'+','.join(selected)).encode()).hexdigest()
+        score = (max(deviations),sum(deviations),abs(Fraction(sum(counts),sum(totals))-Fraction(1,3)),
+                 abs(Fraction(len(selected),len(names))-Fraction(1,3)),tie)
+        if best is None or score < best: best, heldout = score, selected
+
+    if method == 'exhaustive':
+        for size in range(1, len(names)):
+            for selected in combinations(names, size):
+                consider(selected, tuple(sum(vectors[name][i] for name in selected) for i in range(len(labels))))
+    else:
+        # 39 orders x <=105 prefixes = <=4095 candidates, independent of the
+        # number of groups. Prefix counts are accumulated in O(39*n) time.
+        orders = [names]
+        for index in range(len(labels)):
+            ordered = sorted(names, key=lambda name:(vectors[name][index], name))
+            orders.extend((ordered, list(reversed(ordered))))
+        for salt in range(32):
+            orders.append(sorted(names, key=lambda name:hashlib.sha256(
+                f'radar-stratified-v2/{salt}/{name}'.encode()).digest()))
+        limit = 4096//len(orders)
+        sizes = set(range(1,len(names))) if len(names)-1 <= limit else {
+            1+round(i*(len(names)-2)/(limit-1)) for i in range(limit)}
+        for ordered in orders:
+            counts = [0]*len(labels)
+            for size,name in enumerate(ordered,1):
+                counts = [a+b for a,b in zip(counts,vectors[name])]
+                if size in sizes: consider(ordered[:size], counts)
+    if heldout is None:
+        return None, manifest | dict(reason='no_feasible_group_split' if manifest['exhaustive'] else 'no_feasible_group_split_found')
+    manifest.update(reason='label_support_satisfied', validation_groups=list(heldout),
+        train_groups=[name for name in names if name not in heldout],
+        score=[str(value) for value in best[:-1]], tie_break_sha256=best[-1])
+    return set(heldout), manifest
 
 
 class RadarCalibrationRecorder:
@@ -81,18 +151,22 @@ Thresholds are fixed before fitting; validation is never used to tune them.
         if key in unique: raise ValueError('Duplicate calibration trajectory')
         unique[key]=row
     group=lambda r:str(r.get('split_group',r['episode_key']))
-    episodes=sorted({group(r) for r in unique.values()}, key=lambda e:hashlib.sha256(('radar-v1/'+e).encode()).hexdigest())
-    # Deterministic 2:1 split, grouping all robots and viewpoints of an episode.
-    heldout=set(episodes[::3]); train=[r for r in unique.values() if group(r) not in heldout]
-    validation=[r for r in unique.values() if group(r) in heldout]
+    episodes=sorted({group(r) for r in unique.values()})
+    group_counts={episode:{label:0 for label in labels} for episode in episodes}
+    for row in unique.values(): group_counts[group(row)][row['label']] += 1
+    heldout,split = stratified_groups(group_counts, minimum_tracks=minimum_tracks)
+    train=[] if heldout is None else [r for r in unique.values() if group(r) not in heldout]
+    validation=[] if heldout is None else [r for r in unique.values() if group(r) in heldout]
     counts=lambda group:{label:sum(r['label']==label for r in group) for label in labels}
-    report=dict(version=1, valid=False, independent_tracks=len(unique), episodes=len(episodes),
+    report=dict(version=2, valid=False, independent_tracks=len(unique), episodes=len(episodes), split=split,
         train_counts=counts(train), validation_counts=counts(validation),
-        train_episodes=[e for e in episodes if e not in heldout], validation_episodes=sorted(heldout),
+        train_episodes=[] if heldout is None else [e for e in episodes if e not in heldout],
+        validation_episodes=[] if heldout is None else sorted(heldout),
         thresholds=dict(minimum_tracks_per_class_per_split=minimum_tracks, selective_accuracy=.7,
             per_class_coverage=.25, macro_accuracy=.5, brier=2/3),
         label_source='private_offline_chassis', runtime_input='legal_radar_coordinate_history')
-    if minimum_tracks < 4: raise ValueError('At least four independent tracks per class required')
+    if heldout is None:
+        report['reason']=split['reason']; return dict(validated=False,calibration=report),report
     if any(n < minimum_tracks for n in report['train_counts'].values()):
         report['reason']='insufficient_training_tracks'; return dict(validated=False, calibration=report),report
     classifier=ChassisClassifier.fit(train, validated=False)
