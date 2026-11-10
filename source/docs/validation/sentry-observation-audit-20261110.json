@@ -1,0 +1,214 @@
+{
+  "scope": "Current policy v2 / sentry slot 7 / 152 features. Audit only; no runtime, checkpoint or training change.",
+  "date": "2026-11-10",
+  "indices": "0-based",
+  "policy_hz": 10,
+  "rule_tick_hz": 20,
+  "physics_hz": 120,
+  "protocol": {
+    "title": "RoboMaster 2027 机甲大师高校系列赛通信协议 V1.0.0（20261029）.pdf",
+    "publisher": "RoboMaster 高校赛务",
+    "wiki": "https://bbs.robomaster.com/wiki/20204847/1969151",
+    "url": "https://hz-rm-bbs-web-prod.oss-cn-hangzhou.aliyuncs.com/3db568c5796b494190475a694f001e841793263540152/RoboMaster 2027 机甲大师高校系列赛通信协议 V1.0.0（20261029）.pdf",
+    "local": "/home/lx/rmuc2027/data/research/sentry-observation-audit-20261110/protocol-2027-v1.pdf",
+    "sha256": "109a5e2a82afd3f253a5ac15aef7bb5e0aa354c6b41e3a6ceca7fed889e619e1"
+  },
+  "manual": {
+    "path": "/home/lx/px4_gazebo/RoboMaster 2027 机甲大师超级对抗赛比赛规则手册V1.0.0（20261015）.pdf",
+    "version": "1.0.0",
+    "date": "2026-10-15"
+  },
+  "page_convention": "Printed page numbers; PDF page is printed page + 1 for both documents.",
+  "important_corrections": [
+    "0x020B directly supplies sentry with ally ground positions at 1 Hz; these do not all require radar forwarding.",
+    "0x0305 5 Hz limit concerns radar-to-operator minimap; it does not set all sentry observations or decisions to 5 Hz.",
+    "0x0A01..0x0A06 originate at 10 Hz at signal source; actual sentry availability depends on radar decoding and permitted forwarding.",
+    "10 Hz policy inference is allowed; lower-rate sources require held/estimated observations, not slower whole-policy inference.",
+    "Self onboard sensing can exceed referee position frequency; actual hardware performance is not available in this repository."
+  ],
+  "communication_differences": [
+    {
+      "item": "robot interaction 0x0301",
+      "required": "30 Hz shared maximum uplink; 112 byte content, <=127 byte total packet; sentry/radar receive round(5120*(1-base_hp_lost/20000)) bytes per 1000 ms",
+      "current": "4 messages of <=512 JSON bytes per decision; unrestricted roster routing and next-round delivery; no shared packet budget or base-HP scaling",
+      "source": "protocol p23-p24; core/communication.py; strategies/battle.py"
+    },
+    {
+      "item": "allowed recipients",
+      "required": "Sentry can receive multi-robot interaction data only from radar; separate referee downlinks remain permitted",
+      "current": "generic TeamCommunication can route ground teammate messages to sentry directly; radar excluded from roster",
+      "source": "rulebook p25,p28; core/communication.py"
+    },
+    {
+      "item": "link and module status",
+      "required": "module connectivity check 2 Hz; offline cuts relevant communication",
+      "current": "physical failures not randomly simulated; no observation availability scheduler for these failures",
+      "source": "rulebook p68-p69; configs/rules.json simulation_assumptions"
+    },
+    {
+      "item": "radar markers",
+      "required": "mark updates depend on radar sending; 0.5 s gaps count as errors; 0x020C and 0x020E update radar at 1 Hz",
+      "current": "radar and marking mechanisms explicitly excluded",
+      "source": "rulebook p112-p114; protocol p6,p21,p23"
+    },
+    {
+      "item": "commander input",
+      "required": "0x0303 event; >=0.5 s between commander sends, >=3 s for semi-auto operator; four additional copies every 100 ms then last packet at 1 Hz",
+      "current": "commander intervention and semi-auto explicitly excluded",
+      "source": "protocol p33-p34; configs/rules.json:51"
+    },
+    {
+      "item": "perception",
+      "required": "actual camera/estimator produces detections at configured rate with errors/occlusion and processing delay",
+      "current": "geometric visible check then exact state; no camera pipeline; official terminal video 60 fps is not the onboard detector frequency",
+      "source": "protocol p46; simulation/lib.rs:1644"
+    },
+    {
+      "item": "FPV vs onboard perception",
+      "required": "Rulebook p66-p67 disables operator FPV after heat threshold; local autonomous sensing is a separate source",
+      "current": "visibility based on simulated muzzle camera; overheat reduces effective vision to 0.35 rather than representing separate FPV/video and local sensor streams",
+      "source": "simulation/lib.rs:1634; configs/rules.json:1560; rulebook p66-p67"
+    }
+  ],
+  "available_but_not_explicitly_encoded": [
+    {
+      "source": "0x0201 / 10 Hz",
+      "fields": "level, absolute current/max HP, cooling rate, power limit, heat limit, bullet speed limit, separate gimbal/chassis/shooter supply bits",
+      "note": "Some ratios already encoded; some fields used by scripted execution but not by MLP."
+    },
+    {
+      "source": "0x0204 / 3 Hz",
+      "fields": "healing, cooling, defense, vulnerability and attack buffs"
+    },
+    {
+      "source": "0x0209 / 3 Hz",
+      "fields": "RFID zone bits including traversal-card sequence inputs"
+    },
+    {
+      "source": "0x020D / 1 Hz",
+      "fields": "enhanced posture; 3 ordinary and 3 enhanced remaining-time counters; disengaged; purchase acknowledgements/counters; can-free/pay-revive and cost; team available ammo purchase quota; rune activation availability"
+    },
+    {
+      "source": "0x0206 / injury event; 0x0207 / shot event",
+      "fields": "injury cause, hit event identifier/location; shot speed/rate"
+    },
+    {
+      "source": "0x0003 / 3 Hz; 0x0101 / 1 Hz",
+      "fields": "R/B outpost HP, damage difference, valid zone activation states, rune state, dart event"
+    },
+    {
+      "source": "0x0208 / 10 Hz",
+      "fields": "fortress reserve ammo allowance"
+    },
+    {
+      "source": "0x0A03..0x0A05 / 10 Hz source, conditional radar forwarding",
+      "fields": "enemy ammo, economy, buffs, weakness, sentry posture, field activation, armor reinforcement"
+    },
+    {
+      "source": "0x020C/0x020E / 1 Hz to radar, conditional forwarding",
+      "fields": "mark threshold flags, double vulnerability, armor fortification, encryption state"
+    },
+    {
+      "source": "0x0104 / event plus 1 Hz; 0x0303 / event plus repeats",
+      "fields": "warnings/penalty and commander intent"
+    },
+    {
+      "source": "local source metadata",
+      "fields": "per-field/source timestamp, validity, unknown/stale, confidence where appropriate",
+      "note": "Adapter design requirement for faithful partial observations, not mandatory official packet fields."
+    }
+  ],
+  "already_matching": [
+    "Heat cooling and power-buffer settlement at 10 Hz (season2027.rs:607,705).",
+    "RFID deactivation 2 s hold exists (season2027.rs:865; rulebook p102).",
+    "Sentry posture switch 5 s, decay 180 s, enhanced budget 15 s implemented; missing MLP information is separate from rule implementation.",
+    "Self HP/heat/ammo/gold nominal input rate 10 Hz is compatible with relevant protocol downlinks."
+  ],
+  "encoder_and_execution_evidence": [
+    "research/rmuc2027_research/rl/portable.py:39",
+    "packages/simulation/src/lib.rs:1685",
+    "packages/core/rmuc2027_core/sdk.py:1353",
+    "research/rmuc2027_research/rl/portable.py:306",
+    "research/rmuc2027_research/rl/session.py:39"
+  ],
+  "source_hashes": {
+    "research/rmuc2027_research/rl/portable.py": "7c286b92da5f734c9b5f7db48c5153e4079f36a13248a09eab1c6315d6e82ec3",
+    "packages/simulation/src/lib.rs": "94a8e261c0bdd83620294495872a6295e1aea4e28d08514d688b8c691bb8c22c",
+    "packages/core/rmuc2027_core/sdk.py": "24af6ac47ce48c3e5cac3991bd6007d1a75da75177ce8d10a4c8a6d01e4af52a",
+    "packages/core/rmuc2027_core/communication.py": "aaa96f9fd1ff60a2237fa3efad9663f7c75cde6fa0fec88b5f54bc318f9df46f",
+    "configs/rules.json": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe"
+  },
+  "caveat": "Missing network features are not automatically illegal or required. Scripted controller and navigator also read raw observation; fixing only the 152 feature encoder cannot by itself establish real-robot equivalence.",
+  "representation_differences": [
+    {
+      "indices": [
+        7
+      ],
+      "item": "energy feature constant zero",
+      "evidence": "lib.rs initializes legacy energy=0 and no simulation source updates it; portable.py prioritizes this present key over buffer_energy_j"
+    },
+    {
+      "indices": [
+        5,
+        6,
+        91
+      ],
+      "item": "clipping loses distinctions",
+      "evidence": "ammo>500, heat>max_heat, own gold>5000 all saturate at 1; this is lossy representation, not an official prohibition"
+    },
+    {
+      "indices": [
+        14
+      ],
+      "item": "respawn progress source",
+      "evidence": "precise current/required progress exists in terminal RobotRespawnStatus (1 Hz), while onboard 0x020D reports confirmation/payment eligibility; no proven direct onboard equivalent"
+    },
+    {
+      "indices": [
+        15
+      ],
+      "item": "power bits collapsed",
+      "evidence": "one boolean primarily represents chassis availability, not independent chassis/gimbal/shooter outputs"
+    },
+    {
+      "indices": [
+        16,
+        17
+      ],
+      "item": "orientation source and units",
+      "evidence": "policy uses chassis heading; official 0x0203 angle is muzzle velocity module heading in degrees from north"
+    },
+    {
+      "indices": [
+        95,
+        99,
+        103,
+        107
+      ],
+      "item": "exact capture progress",
+      "evidence": "not in 0x0101 nor 0x0A04; terminal-only information must not be assumed available onboard"
+    },
+    {
+      "indices": [
+        151
+      ],
+      "item": "course label",
+      "evidence": "training-only flat_jump annotation, zero in normal match"
+    },
+    {
+      "indices": "all external inputs",
+      "item": "source metadata absent",
+      "evidence": "no per-field age/validity and no distinction between unobserved, stale, zero or derived values"
+    },
+    {
+      "indices": "allies and enemies",
+      "item": "HP normalization denominator",
+      "evidence": "0x0003/0x0A02 provide current HP, not each target max_hp; own max_hp is available through 0x0201"
+    },
+    {
+      "indices": "39-45,70-77",
+      "item": "slot 6 and aerial representation",
+      "evidence": "corresponding standard ground-robot protocol positions are reserved; six-slot data layouts must not be interpreted as real values for all six slots; individual drones are absent from the MLP vector"
+    }
+  ]
+}
