@@ -1,5 +1,5 @@
 {
-  "status": "evaluating_mjwarp_under_contention",
+  "status": "completed_partial",
   "started_unix": 1794330006.0,
   "deadline_unix": 1794333606.0,
   "gradient_deadline_unix": 1794332406.0,
@@ -23,7 +23,49 @@
       "backend": "warp_kinematic",
       "side": "blue",
       "exit_code": 0
+    },
+    {
+      "backend": "mjwarp",
+      "side": "red",
+      "exit_code": 0,
+      "priority": "complete migration trial under shared-host contention"
     }
   ],
-  "evaluation_reallocation": "review-notes/evaluation-reallocation.json"
+  "evaluation_reallocation": "review-notes/evaluation-reallocation.json",
+  "skipped_evaluations": [
+    {
+      "backend": "rapier",
+      "side": "red",
+      "status": "interrupted_trace_retained"
+    },
+    {
+      "backend": "rapier",
+      "side": "blue",
+      "status": "not_run_budget"
+    },
+    {
+      "backend": "mjwarp",
+      "side": "blue",
+      "status": "not_run_budget"
+    }
+  ],
+  "radar_candidate_fit": "completed; active classifier unchanged",
+  "selection": {
+    "selected": "initialized.zip",
+    "ppo_improvement_verified": false,
+    "complete_pairs": 1,
+    "resume_default": "model.zip",
+    "reason": "keep_demonstration_anchor_pending_evidence"
+  },
+  "bundle": {
+    "path": "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100.zip",
+    "verified_after_relocation": true,
+    "training_ready": true,
+    "sha256": "ab479934c9a902708decaff1dab8379a61f9b117db6808c7a1e2be58494df7cd"
+  },
+  "finished_unix": 1794333245.8305712,
+  "elapsed_seconds": 3239.830572605133,
+  "within_wall_budget": true,
+  "all_stages_succeeded": false,
+  "limitation": "Shared-host contention prevented six complete frozen pairs; no PPO promotion claim"
 }

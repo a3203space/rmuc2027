@@ -1,10 +1,10 @@
 {
-  "captured_utc": "2026-11-10T17:46:47.198112+00:00",
-  "source_commit": "ab7e8a4e49291e8853d5e6d5f58a906173da7e0d",
+  "captured_utc": "2026-11-10T17:57:07.824315+00:00",
+  "source_commit": "dc27ce41f6f0aaf3c8d86c28fe7393c6c4211134",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T17:46:40.077850+00:00",
+      "captured_utc": "2026-11-10T17:56:59.085693+00:00",
       "model_sha256": "b6d082158d45a883b9ba1eabf57a705e3803e800f9240f2dd28fe194774d40cd",
       "resume_sha256": "58b0094da28b66e6c6ca8edc74e2f67119307de11e1196e688aa593fc489de3b",
       "num_timesteps": 14322,
@@ -19,8 +19,8 @@
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "76de29166a081b0138c9c3a152d0111fc666348a83d9bb27cc2ac68b8ea18d47",
-      "bytes": 3486884
+      "archive_sha256": "ac97ca5c3ba7faf4f17c743301709ac0ae5d8d53d42a080d6d9b234764fba5dd",
+      "bytes": 6488260
     }
   },
   "gradient_deadline_unix": 1794332406.0,
@@ -45,8 +45,8 @@
     "kind": "authorized_main_only_extension_training_complete_evaluation_running",
     "recorded_utc": "2026-11-10T17:40:48.877462+00:00",
     "artifact_title": "阶段备份：主哨兵追加训练结束，冻结评估进行中",
-    "description": "独立追加运行主哨兵训练已正常结束：新增4012 samples、累计14322，新增102 gradient epochs、177 optimizer steps（累计494），累计31616 sample visits，actor参数L2变化0.044858984；PPO期间BC更新0。actor.json已刷新。步兵与重装助手冻结；六组reuse-anchor冻结评估刚开始，尚未形成追加改进结论。跨机器恢复仍以model.zip与resume-state匹配计数为准，丢弃partial rollout并开启新episode。",
-    "validation": "追加训练结束；六组冻结对照进行中，尚不宣称整体改进或486阵容全矩阵验收。场景覆盖按唯一scenario去重。原两小时包与结论保留。",
+    "description": "独立追加运行主哨兵训练已正常结束：新增4012 samples、累计14322，新增102 gradient epochs、177 optimizer steps（累计494），累计31616 sample visits，actor参数L2变化0.044858984；PPO期间BC更新0。actor.json已刷新。步兵与重装助手冻结；六组reuse-anchor冻结评估刚开始，尚未形成追加改进结论。跨机器恢复仍以model.zip与resume-state匹配计数为准，丢弃partial rollout并开启新episode。 评估遭遇其他项目CPU争用：Warp红/蓝仅16.8s/14.5s截断，Rapier红中断保留trace；重分配剩余预算优先MJ红60s，权重不再更新。最终预期completed_partial，selected保守anchor，不宣传追加综合改善。",
+    "validation": "已完成主训练；冻结评估受其他项目CPU争用而截断/重分配，依实际报告判定完整配对。保持保守anchor，不宣称追加综合改善或全486矩阵通过。",
     "deadline_unix": 1794333606,
     "gradient_deadline_unix": 1794332406,
     "main_training": {
