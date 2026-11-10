@@ -19,9 +19,19 @@
     {
       "stage": "heavy",
       "exit_code": 0
+    },
+    {
+      "stage": "main",
+      "exit_code": 0
     }
   ],
-  "evaluations": [],
+  "evaluations": [
+    {
+      "backend": "warp_kinematic",
+      "side": "red",
+      "exit_code": 0
+    }
+  ],
   "gradient_deadline_unix": 1794328346.4470646,
   "num_envs": 2
 }

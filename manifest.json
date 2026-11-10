@@ -1,24 +1,26 @@
 {
-  "captured_utc": "2026-11-10T16:31:18.299078+00:00",
-  "source_commit": "6ef83eabd91b6218ad9ab5ffa15a48365722f8c2",
+  "captured_utc": "2026-11-10T16:37:22.071455+00:00",
+  "source_commit": "675d8af8c57d57ca9a1cfd530cc8301b20e391ff",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T16:31:08.879834+00:00",
-      "model_sha256": "9307f8e648fef66c15981576d1408ca5b43573d49489959228ae7d510cd2a864",
-      "resume_sha256": "f9cf2ba2ca07529355b862bec26b10cdf80030ef0936e5486503fefc2a961bde",
-      "num_timesteps": 9984,
-      "sb3_n_updates": 202,
-      "optimized_samples": 19904,
-      "partial_rollout_discarded": 0,
+      "captured_utc": "2026-11-10T16:37:13.192812+00:00",
+      "model_sha256": "6102d347b9300c137ffeb040e22089c2b0379d1d7d593b9b391435e24f385cba",
+      "resume_sha256": "600154c1e8fb4658bd333cd37cfbea22de4551570c3a5f43f779aa39ec567fd6",
+      "num_timesteps": 10310,
+      "sb3_n_updates": 206,
+      "optimizer_steps": 317,
+      "completed_updates": 80,
+      "optimized_samples": 20288,
+      "partial_rollout_discarded": 70,
       "checkpoint_resume_counts_match": true,
       "source_files_stable": true,
-      "actor_export_may_lag_model": true,
+      "actor_export_may_lag_model": false,
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "0cc8253353c85d57e02bbe2dc9ae611e449ecbd7083007649b016938b001500f",
-      "bytes": 4467303
+      "archive_sha256": "7ab81a1cea516b8383bec1fa1f263a9ef9caf41e657192986b7524ef26a52a9b",
+      "bytes": 4470122
     },
     "infantry": {
       "role": "infantry",
@@ -60,5 +62,27 @@
   "gradient_deadline_unix": 1794328346.4470646,
   "campaign_deadline_unix": 1794330746.4470646,
   "database_included": false,
-  "validation": "训练中开发备份，未宣称收敛或全243/486矩阵420秒通过"
+  "validation": "PPO已结束；冻结对照进行中，尚未宣称对照通过或全矩阵420秒验收",
+  "milestone": {
+    "kind": "ppo_complete_frozen_evaluation_in_progress",
+    "recorded_utc": "2026-11-10T16:36:56.872725+00:00",
+    "description": "主哨兵PPO已结束：10,310个采集样本、317次optimizer steps、20,288次sample visits、206个gradient epochs，actor参数L2变化0.152359；PPO期间示范更新为0。三角色模型稳定且actor.json均已刷新。2场420秒训练对局已结束，不能替代冻结验收；6组冻结对照仍进行中。增量包含雷达标签分层拆分（21项测试），活动分类器保持unknown、较弱omni候选不自动晋级；恢复包synthetic mask修复（6项测试）与只读render调用。",
+    "main_training": {
+      "role": "main",
+      "actual_samples": 10310,
+      "total_samples": 10310,
+      "gradient_epochs": 206,
+      "optimized_samples": 20288,
+      "parameter_l2_change": 0.2638886187693432,
+      "actor_parameter_l2_change": 0.15235938295474596,
+      "optimizer_steps": 317,
+      "wall_seconds": 2395.1735575249986,
+      "deadline_unix": 1794328346.4470646,
+      "demonstration_updates_during_ppo": 0,
+      "checkpoint": "model.zip"
+    },
+    "completed_training_420s_episodes": 2,
+    "frozen_pairs_status": "in_progress",
+    "budget_extended": false
+  }
 }
