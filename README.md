@@ -1,6 +1,6 @@
 # 哨兵 v4 定时恢复快照
 
-源码：[对应提交](https://github.com/a3203space/rmuc2027/commit/e968ea5c2fde7250bcfc176c0ecbc2bb0c82fb0c)
+源码：[对应提交](https://github.com/a3203space/rmuc2027/commit/ab58869a43acc30d8cd038ca0d7f18add6eda28f)
 
 main.zip 包含当前已完整发布的模型、初始化锚点、优化器ZIP、RNG、抽样/覆盖状态及阶段证据。
 本次是独立追加一小时的main-only续训，辅助策略冻结，不重复上传；可核验的原辅助ZIP提交和SHA见frozen-helpers.json。原两小时历史不变。

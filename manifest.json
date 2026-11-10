@@ -1,17 +1,17 @@
 {
-  "captured_utc": "2026-11-10T17:15:41.329262+00:00",
-  "source_commit": "e968ea5c2fde7250bcfc176c0ecbc2bb0c82fb0c",
+  "captured_utc": "2026-11-10T17:26:08.352048+00:00",
+  "source_commit": "ab58869a43acc30d8cd038ca0d7f18add6eda28f",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T17:15:37.239883+00:00",
-      "model_sha256": "2f1eb00676f5d6b5f9be1acfd699aaee0a2f8fddbb5a4606c16fe6ef4a905801",
-      "resume_sha256": "3f88187740ef1ea7aab82957a7121cf4d8db147bb5b9351db4ea80a8c888103f",
-      "num_timesteps": 11462,
-      "sb3_n_updates": 234,
-      "optimizer_steps": 364,
-      "completed_updates": 89,
-      "optimized_samples": 23296,
+      "captured_utc": "2026-11-10T17:25:59.609302+00:00",
+      "model_sha256": "785df1dc11cdd574607a21587163195c723cc8a766f750f1470a35ced8e3b5e2",
+      "resume_sha256": "aa21986e6950e958477e1b19ad4c125a091bd691e0159cb3f743ee8439f0b6df",
+      "num_timesteps": 12870,
+      "sb3_n_updates": 272,
+      "optimizer_steps": 430,
+      "completed_updates": 100,
+      "optimized_samples": 27520,
       "partial_rollout_discarded": 0,
       "checkpoint_resume_counts_match": true,
       "source_files_stable": true,
@@ -19,8 +19,8 @@
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "0e89fca2e7b68f7bfeeca80fd1382f9aefbd40235fffffa027557f5bdfb611b8",
-      "bytes": 3495741
+      "archive_sha256": "dfdf3145dc1696ebbfd5e65b68cfe0b2876f3d9bf168f6526b29e8e4612f94cb",
+      "bytes": 3487828
     }
   },
   "gradient_deadline_unix": 1794332406.0,
