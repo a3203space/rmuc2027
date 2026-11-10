@@ -1,6 +1,6 @@
 {
-  "captured_utc": "2026-11-10T17:08:41.157330+00:00",
-  "source_commit": "e968ea5c2fde7250bcfc176c0ecbc2bb0c82fb0c",
+  "captured_utc": "2026-11-10T17:24:18.054524+00:00",
+  "source_commit": "ab58869a43acc30d8cd038ca0d7f18add6eda28f",
   "stages": {
     "main": {
       "role": "main",
@@ -62,11 +62,11 @@
   "gradient_deadline_unix": 1794328346.4470646,
   "campaign_deadline_unix": 1794330746.4470646,
   "database_included": false,
-  "validation": "PPO已结束；冻结对照进行中，尚未宣称对照通过或全矩阵420秒验收",
+  "validation": "六组短冻结对照完整，PPO整体改进未验证；selected初始化，resume PPO。未完成486阵容420秒全矩阵验收。",
   "milestone": {
-    "kind": "ppo_complete_frozen_evaluation_in_progress",
-    "recorded_utc": "2026-11-10T16:36:56.872725+00:00",
-    "description": "主哨兵PPO已结束：10,310个采集样本、317次optimizer steps、20,288次sample visits、206个gradient epochs，actor参数L2变化0.152359；PPO期间示范更新为0。三角色模型稳定且actor.json均已刷新。2场420秒训练对局已结束，不能替代冻结验收；6组冻结对照仍进行中。增量包含雷达标签分层拆分（21项测试），活动分类器保持unknown、较弱omni候选不自动晋级；恢复包synthetic mask修复（6项测试）与只读render调用。",
+    "kind": "original_two_hour_complete_extension_in_progress",
+    "recorded_utc": "2026-11-10T17:19:50.963075+00:00",
+    "description": "原两小时已完成：主哨兵10310 samples、317 optimizer_steps、20288 sample visits、206 gradient epochs，actor L2变化0.152359，PPO期间BC更新0；两场420秒训练对局结束。六组冻结对照全部完成：初始化锚点过洞5/6，PPO过洞6/6，但控制指标合计103.6降至71.0，故展示selected仍initialized.zip，续训model.zip。原412MiB可迁移包已通过异地解压/推理/Rust校验。另获授权的一小时是独立main-only追加运行，helpers冻结，绝对截止18:00:06UTC；不改原两小时历史，追加结果尚未验收。",
     "main_training": {
       "role": "main",
       "actual_samples": 10310,
@@ -82,7 +82,10 @@
       "checkpoint": "model.zip"
     },
     "completed_training_420s_episodes": 2,
-    "frozen_pairs_status": "in_progress",
-    "budget_extended": false
+    "frozen_pairs_status": "completed_six_pairs",
+    "budget_extended": false,
+    "source_title": "备份：原两小时结果封存，主哨兵追加一小时进行中",
+    "artifact_title": "备份：原两小时三策略稳定权重及六组冻结对照结论",
+    "validation": "六组短冻结对照完整，PPO整体改进未验证；selected初始化，resume PPO。未完成486阵容420秒全矩阵验收。"
   }
 }
