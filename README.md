@@ -1,6 +1,6 @@
 # 哨兵 v4 定时恢复快照
 
-源码：[对应提交](https://github.com/a3203space/rmuc2027/commit/675d8af8c57d57ca9a1cfd530cc8301b20e391ff)
+源码：[对应提交](https://github.com/a3203space/rmuc2027/commit/f649924bf981b562da93c91da1eb03ed7281efbd)
 
 main.zip、infantry.zip、heavy.zip分别包含当前已完整发布的模型、初始化锚点、优化器ZIP、RNG、抽样/覆盖状态及阶段证据。
 各模型和resume计数匹配，读取前后哈希稳定；三阶段分别捕获，并非全系统同一时刻事务。actor导出可能滞后，恢复训练以model.zip为准。

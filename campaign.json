@@ -30,6 +30,21 @@
       "backend": "warp_kinematic",
       "side": "red",
       "exit_code": 0
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "blue",
+      "exit_code": 0
+    },
+    {
+      "backend": "rapier",
+      "side": "red",
+      "exit_code": 0
+    },
+    {
+      "backend": "rapier",
+      "side": "blue",
+      "exit_code": 0
     }
   ],
   "gradient_deadline_unix": 1794328346.4470646,
