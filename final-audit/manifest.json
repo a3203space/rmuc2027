@@ -1,0 +1,46 @@
+{
+  "created_utc": "2026-11-10T17:56:50.592572+00:00",
+  "bundle_commit": "980b5da1f6f7486a39f4848914b7aa170c94d8f4",
+  "bundle_sha256": "ab479934c9a902708decaff1dab8379a61f9b117db6808c7a1e2be58494df7cd",
+  "bundle_unchanged": true,
+  "source_commit": "dc27ce41f6f0aaf3c8d86c28fe7393c6c4211134",
+  "reason": "Final campaign, evaluation limits and docs were written after the immutable ZIP was created.",
+  "files": {
+    "final-audit/campaign.json": {
+      "bytes": 1977,
+      "sha256": "22f0680fdcd265664ef06f9937b1c3819bb198bf38389c4d06165acbe82faf3d"
+    },
+    "final-audit/package.json": {
+      "bytes": 229,
+      "sha256": "632b231097ebfcd775913980b5cef561df1ad7829ad78f1ed125b6a0970faa60"
+    },
+    "final-audit/bundle-verification.json": {
+      "bytes": 2802,
+      "sha256": "987ae0e74104895b893c04ca23b043ea82004a5a29531ebcca0fe586d152daf3"
+    },
+    "final-audit/review-notes/campaign-before-evaluation-reallocation.json": {
+      "bytes": 634,
+      "sha256": "2fd81add3037d90de291050f87a75c8f1ae841b95342d3fb6da5953ff05bab9c"
+    },
+    "final-audit/review-notes/evaluation-reallocation.json": {
+      "bytes": 1723,
+      "sha256": "f2e95713c316c6d7da9ae4fa1a49d6741d1b943199ca36d8614db01129b14cbc"
+    },
+    "final-audit/review-notes/extension-evaluation-limits.json": {
+      "bytes": 19178,
+      "sha256": "8cf719f1686d6941c5a343cd79b16d47aae9df08b590f9a551d80d6b7137ce89"
+    },
+    "final-audit/review-notes/recovery-analysis.json": {
+      "bytes": 14613,
+      "sha256": "cca2118c4b7cab3581a15dec875332ade93deca0a4ee7f36cd69ac983662ef77"
+    },
+    "final-audit/docs/validation/sentry-v4-extension-20261111.json": {
+      "bytes": 23554,
+      "sha256": "ea9fd29fdb14e6d64eb96a6f75dba15e43f003683379679e8e1d58551cf9cc4f"
+    },
+    "final-audit/source-receipt.json": {
+      "bytes": 592,
+      "sha256": "09b27043c33083e1df8c6d9812d11d855bec62cc1dc42743dadb44ee006b9498"
+    }
+  }
+}

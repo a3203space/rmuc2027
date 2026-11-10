@@ -1,0 +1,38 @@
+{
+  "time_unix": 1794332710.2600791,
+  "kind": "frozen_evaluation_reallocation",
+  "parent_pid": 1074080,
+  "finishing_child_pid": 1150074,
+  "gradient_updates_stopped": true,
+  "deadline_unix": 1794333606,
+  "reason": "Other repositories are running CPU-heavy Gazebo/Bevy/training workloads; current Warp throughput ~1.4 steps/s vs ~4.7 baseline. Preserve wall deadline and prioritize one complete MJWarp pair. No unrelated process changed.",
+  "old_parent_paused": true,
+  "next": "allow blue worker to finish its own deadline; replace only the evaluation coordinator",
+  "parent_paused": false,
+  "parent_replaced": true,
+  "interrupted_eval": {
+    "pid": 1153954,
+    "backend": "rapier",
+    "side": "red",
+    "reason": "reserve complete MJWarp frozen evaluation",
+    "trace_retained": true
+  },
+  "effective_unix": 1794332762.0324726,
+  "original_evaluation_child_at_pause": {
+    "pid": 1153954,
+    "backend": "rapier",
+    "side": "red"
+  },
+  "earlier_blue_child_finished_normally": true,
+  "finishing_child_pid_note": "1150074 was the earlier Warp blue child; it completed before coordinator pause",
+  "replacement_script": "report-tools/finish-under-contention.py",
+  "gradient_deadline_unchanged": 1794332406,
+  "absolute_end_unchanged": 1794333606,
+  "report_finalization_hold": {
+    "parent_pid": 1156533,
+    "started_unix": 1794333123.4169636,
+    "purpose": "Let the final evaluation finish, then freeze notes and documentation before source packaging; deadline unchanged",
+    "ended_unix": 1794333245.8304846,
+    "observed_effect": "Coordinator paused, but package child had already started and completed. Original bundle remains immutable; final notes are published as an audit supplement."
+  }
+}

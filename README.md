@@ -1,3 +1,5 @@
+> 最终报告补充：请同时阅读 [final-audit/README.md](final-audit/README.md)。ZIP及SHA保持不变；该目录补入包完成后写入的最终campaign、评估限制和覆盖说明。
+
 # 哨兵 v4 独立追加一小时的最终恢复包
 
 用户追加授权从 2026-11-10 17:00:06 UTC 到 18:00:06 UTC；梯度截止 17:40:06 UTC。主哨兵从原 10310 samples / 317 optimizer steps 继续，步兵与重装辅助策略冻结。本包记录追加运行，不覆盖原两小时封存。

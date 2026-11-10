@@ -1,0 +1,12 @@
+{
+  "ref": "refs/heads/backup/sentry-v4-20261110",
+  "commit": "dc27ce41f6f0aaf3c8d86c28fe7393c6c4211134",
+  "content_tree": "b0e8cd29b6055a7eea5d46246a0ffb82a5e79e8f",
+  "source_tree": "932b3e2bc4d0ac16338a1a0d7439951fb46bc4b0",
+  "base_commit": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
+  "milestone_hash": "3797ea6313cc1fc0c5c88ea8fe1ef6ece4ab8b68a5c773ed9f5785964d7a9c45",
+  "url": "https://github.com/a3203space/rmuc2027/commit/dc27ce41f6f0aaf3c8d86c28fe7393c6c4211134",
+  "uploaded_utc": "2026-11-10T17:55:55.365766+00:00",
+  "main_unchanged": true,
+  "shared_index_unchanged": true
+}

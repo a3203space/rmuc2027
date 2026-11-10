@@ -1,0 +1,634 @@
+{
+  "version": 1,
+  "created_unix": 1794333190.6321273,
+  "status": "final available evidence before packaging",
+  "scope": "Frozen inference only; no additional training, simulation or parameter changes by this audit. Parent anchor reuse is documented separately in trial reuse provenance.",
+  "complete_60_second_pairs": 1,
+  "trials": [
+    {
+      "backend": "mjwarp",
+      "side": "red",
+      "checkpoint": "initialized.zip",
+      "simulation_seconds": 60.0,
+      "horizon_completed": true,
+      "censored": false,
+      "reused": true,
+      "metrics": {
+        "alive_seconds": 60.0,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 0.0,
+        "policy_errors": 0,
+        "path_m": 10.365461238748154,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 5,
+        "rejected_skills": 16
+      },
+      "control": {
+        "red": 0.0,
+        "blue": 0.0
+      },
+      "passed_tunnel": false,
+      "final_position": [
+        8.774481773376465,
+        12.020671844482422,
+        0.05986941605806351
+      ],
+      "trace_last_time": 60.0,
+      "geometric_pass_recomputed": false
+    },
+    {
+      "backend": "mjwarp",
+      "side": "red",
+      "checkpoint": "model.zip",
+      "simulation_seconds": 60.0,
+      "horizon_completed": true,
+      "censored": false,
+      "reused": false,
+      "metrics": {
+        "alive_seconds": 60.0,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 0.0,
+        "policy_errors": 0,
+        "path_m": 10.359764114610453,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 5,
+        "rejected_skills": 16
+      },
+      "control": {
+        "red": 0.0,
+        "blue": 0.0
+      },
+      "passed_tunnel": false,
+      "final_position": [
+        8.771819114685059,
+        12.02120304107666,
+        0.059919122606515884
+      ],
+      "trace_last_time": 60.0,
+      "geometric_pass_recomputed": false
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "blue",
+      "checkpoint": "initialized.zip",
+      "simulation_seconds": 60.0,
+      "horizon_completed": true,
+      "censored": false,
+      "reused": true,
+      "metrics": {
+        "alive_seconds": 60.0,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 39.199999999999996,
+        "policy_errors": 0,
+        "path_m": 27.6502302563894,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 4,
+        "rejected_skills": 21
+      },
+      "control": {
+        "red": 0.0,
+        "blue": 34.25000000000019
+      },
+      "passed_tunnel": true,
+      "final_position": [
+        10.607616424560547,
+        7.494154453277588,
+        0.47824135422706604
+      ],
+      "trace_last_time": 60.0,
+      "geometric_pass_recomputed": true
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "blue",
+      "checkpoint": "model.zip",
+      "simulation_seconds": 14.5,
+      "horizon_completed": false,
+      "censored": true,
+      "reused": false,
+      "metrics": {
+        "alive_seconds": 14.5,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 0.0,
+        "policy_errors": 0,
+        "path_m": 20.179966759716496,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 4,
+        "rejected_skills": 20
+      },
+      "control": {
+        "red": 0.0,
+        "blue": 0.0
+      },
+      "passed_tunnel": true,
+      "final_position": [
+        12.170088768005371,
+        5.8044328689575195,
+        0.43399444222450256
+      ],
+      "trace_last_time": 14.5,
+      "geometric_pass_recomputed": true
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "red",
+      "checkpoint": "initialized.zip",
+      "simulation_seconds": 60.0,
+      "horizon_completed": true,
+      "censored": false,
+      "reused": true,
+      "metrics": {
+        "alive_seconds": 60.0,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 39.199999999999996,
+        "policy_errors": 0,
+        "path_m": 28.778870188761562,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 4,
+        "rejected_skills": 20
+      },
+      "control": {
+        "red": 34.25000000000019,
+        "blue": 0.0
+      },
+      "passed_tunnel": true,
+      "final_position": [
+        17.447519302368164,
+        7.5002875328063965,
+        0.47838687896728516
+      ],
+      "trace_last_time": 60.0,
+      "geometric_pass_recomputed": true
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "red",
+      "checkpoint": "model.zip",
+      "simulation_seconds": 16.8,
+      "horizon_completed": false,
+      "censored": true,
+      "reused": false,
+      "metrics": {
+        "alive_seconds": 16.8,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 0.0,
+        "policy_errors": 0,
+        "path_m": 24.94941546927255,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 2,
+        "rejected_skills": 0
+      },
+      "control": {
+        "red": 0.0,
+        "blue": 0.0
+      },
+      "passed_tunnel": true,
+      "final_position": [
+        16.722152709960938,
+        7.482992649078369,
+        0.4779490828514099
+      ],
+      "trace_last_time": 16.8,
+      "geometric_pass_recomputed": true
+    }
+  ],
+  "partial_orphan_trace": {
+    "path": "evaluation/rapier-red-model.zip.jsonl",
+    "duration_seconds": 10.6,
+    "status": "No completed pair summary; cannot count as a completed trial or performance comparison."
+  },
+  "warp_blue_skill_stability": {
+    "common_prefix_seconds": 14.5,
+    "new_navigation_rejected_frames": {
+      "ceiling": 8,
+      "transform_dwell": 12
+    },
+    "parent_navigation_rejected_frames": {},
+    "new_reported_fold_reversals": 4,
+    "parent_full60_reported_fold_reversals": 2,
+    "qualification": "New repeated ceiling/dwell rejections are observed within the same 14.5-second prefix. The 20 Hz execution reversal metric is not a count of full physical fold/unfold cycles; a 10 Hz trace may omit intermediate reversals. This supports a skill-stability regression signal, not a 60-second control comparison."
+  },
+  "mjwarp_red_diagnostics": {
+    "duration_seconds": 60.0,
+    "geometric_pass": {
+      "passed_tunnel": false,
+      "algorithm": "recorded_passage_geometry_v1",
+      "crossings": [],
+      "tested_passages": 1,
+      "trace_samples": 600,
+      "invalid_samples": 0,
+      "thresholds": {
+        "fold": 0.8,
+        "longitudinal_clearance_m": 0.05,
+        "lateral_clearance_m": 0.0,
+        "max_gap_s": 0.25,
+        "max_speed_mps": 20.0
+      },
+      "limitations": [
+        "Tracked-center geometry, not a swept-body collision certificate",
+        "No independent vertical-clearance test without recorded roof height",
+        "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+      ]
+    },
+    "last_position": [
+      8.771819114685059,
+      12.02120304107666,
+      0.059919122606515884
+    ],
+    "last_fold": 1.0,
+    "last_navigation": {
+      "phase": "approach",
+      "goal": [
+        15.5,
+        7.0
+      ],
+      "trajectory_goal": [
+        9.32,
+        11.72172339074321
+      ],
+      "rejected": [],
+      "passage": {
+        "center": [
+          9.32,
+          12.735
+        ],
+        "axis": [
+          6.123233995736766e-17,
+          1.0
+        ],
+        "half": 0.17499999999999982,
+        "width": 1.0,
+        "since": 50.2,
+        "id": "red_road_tunnel_roof"
+      },
+      "passed_passages": null
+    },
+    "legal_terminal_state": {
+      "id": "red-7",
+      "team": "red",
+      "slot": 7,
+      "vx": 5.880528078705538e-06,
+      "vy": 0.004099047277122736,
+      "vz": 0.0004958960344083607,
+      "quaternion": [
+        -0.00784970992497593,
+        0.006737817892410958,
+        0.6383664496449957,
+        0.7696630820247166
+      ],
+      "angular_velocity": [
+        0.030094042160160577,
+        -0.002216942932376252,
+        0.017907216727501188
+      ],
+      "grounded": true,
+      "upright": 0.9997859677282849,
+      "tipped": false,
+      "alive": true,
+      "powered": true,
+      "transform_progress": 1.0,
+      "rfid": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "last_executed_action": {
+      "move": [
+        0.0,
+        0.0
+      ],
+      "aim": null,
+      "pitch": 0.04,
+      "fire": false,
+      "transform": true,
+      "jump": 0.0,
+      "heading": 1.5707963267948966,
+      "brake": true,
+      "sentry_cmd": 2097152
+    },
+    "terminal_heading_deg": 79.34328601375654,
+    "commanded_heading_deg": 90.0,
+    "absolute_heading_error_deg": 10.65671398624346,
+    "longest_observed_stationary_braking_interval": {
+      "start": 27.7,
+      "end": 50.7,
+      "duration_seconds": 23.1,
+      "definition": "sample planar speed < 0.01 m/s and executed brake=true at 10 Hz"
+    },
+    "private_posthoc_diagnosis": {
+      "scope": "evaluation_ground_truth; never actor input",
+      "all_recorded_weak_false": true,
+      "terminal_robot": {
+        "weak": false,
+        "invulnerable": false,
+        "zone_contacts": {},
+        "last_raw_zones": []
+      }
+    },
+    "parent_ppo_same60_comparison": {
+      "simulation_seconds": 60.0,
+      "passed_tunnel": true,
+      "metrics": {
+        "alive_seconds": 60.0,
+        "weak_seconds": 0.0,
+        "deaths": 0,
+        "revives": 0,
+        "takeover_seconds": {
+          "dead": 0.0,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 0.0,
+        "policy_errors": 0,
+        "path_m": 25.41552290789488,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 2,
+        "rejected_skills": 0
+      },
+      "control": {
+        "red": 0.0,
+        "blue": 0.0
+      },
+      "final_position": [
+        15.979682922363281,
+        7.58969259262085,
+        0.4736712872982025
+      ]
+    },
+    "interpretation": "New candidate failed to cross within 60 seconds, unlike the parent PPO candidate. It folds fully but remains before the tunnel in an approach/alignment braking state. Legal alive/powered/grounded feedback and private weak=false exclude the specific death/revival recovery failure from this trial. The heading error exceeds the executor 5-degree spin-guard alignment threshold and explains why its brake gate remains set, but contact/force history was not recorded so the physical reason for stalled heading is not established."
+  },
+  "renderer_audit": {
+    "source": "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/report-tools/render_review.py",
+    "sha256": "c9c9f731ac52ba8432557b34ae2ab60b6248ca765c4b8339e41e0323fd82b6a1",
+    "mode": "Read-only collect() only; no rendering or concurrent review write",
+    "pairs": [
+      {
+        "backend": "warp_kinematic",
+        "side": "red",
+        "comparable_complete_pair": false,
+        "members": [
+          {
+            "checkpoint": "initialized.zip",
+            "duration_seconds": 60.0,
+            "censored": false
+          },
+          {
+            "checkpoint": "model.zip",
+            "duration_seconds": 16.8,
+            "censored": true
+          }
+        ]
+      },
+      {
+        "backend": "warp_kinematic",
+        "side": "blue",
+        "comparable_complete_pair": false,
+        "members": [
+          {
+            "checkpoint": "initialized.zip",
+            "duration_seconds": 60.0,
+            "censored": false
+          },
+          {
+            "checkpoint": "model.zip",
+            "duration_seconds": 14.5,
+            "censored": true
+          }
+        ]
+      },
+      {
+        "backend": "rapier",
+        "side": "red",
+        "comparable_complete_pair": false,
+        "members": [
+          {
+            "checkpoint": "initialized.zip",
+            "duration_seconds": 60.0,
+            "censored": true
+          },
+          {
+            "checkpoint": "model.zip",
+            "duration_seconds": 10.6,
+            "censored": true
+          }
+        ]
+      },
+      {
+        "backend": "rapier",
+        "side": "blue",
+        "comparable_complete_pair": false,
+        "members": [
+          {
+            "checkpoint": "initialized.zip",
+            "duration_seconds": 0.0,
+            "censored": true
+          },
+          {
+            "checkpoint": "model.zip",
+            "duration_seconds": 0.0,
+            "censored": true
+          }
+        ]
+      },
+      {
+        "backend": "mjwarp",
+        "side": "red",
+        "comparable_complete_pair": true,
+        "members": [
+          {
+            "checkpoint": "initialized.zip",
+            "duration_seconds": 60.0,
+            "censored": false
+          },
+          {
+            "checkpoint": "model.zip",
+            "duration_seconds": 60.0,
+            "censored": false
+          }
+        ]
+      },
+      {
+        "backend": "mjwarp",
+        "side": "blue",
+        "comparable_complete_pair": false,
+        "members": [
+          {
+            "checkpoint": "initialized.zip",
+            "duration_seconds": 0.0,
+            "censored": true
+          },
+          {
+            "checkpoint": "model.zip",
+            "duration_seconds": 0.0,
+            "censored": true
+          }
+        ]
+      }
+    ],
+    "rules_verified": [
+      "Trajectory duration is read from the last actual trace timestamp.",
+      "Incomplete/missing-summary members are marked CENSORED, never stretched or normalized to 60 seconds.",
+      "Outcome bars include only pairs with both complete 60-second summaries and traces.",
+      "Missing trials are displayed as missing/incomplete rather than substituted with zeros."
+    ],
+    "warnings": []
+  },
+  "supported_conclusions": [
+    "Both truncated Warp candidate traces geometrically crossed a tunnel within their recorded 16.8/14.5 seconds.",
+    "Warp blue has more recorded ceiling/dwell rejections within an equal 14.5-second prefix than the parent PPO.",
+    "The new MJWarp red candidate did not cross in the full 60-second trial and did not improve capture/control over the initialized anchor. It regressed in tunnel crossing relative to the parent PPO candidate.",
+    "The available evaluation evidence does not satisfy the six-complete-pair improvement gate; retaining the demonstration anchor for selected deployment is appropriate."
+  ],
+  "unsupported_claims": [
+    "No comparison of truncated Warp control/capture totals against 60-second totals.",
+    "No claim that zero capture in a short truncated opening predicts zero capture at 60 seconds.",
+    "No claim of full six-pair validation, full 420-second-match performance, statistical generalization, or all 486 scenarios covered.",
+    "No claim that the MJ heading stall was caused by a particular collision, torque failure, or hidden robot property.",
+    "No attribution of the CPU slowdown to a particular external job from these JSON traces alone."
+  ],
+  "source_files": {
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/mjwarp-red.json": {
+      "sha256": "5dd9167f7bb2d62c6b30148eb4b264fc65c3e7698d3ef95b9e0f64bfd44f5bcd",
+      "bytes": 4508
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/mjwarp-red-initialized.zip.jsonl": {
+      "sha256": "3da7c1affad72bee489d8b69928ed508129bae53c56bf3659467e03d85fe399f",
+      "bytes": 498175
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/mjwarp-red-model.zip.jsonl": {
+      "sha256": "11d9829ab0358b3bee13213e349305337db3024f687921d09ab476d7fb2e1975",
+      "bytes": 4453656
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/warp_kinematic-blue.json": {
+      "sha256": "40e47117a92f41dbbc4d10a156180a64e566766ddf9b337ff6c6c83541b83398",
+      "bytes": 7039
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/warp_kinematic-blue-initialized.zip.jsonl": {
+      "sha256": "c34716f6b2f5510ae988711b847fff6ee6babbc210901ecce0e95b876af7c155",
+      "bytes": 415625
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/warp_kinematic-blue-model.zip.jsonl": {
+      "sha256": "e69b656d31b7d195fc18052359f9b0e7265a7847008dad3f1573b89914612762",
+      "bytes": 1071340
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/warp_kinematic-red.json": {
+      "sha256": "d1f498286a2b4e64c1ac37c7eef164481a5f757c796e47545cd9a4b6602dc321",
+      "bytes": 7006
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/warp_kinematic-red-initialized.zip.jsonl": {
+      "sha256": "cd6592ef8d0d84a250e5383c69a971d4b077ab48766f9890e64dec59e2e55d9a",
+      "bytes": 389679
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-extension-20261111-0100/evaluation/warp_kinematic-red-model.zip.jsonl": {
+      "sha256": "c78b0a618ae3f14dad6f175959788c2575b15b1cc08707ff1a9e07b60d5aa413",
+      "bytes": 1232392
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/evaluation/warp_kinematic-blue-model.zip.jsonl": {
+      "sha256": "684f17d66269909920c9bb230d0545c4069ef853cce18baf51940d0d376ee6b9",
+      "bytes": 405975
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/evaluation/warp_kinematic-blue.json": {
+      "sha256": "9fb1fcb227a3b2c185833666e4747ef79fa2c7dd40e2019b3e7abd1fa7a82780",
+      "bytes": 5860
+    },
+    "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/evaluation/mjwarp-red.json": {
+      "sha256": "d51675ca9b568235971a42a850227b68aafeb65a6b85833b67152b97a8b61447",
+      "bytes": 4531
+    }
+  }
+}

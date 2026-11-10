@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "created_unix": 1794331783.9227703,
+  "scope": "Read-only diagnosis of the first two completed 120-second continuation episodes; not frozen policy evaluation or proof of regression. No additional simulation or optimization.",
+  "records": [
+    {
+      "seed": 2139058526,
+      "side": "red",
+      "simulation_seconds": 120.0,
+      "completed_record": "main/completed-episodes/1074137-1794331429434240374.json",
+      "completed_record_sha256": "6c0fffe7eed7cf0c030a069f5ab4c9cfbc99b461da44efe4dbcf279ed99bff31",
+      "terminal_observation_record": "main/episodes.jsonl",
+      "terminal_observation_record_sha256": "9fd1a31ceedd4fcd68f04b9844608d4ced5705fd936b83925f7cad6361bcf8a3",
+      "actor_schema_sha256": "342d9a01cdd762e00ae24a2a73bcb9b63ade643cee82bfd62a821f23cdcd0367",
+      "legal_terminal_observation": {
+        "hp": 400.0000059604645,
+        "max_hp": 400.0000059604645,
+        "alive": true,
+        "powered": true,
+        "buffer_energy_j": 60.0,
+        "heat": 0.0,
+        "rfid_active": [
+          {
+            "bit": 7,
+            "name": "blue_central"
+          },
+          {
+            "bit": 17,
+            "name": "blue_central"
+          }
+        ],
+        "source_packets": {
+          "0201": {
+            "valid": true,
+            "age_seconds": 0.0
+          },
+          "0202": {
+            "valid": true,
+            "age_seconds": 0.0
+          },
+          "0209": {
+            "valid": true,
+            "age_seconds": 0.0
+          },
+          "020D": {
+            "valid": true,
+            "age_seconds": 0.0
+          }
+        },
+        "ack": {
+          "free_revive": 0.0,
+          "paid_revive": 0.0,
+          "disengaged": 1.0
+        },
+        "last_event_features": {
+          "event.hurt": 0.0,
+          "event.shot": 0.0,
+          "event.warning_level": 0.0,
+          "event.age": 0.0
+        }
+      },
+      "private_training_diagnosis": {
+        "provenance": "terminal_observation.critic, training-only global snapshot encoding",
+        "fields": {
+          "x": 17.278638124465942,
+          "y": 7.740861475467682,
+          "z": 0.4720872491598129,
+          "hp": 400.0000059604645,
+          "max_hp": 400.0000059604645,
+          "alive": 1.0,
+          "powered": 1.0,
+          "weak": 1.0,
+          "buffer_energy_j": 60.0,
+          "heat": 0.0,
+          "respawn_progress": 0.0,
+          "respawn_required": 18.000000715255737
+        },
+        "never_sent_to_actor": true
+      },
+      "metrics": {
+        "alive_seconds": 88.4,
+        "weak_seconds": 85.0,
+        "deaths": 2,
+        "revives": 2,
+        "takeover_seconds": {
+          "dead": 31.599999999999994,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 0.8000000000000007,
+        "policy_errors": 0,
+        "path_m": 43.549985119555465,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 2,
+        "rejected_skills": 0
+      },
+      "reward_totals": {
+        "control": 0.0,
+        "outcome": 0.0,
+        "capture_seconds": 0.016000000000000018,
+        "death": -0.2,
+        "locomotion": 0.0
+      },
+      "capture_reward_ratio": 0.020000000000000004,
+      "terminal_goal": [
+        17.5,
+        7.75
+      ],
+      "terminal_executed_action": {
+        "move": [
+          0.12243124154897836,
+          0.004994319035456732
+        ],
+        "aim": -0.4057220588667331,
+        "pitch": -0.2617354719329875,
+        "fire": false,
+        "transform": false,
+        "jump": 0.0,
+        "yaw_rate": 6.283185307179586,
+        "sentry_cmd": 6684672
+      },
+      "qualification": "Private diagnosis: actual weak=true disqualifies occupancy even though legal RFID reports blue_central contact. Legal actor observation alone does not directly expose own weak."
+    },
+    {
+      "seed": 1786193536,
+      "side": "red",
+      "simulation_seconds": 120.0,
+      "completed_record": "main/completed-episodes/1074137-1794331429438268902.json",
+      "completed_record_sha256": "51866db7c5ce55d3768d5e8d75c7a13de1b0d5696b17eeabb68b45e3970e6895",
+      "terminal_observation_record": "main/episodes.jsonl",
+      "terminal_observation_record_sha256": "94497c3c0028cb6278448b3ae4c477e2a10d3d918a61df542e4017c89e87acd8",
+      "actor_schema_sha256": "342d9a01cdd762e00ae24a2a73bcb9b63ade643cee82bfd62a821f23cdcd0367",
+      "legal_terminal_observation": {
+        "hp": 280.0000011920929,
+        "max_hp": 400.0000059604645,
+        "alive": true,
+        "powered": true,
+        "buffer_energy_j": 60.0,
+        "heat": 0.0,
+        "rfid_active": [
+          {
+            "bit": 7,
+            "name": "blue_central"
+          },
+          {
+            "bit": 17,
+            "name": "blue_central"
+          }
+        ],
+        "source_packets": {
+          "0201": {
+            "valid": true,
+            "age_seconds": 0.0
+          },
+          "0202": {
+            "valid": true,
+            "age_seconds": 0.0
+          },
+          "0209": {
+            "valid": true,
+            "age_seconds": 0.0
+          },
+          "020D": {
+            "valid": true,
+            "age_seconds": 0.0
+          }
+        },
+        "ack": {
+          "free_revive": 0.0,
+          "paid_revive": 0.0,
+          "disengaged": 1.0
+        },
+        "last_event_features": {
+          "event.hurt": 0.0,
+          "event.shot": 0.0,
+          "event.warning_level": 0.0,
+          "event.age": 0.0
+        }
+      },
+      "private_training_diagnosis": {
+        "provenance": "terminal_observation.critic, training-only global snapshot encoding",
+        "fields": {
+          "x": 17.079768419265747,
+          "y": 7.70657479763031,
+          "z": 0.47298507392406464,
+          "hp": 280.0000011920929,
+          "max_hp": 400.0000059604645,
+          "alive": 1.0,
+          "powered": 1.0,
+          "weak": 1.0,
+          "buffer_energy_j": 60.0,
+          "heat": 0.0,
+          "respawn_progress": 0.0,
+          "respawn_required": 18.000000715255737
+        },
+        "never_sent_to_actor": true
+      },
+      "metrics": {
+        "alive_seconds": 88.35,
+        "weak_seconds": 85.0,
+        "deaths": 2,
+        "revives": 2,
+        "takeover_seconds": {
+          "dead": 31.699999999999992,
+          "recover": 0.0,
+          "tipped": 0.0,
+          "unreachable": 0.0
+        },
+        "capture_seconds": 4.5,
+        "policy_errors": 0,
+        "path_m": 46.46473114165146,
+        "tipped_seconds": 0.0,
+        "jump_commands": 0,
+        "fold_reversals": 2,
+        "rejected_skills": 0
+      },
+      "reward_totals": {
+        "control": 0.0,
+        "outcome": 0.0,
+        "capture_seconds": 0.09000000000000005,
+        "death": -0.2,
+        "locomotion": 0.0
+      },
+      "capture_reward_ratio": 0.02000000000000001,
+      "terminal_goal": [
+        17.5,
+        7.5
+      ],
+      "terminal_executed_action": {
+        "move": [
+          0.22358038486578527,
+          -0.10540497608673877
+        ],
+        "aim": -0.2902041347286742,
+        "pitch": -0.22747656767020819,
+        "fire": false,
+        "transform": false,
+        "jump": 0.0,
+        "yaw_rate": 6.283185307179586,
+        "sentry_cmd": 6553600
+      },
+      "qualification": "Private diagnosis: actual weak=true disqualifies occupancy even though legal RFID reports blue_central contact. Legal actor observation alone does not directly expose own weak."
+    }
+  ],
+  "confirmed": [
+    "Actual self-occupancy reward equals 0.02 times measured valid occupancy seconds in both episodes.",
+    "Both episodes record two deaths, two revives, and 85 seconds with the weak flag. weak_seconds includes dead frames and must not be interpreted as alive-and-weak duration.",
+    "At the terminal frame, legal HP/power/RFID packets report an alive powered sentry touching blue_central; both terminal critic states independently expose actual weak=true. The latter is private training diagnosis, not actor-visible evidence.",
+    "The recorded final policy goals remain at the enemy central card."
+  ],
+  "source_reasoning": [
+    {
+      "source": "packages/simulation/src/lib.rs:1095",
+      "claim": "Robots initialize with weak=false; the initial-spawn rule alone does not explain these weak states."
+    },
+    {
+      "source": "packages/simulation/src/season2027.rs:775",
+      "claim": "respawn_2027 sets weak=true; ordinary revival has no fixed weak_until timer, while instant revival sets a three-second timer."
+    },
+    {
+      "source": "packages/simulation/src/season2027.rs:1171",
+      "claim": "Weak state can be cleared by the specified recovery-zone conditions; merely being on an enemy uncontrolled central card is insufficient."
+    },
+    {
+      "source": "packages/simulation/src/season2027.rs:734",
+      "claim": "The ordinary depleted power-buffer path cuts chassis power for five seconds; it does not directly reduce HP. This excludes only that particular direct-death mechanism."
+    },
+    {
+      "source": "research/rmuc2027_research/rl/session.py:574",
+      "claim": "Valid occupancy requires alive and not weak, and membership in the enemy-owned position zone occupants."
+    }
+  ],
+  "unknowns": [
+    "The two deaths per episode cannot be attributed to projectiles, penalties, or other causes from stored records. No time-resolved HP, damage-source, penalty, weak_until or death/respawn event stream was retained.",
+    "Terminal positive HP and full power buffer do not establish the cause of earlier death. Empty final event features do not establish absence of earlier damage or penalties.",
+    "A cumulative weak duration does not reveal the exact onset, clearance history, or live-only weak duration.",
+    "Training navigation passed_passages is not the independent trajectory-based tunnel-crossing certificate used by frozen evaluation."
+  ],
+  "next_research_only": {
+    "preferred_explicit_belief": {
+      "legal_inputs": [
+        "Valid ordered HP/alive packet history, retaining source timestamps and invalid/unknown states.",
+        "Own issued revival commands and legal revival acknowledgements, combined with confirmed death-to-alive transitions; HP gains alone may be healing.",
+        "Own legal RFID history and public/legal control-state reports for recovery-zone conditions.",
+        "Elapsed time since legally observed transitions or confirmed commands, respecting real protocol cadence."
+      ],
+      "outputs": [
+        "self-recovery belief probability or categorical posterior",
+        "valid/unknown state, evidence age and confidence",
+        "evidence kind separating natural revival, paid/instant revival, possible healing and ambiguous packet gaps"
+      ],
+      "requirements": [
+        "Do not read true weak, hidden weak_until or private hit sources into actor or inference.",
+        "Reset or lower confidence on stale, missing, duplicated or out-of-order evidence; do not silently treat missing HP as death.",
+        "Schema and encoding must be explicitly versioned; existing 739-dimensional models/demonstrations need a documented migration and new frozen evaluation."
+      ]
+    },
+    "alternative": "A recurrent tactical actor can integrate only legal packet history, but requires explicit recurrent-state handling, timeout/reset tests, export support and schema/architecture migration; it is not a hot fix.",
+    "current_run_constraints": [
+      "No hot changes to the 739-dimensional actor or 37-dimensional skill slice in this continuation.",
+      "No automatic forced return-home goal substitution.",
+      "No new training, simulation or parameters were changed by this diagnosis."
+    ]
+  },
+  "cross_stage_frozen_evidence": [
+    {
+      "source": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/evaluation/warp_kinematic-red.json",
+      "sha256": "7bde69fb8e6d34a349273b44ef17067a48b3168c8d7080ee1c42a0f466e768ec",
+      "comparison": [
+        {
+          "checkpoint": "initialized.zip",
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "passed_tunnel": true,
+          "capture_seconds": 39.199999999999996,
+          "own_control": 34.25000000000019,
+          "deaths": 0,
+          "revives": 0,
+          "weak_seconds": 0.0,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0
+        },
+        {
+          "checkpoint": "model.zip",
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "passed_tunnel": true,
+          "capture_seconds": 8.900000000000002,
+          "own_control": 7.84999999999998,
+          "deaths": 1,
+          "revives": 1,
+          "weak_seconds": 19.0,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0
+        }
+      ],
+      "interpretation": "The original red PPO trial includes one death and 19 seconds with weak flag, unlike its anchor. Loss of occupancy eligibility is therefore an additional supported mechanism behind the control regression; these aggregates cannot quantify its causal share or reveal the death source."
+    },
+    {
+      "source": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/evaluation/warp_kinematic-blue.json",
+      "sha256": "9fb1fcb227a3b2c185833666e4747ef79fa2c7dd40e2019b3e7abd1fa7a82780",
+      "comparison": [
+        {
+          "checkpoint": "initialized.zip",
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "passed_tunnel": true,
+          "capture_seconds": 39.199999999999996,
+          "own_control": 34.25000000000019,
+          "deaths": 0,
+          "revives": 0,
+          "weak_seconds": 0.0,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0
+        },
+        {
+          "checkpoint": "model.zip",
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "passed_tunnel": true,
+          "capture_seconds": 30.1,
+          "own_control": 25.150000000000222,
+          "deaths": 0,
+          "revives": 0,
+          "weak_seconds": 0.0,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0
+        }
+      ],
+      "interpretation": "Both original blue trials have no deaths or weak time. Its control regression cannot be explained by the observed death/revival mechanism, and still needs trajectory/contact diagnostics."
+    }
+  ],
+  "updated_unix": 1794332390.136876,
+  "cross_stage_limitations": "Original frozen trials are 60-second comparisons on one fixed scenario per side/backend. Training episodes use sampled scenarios and changing weights; no statistical or full-match equivalence is claimed."
+}

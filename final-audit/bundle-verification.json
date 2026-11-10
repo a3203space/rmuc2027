@@ -1,0 +1,120 @@
+{
+  "integrity": true,
+  "system": "Linux",
+  "python": "3.12.3",
+  "os_release": {
+    "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+    "NAME": "Ubuntu",
+    "VERSION_ID": "24.04",
+    "VERSION": "24.04.4 LTS (Noble Numbat)",
+    "VERSION_CODENAME": "noble",
+    "ID": "ubuntu",
+    "ID_LIKE": "debian",
+    "HOME_URL": "https://www.ubuntu.com/",
+    "SUPPORT_URL": "https://help.ubuntu.com/",
+    "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+    "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+    "UBUNTU_CODENAME": "noble",
+    "LOGO": "ubuntu-logo"
+  },
+  "ubuntu24": true,
+  "dependencies": {
+    "torch": "2.15.0+cpu",
+    "numpy": "2.2.6",
+    "stable-baselines3": "2.9.0",
+    "gymnasium": "1.4.0",
+    "warp-lang": "1.19.0",
+    "mujoco": "3.17.0",
+    "mujoco-warp": "3.17.0"
+  },
+  "cuda_available": true,
+  "cuda_devices": [
+    {
+      "device": "cuda:0",
+      "name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+      "architecture": 120,
+      "memory_bytes": 8055947264,
+      "is_cuda": true
+    }
+  ],
+  "inference": {
+    "main": {
+      "finite": true,
+      "action_shape": [
+        6
+      ],
+      "algorithm": "AsymmetricPPO",
+      "portable_actor_finite": true
+    },
+    "infantry": {
+      "finite": true,
+      "action_shape": [
+        69
+      ],
+      "algorithm": "PPO",
+      "portable_actor_finite": true
+    },
+    "heavy": {
+      "finite": true,
+      "action_shape": [
+        69
+      ],
+      "algorithm": "PPO",
+      "portable_actor_finite": true
+    }
+  },
+  "gradient_updates": 0,
+  "dependency_imports": {
+    "torch": {
+      "available": true
+    },
+    "numpy": {
+      "available": true
+    },
+    "stable-baselines3": {
+      "available": true
+    },
+    "gymnasium": {
+      "available": true
+    },
+    "warp-lang": {
+      "available": true
+    },
+    "mujoco": {
+      "available": true
+    },
+    "mujoco-warp": {
+      "available": true
+    }
+  },
+  "warp_cuda_available": true,
+  "warp_cuda_devices": [
+    {
+      "device": "cuda:0",
+      "name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+      "architecture": 120,
+      "memory_bytes": 8055947264,
+      "is_cuda": true
+    }
+  ],
+  "policy_device": "cpu",
+  "torch_cuda_available": false,
+  "torch_cuda_devices": [],
+  "physics_device": "cuda:0",
+  "bitwise_resume_claimed": false,
+  "reset_episodes": true,
+  "discard_partial_rollout": true,
+  "missing_resume_state": [],
+  "native_simulator": {
+    "path": "source/target/release/rmuc-sim",
+    "available": true,
+    "build_command": "cargo build --release --manifest-path source/packages/simulation/Cargo.toml",
+    "exit_code": 0,
+    "rules_hash_match": true
+  },
+  "torch_cuda_version": null,
+  "inference_ready": true,
+  "training_ready": true,
+  "ready": true,
+  "resume_state_complete": true
+}
