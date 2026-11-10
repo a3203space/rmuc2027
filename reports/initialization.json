@@ -1,0 +1,82 @@
+{
+  "version": 6,
+  "mode": "continue_published_generation",
+  "source_run": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333",
+  "source_generation": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/main/checkpoints/baseline",
+  "source_complete_sha256": "b2c2188467e1212a79dade88d71c3fc2ef490844fc869529245baf35b499e733",
+  "source_members_sha256": {
+    "model.zip": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+    "resume-state.pt": "50fb1485799e4a29722b860914f9ae8403feeedb6709116af10daefb35f73470",
+    "samplers.json": "5672a640709a23b760a7c57865ddf084eea5fc1fb45a0a18059f0f36a1545b4f",
+    "actor.json": "cb48ab8d10ca55e3a52bd5b52c29865bbdb4c65e3e85be8574c563788fe9056f",
+    "experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
+    "coordinator-state.json": "a69c9484ade918aefaaa59b08143acc31aa0bf8dccc461ba8f54b765a3235078"
+  },
+  "source_model_sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+  "resumed_model_sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+  "reason": "Continue only from a complete generation; a failed or incomplete canary rejects its branch",
+  "rejected_candidate": {
+    "path": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r01/main/model.zip",
+    "sha256": "3fa1e3ec781b0fd1d5844a53511fddb755f647068f0083ebea52988f9fbe6ada",
+    "retained_in_ancestor": true,
+    "state_imported": false
+  },
+  "source_num_timesteps": 10310,
+  "source_gradient_epochs": 206,
+  "source_completed_updates": 80,
+  "optimizer_steps": {
+    "tactical_optimizer_steps": 317,
+    "revive_optimizer_steps": 0,
+    "critic_optimizer_steps": 317
+  },
+  "optimizer_reset": false,
+  "optimizer_count": 3,
+  "source_coordinator_sha256": "a69c9484ade918aefaaa59b08143acc31aa0bf8dccc461ba8f54b765a3235078",
+  "released_interrupted_leases": 0,
+  "historical_counts_preserved": true,
+  "descendant_coverage_imported": false,
+  "rng_file_copied_exact": true,
+  "source_sampler_copied_exact": true,
+  "runtime_bindings": {
+    "/home/lx/rmuc2027/research/strategies/examples/claude_opus55_xhigh_2027_squad": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/bundle-resources/724619afce071844fdd3/claude_opus55_xhigh_2027_squad",
+    "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/infantry/actor.json": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/infantry/actor.json",
+    "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/heavy/actor.json": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/heavy/actor.json",
+    "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/radar-calibration/classifier.json": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/radar-calibration/classifier.json",
+    "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/infantry/actor.json": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/infantry/actor.json",
+    "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/heavy/actor.json": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/heavy/actor.json",
+    "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312/radar-calibration/classifier.json": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r02/radar-calibration/classifier.json"
+  },
+  "rollout_reused": false,
+  "fresh_episodes_required": true,
+  "gradient_updates": 0,
+  "physics_steps": 0,
+  "frozen_contract_validation": {
+    "hybrid_contract_valid": true,
+    "actor_size": 775,
+    "critic_size": 454,
+    "revive_mask_size": 3,
+    "portable_parity_max_error": 1.2860564668759622e-07,
+    "frozen_skill": true,
+    "frozen_skill_matches_initial": true,
+    "optimizer_groups_disjoint": true,
+    "optimizers": {
+      "tactical_optimizer": {
+        "parameters": 7,
+        "states": 7
+      },
+      "revive_optimizer": {
+        "parameters": 6,
+        "states": 0
+      },
+      "critic_optimizer": {
+        "parameters": 6,
+        "states": 6
+      }
+    },
+    "dead_continuous_noop": true,
+    "dead_continuous_logprob_zero": true,
+    "categorical_legal": true,
+    "synthetic_regimes": 6,
+    "gradient_updates": 0
+  }
+}
