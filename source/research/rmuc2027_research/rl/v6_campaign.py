@@ -329,7 +329,20 @@ def package(root,deadline_unix):
     root=Path(root)
     selection=json.loads((root/'selection.json').read_text())
     shutil.copy2(root/'main'/selection['selected'],root/'main/selected.zip')
-    export_model(root/'main/selected.zip',root/'selected-export')
+    # Packaging may fail after export but before sealing. Recreate in an owned
+    # temporary directory and verify an existing export instead of overwriting
+    # it or failing merely because the previous valid export already exists.
+    with tempfile.TemporaryDirectory(prefix='.selected-export-',dir=root) as scratch:
+        candidate=Path(scratch)/'submission'
+        export_model(root/'main/selected.zip',candidate)
+        destination=root/'selected-export'
+        if destination.exists():
+            def entries(directory):
+                return {str(p.relative_to(directory)):sha(p) for p in directory.rglob('*') if p.is_file()}
+            if entries(candidate)!=entries(destination):
+                raise ValueError('Existing selected export differs from the verified current export')
+        else:
+            candidate.replace(destination)
     database=ROOT/'rmuc2026shuj/rmuc_2026_region_dataset.sqlite'
     report=create_bundle(root,root.with_suffix('.zip'),preparation=root/'preparation',
         external_database=database if database.is_file() else None)

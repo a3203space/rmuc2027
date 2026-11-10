@@ -148,10 +148,10 @@ def create_bundle(run_dir, output, *, preparation=None, source_root=None, extern
             except ValueError:
                 members = list(_walk(path.parent)) if path.parent.name == "radar-calibration" else [(path, path.name)]
                 digest = canonical_hash([(relative, file_hash(resource)) for resource, relative in members])[:20]
-                directory = "frozen-pool/radar/"+digest
+                radar_destination = "frozen-pool/radar/"+digest
                 for resource, relative in members:
-                    include(resource, directory+"/"+relative)
-                destination = directory+"/"+path.name
+                    include(resource, radar_destination+"/"+relative)
+                destination = radar_destination+"/"+path.name
             include(path, destination)
             bindings["radar_classifier_path"] = destination
         if config.get('policy_version') == 6:

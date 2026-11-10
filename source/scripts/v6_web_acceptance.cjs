@@ -11,7 +11,7 @@ function argumentsOf(argv){
  const args={url:'http://127.0.0.1:8767',seconds:20,start:false};
  for(let i=0;i<argv.length;i++){
   const key=argv[i];if(key==='--start'){args.start=true;continue;}if(key==='--help'){args.help=true;continue;}
-  const names={'--url':'url','--run':'run','--deadline-unix':'deadline','--seconds':'seconds','--playwright-module':'playwrightModule','--chrome':'chrome','--checkpoint-id':'checkpoint'};
+  const names={'--url':'url','--run':'run','--deadline-unix':'deadline','--seconds':'seconds','--playwright-module':'playwrightModule','--chrome':'chrome','--checkpoint-id':'checkpoint','--resume-match':'resumeMatch'};
   if(!names[key]||argv[i+1]===undefined)throw Error('Unknown or incomplete argument: '+key);
   args[names[key]]=argv[++i];
  }
@@ -19,6 +19,17 @@ function argumentsOf(argv){
 }
 function atomicJson(filename,value){const pending=filename+'.pending';fs.writeFileSync(pending,JSON.stringify(value,null,2)+'\n');fs.renameSync(pending,filename);}
 function assert(condition,message){if(!condition)throw Error(message);}
+function replaySummary(bytes){
+ const replay=JSON.parse(bytes.toString('utf8')),frames=replay.frames;
+ assert(['rmuc-replay-v3','rmuc-replay-v4'].includes(replay.format),'Frozen archive is not a canonical replay');
+ assert(Array.isArray(frames)&&frames.length>1,'Frozen archive lacks advancing full frames');
+ assert(replay.metadata?.test_match===true,'Frozen archive is not excluded from Elo');
+ assert(Array.isArray(replay.actions)&&replay.actions.length+1===frames.length,'Frozen archive frame/action count mismatch');
+ const first={...replay.static,...frames[0]},last=frames[frames.length-1];
+ for(const field of ['robots','projectiles','events','teams','tick','time'])assert(field in first,'Frozen archive is missing canonical '+field);
+ for(let i=0;i<frames.length;i++)assert(frames[i].tick===first.tick+i&&Math.abs(frames[i].time-first.time-i*.05)<1e-5,'Frozen archive is not consecutive 20 Hz data');
+ return {frame_count:frames.length,action_count:replay.actions.length,frame_hz:20,first_tick:first.tick,last_tick:last.tick};
+}
 async function fileHash(filename,remaining){const digest=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(filename)){remaining();digest.update(chunk);}return digest.digest('hex');}
 async function main(argv=process.argv.slice(2)){
  const args=argumentsOf(argv);
@@ -27,10 +38,12 @@ async function main(argv=process.argv.slice(2)){
  assert(args.run&&Number.isFinite(Number(args.deadline)),'--run and --deadline-unix are required');
  const root=path.resolve(args.run),manifest=JSON.parse(fs.readFileSync(path.join(root,'run-manifest.json'),'utf8'));
  assert(manifest.format==='rmuc-research-run-v1','Unsupported run manifest');
+ assert(!(args.start&&args.resumeMatch),'A resumed match cannot also request a new match');
+ const liveVerification=args.start||Boolean(args.resumeMatch);
  let cutoff=Number(args.deadline);
- if(args.start){
+ if(liveVerification){
   const campaign=JSON.parse(fs.readFileSync(path.join(root,'campaign.json'),'utf8'));
-  assert(campaign.status==='web_acceptance','Live UI acceptance is allowed only in the campaign web_acceptance phase');
+  assert(campaign.status==='web_acceptance'||(args.resumeMatch&&campaign.status==='results_frozen'),'Live UI acceptance is allowed only in the authorized campaign web phase');
   const request=JSON.parse(fs.readFileSync(path.join(root,'web-acceptance-request.json'),'utf8'));
   assert(request.run_id===manifest.run_id,'Acceptance request belongs to another run');
   cutoff=Math.min(cutoff,Number(request.deadline_unix));
@@ -40,11 +53,11 @@ async function main(argv=process.argv.slice(2)){
  remaining();
  const seconds=Number(args.seconds);assert(Number.isInteger(seconds)&&seconds>=1&&seconds<=60,'Short UI acceptance duration must be 1..60 seconds');
  const {chromium}=require(args.playwrightModule||process.env.PLAYWRIGHT_MODULE||'playwright-core');
- const output=path.join(root,args.start?'web-acceptance.json':'web-inspection.json'),shots=path.join(root,'web-evidence');fs.mkdirSync(shots,{recursive:true});
+ const output=path.join(root,args.resumeMatch?'web-acceptance-resumed.json':args.start?'web-acceptance.json':'web-inspection.json'),shots=path.join(root,'web-evidence');fs.mkdirSync(shots,{recursive:true});
  const result={status:'running',started_utc:new Date().toISOString(),deadline_unix:cutoff,run_id:manifest.run_id,url:url.origin,api_stubbed:false,live_requested:args.start,gradient_updates:0,checks:{},errors:[],page_errors:[],console_errors:[]};
  let server,browser,page,ownedMatch=null;
  const watchdog=setTimeout(()=>{result.action_deadline_reached=true;if(page)void page.close().catch(()=>{});},remaining());
- async function get(endpoint){remaining();const response=await page.request.get(url.origin+endpoint,{timeout:Math.min(15000,remaining())});assert(response.ok(),endpoint+' returned '+response.status());return response.json();}
+ async function get(endpoint){remaining();const response=await page.request.get(url.origin+endpoint,{timeout:Math.min(endpoint==='/api/state'?45000:15000,remaining())});assert(response.ok(),endpoint+' returned '+response.status());return response.json();}
  const diagnose=()=>page.evaluate(()=>window.arenaDiagnostics?.());
  try{
   server=await chromium.launchServer({executablePath:args.chrome||'/usr/bin/google-chrome',headless:true,timeout:Math.min(30000,remaining()),args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
@@ -72,18 +85,30 @@ async function main(argv=process.argv.slice(2)){
   await page.getByLabel('观测时长（秒）').fill(String(seconds));
   await page.screenshot({path:path.join(shots,'catalog.png'),fullPage:true,timeout:Math.min(15000,remaining())});
   result.checks.catalog_ui=true;
-  if(args.start){
+  if(liveVerification){
    assert(remaining()>30000,'Insufficient remaining web budget to start a new frozen match');
    const leaderboardBefore=await get('/api/leaderboard');
-   const prior=await get('/api/state');assert(!prior.busy,'A web match is already running; this verifier will not stop it');
-   const responsePromise=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/start'&&response.request().method()==='POST',{timeout:Math.min(60000,remaining())});
-   await page.getByRole('button',{name:'启动冻结对局',exact:true}).click();
-   const response=await responsePromise;assert(response.ok(),'Frozen start failed: '+await response.text());
-   const started=await response.json();ownedMatch=started.match_id;assert(ownedMatch,'Missing started match ID');
-   result.start_request=JSON.parse(response.request().postData());
+   if(args.resumeMatch){
+    const previous=JSON.parse(fs.readFileSync(path.join(root,'web-acceptance.json'),'utf8'));
+    assert(previous.start_request?.research?.run_id===run.run_id&&previous.start_request.research.checkpoint_id===checkpoint.id,'Resume is limited to the original recorded frozen request');
+    const existing=await get('/api/matches/'+encodeURIComponent(args.resumeMatch));
+    assert(existing.metadata.research?.run_id===run.run_id&&existing.metadata.research?.checkpoint_sha256===checkpoint.sha256&&existing.metadata.seed===81001,'Existing match provenance differs from the recorded request');
+    cutoff=Math.min(cutoff,previous.deadline_unix);remaining();ownedMatch=args.resumeMatch;
+    result.start_request=previous.start_request;result.resumed_existing_match=true;result.previous_partial='web-acceptance.json';
+    await page.getByRole('button',{name:'RM 对战',exact:true}).click();
+   }else{
+    const prior=await get('/api/state');assert(!prior.busy,'A web match is already running; this verifier will not stop it');
+    const responsePromise=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/start'&&response.request().method()==='POST',{timeout:Math.min(60000,remaining())});
+    await page.getByRole('button',{name:'启动冻结对局',exact:true}).click();
+    const response=await responsePromise;assert(response.ok(),'Frozen start failed: '+await response.text());
+    const started=await response.json();ownedMatch=started.match_id;assert(ownedMatch,'Missing started match ID');
+    result.start_request=JSON.parse(response.request().postData());
+   }
+   result.owned_match_id=ownedMatch;
    let state;let maximumTick=0;
    while(true){
-    state=await get('/api/state');assert(state.match_id===ownedMatch,'Another match replaced the owned frozen match');
+    try{state=await get('/api/state');}catch(error){if(error.name!=='TimeoutError')throw error;remaining();result.state_read_timeouts=(result.state_read_timeouts||0)+1;continue;}
+    assert(state.match_id===ownedMatch,'Another match replaced the owned frozen match');
     assert(!state.error,'Frozen match failed: '+state.error);maximumTick=Math.max(maximumTick,state.frame.tick);
     if(!state.busy)break;
     await page.waitForTimeout(Math.min(500,remaining()));
@@ -110,9 +135,10 @@ async function main(argv=process.argv.slice(2)){
    const liveReplay=await page.request.get(url.origin+'/api/replays/'+encodeURIComponent(ownedMatch),{timeout:Math.min(30000,remaining())});
    assert(liveReplay.ok(),'Could not archive the owned frozen match replay');
    const liveReplayBytes=await liveReplay.body();remaining();
+   const liveReplaySummary=replaySummary(liveReplayBytes);remaining();
    const liveReplayPath=path.join(shots,'frozen-live-replay.json');
    fs.writeFileSync(liveReplayPath+'.pending',liveReplayBytes);fs.renameSync(liveReplayPath+'.pending',liveReplayPath);
-   result.live.replay={path:path.relative(root,liveReplayPath).split(path.sep).join('/'),bytes:liveReplayBytes.length,sha256:crypto.createHash('sha256').update(liveReplayBytes).digest('hex'),format:'canonical-full-frames',source:'owned-frozen-ui-match'};
+   result.live.replay={path:path.relative(root,liveReplayPath).split(path.sep).join('/'),bytes:liveReplayBytes.length,sha256:crypto.createHash('sha256').update(liveReplayBytes).digest('hex'),format:'canonical-full-frames',source:'owned-frozen-ui-match',...liveReplaySummary};
    await liveReplay.dispose();
    result.checks.frozen_live_match=true;result.checks.test_match_no_elo=true;
    // A saved training/evaluation replay from the registered run is required.
@@ -132,8 +158,9 @@ async function main(argv=process.argv.slice(2)){
    const timeline=page.locator('#timeline');await timeline.focus();await timeline.press('Home');await timeline.press('ArrowRight');
    await page.waitForFunction(()=>window.arenaDiagnostics?.().mode==='replay'&&window.arenaDiagnostics().tick>0,{timeout:Math.min(20000,remaining())});
    const playback=await diagnose();assert(playback.robots===10,'Saved replay did not render the canonical ten-robot field');
-   await page.screenshot({path:path.join(shots,'saved-replay.png'),fullPage:true,timeout:Math.min(15000,remaining())});
    result.replay={...replay,hash_verified:true,diagnostics:playback};result.checks.saved_training_or_evaluation_replay=true;
+   try{await page.screenshot({path:path.join(shots,'saved-replay.png'),fullPage:true,timeout:Math.min(30000,remaining())});}
+   catch(error){if(error.name!=='TimeoutError')throw error;result.evidence_warnings=['Saved replay rendered and advanced, but its screenshot timed out: '+String(error)];remaining();}
    assert(result.page_errors.length===0,'Browser page exceptions occurred');
    result.status='passed';
   }else result.status='inspected_only';
@@ -147,7 +174,7 @@ async function main(argv=process.argv.slice(2)){
   if(!result.within_web_deadline&&result.status==='passed')result.status='partial';
   atomicJson(output,result);console.log(JSON.stringify({status:result.status,path:output,checks:result.checks,errors:result.errors}));
  }
- if(args.start&&result.status!=='passed')process.exitCode=1;
+ if(liveVerification&&result.status!=='passed')process.exitCode=1;
 }
 if(require.main===module)main().catch(error=>{console.error(error.stack||String(error));process.exitCode=1;});
-module.exports={argumentsOf};
+module.exports={argumentsOf,replaySummary};

@@ -101,6 +101,26 @@ class BundleTests(unittest.TestCase):
             self.assertNotIn('/old/',json.dumps(paths))
             verify_bundle(moved)
 
+    def test_external_auxiliary_radar_preserves_stage_rng_and_sampler_bindings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root,run,_ = self.fixture(directory)
+            external=Path(directory)/'ancestor/radar-calibration';external.mkdir(parents=True)
+            (external/'classifier.json').write_text('{"version":2}')
+            (external/'rows.npz').write_bytes(b'ancestor radar calibration')
+            path=run/'heavy/experiment.json';metadata=json.loads(path.read_text())
+            metadata['config']['radar_classifier_path']=str(external/'classifier.json')
+            path.write_text(json.dumps(metadata))
+            archive=Path(directory)/'external.zip'
+            report=create_bundle(run,archive,source_root=root)
+            heavy=report['manifest']['stages']['heavy']
+            self.assertEqual(heavy['rng_state'],'models/heavy/resume-state.pt')
+            self.assertEqual(heavy['sampler_state'],'models/heavy/samplers.json')
+            moved=Path(directory)/'relocated';extract_bundle(archive,moved)
+            radar=Path(load_runtime_config(moved,'heavy')['radar_classifier_path'])
+            self.assertTrue(radar.is_relative_to(moved/'frozen-pool/radar'))
+            self.assertEqual(json.loads(radar.read_text()),{'version':2})
+            self.assertEqual((radar.parent/'rows.npz').read_bytes(),b'ancestor radar calibration')
+
     def test_legacy_configuration_keeps_relocated_guidance_semantics(self):
         with tempfile.TemporaryDirectory() as directory:
             root,run,_ = self.fixture(directory)

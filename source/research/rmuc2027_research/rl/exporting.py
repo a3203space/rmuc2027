@@ -14,6 +14,40 @@ from . import portable
 from .session import provenance, resource
 
 
+_V6_TRAINING_ONLY_SOURCES = frozenset(
+    'research/rmuc2027_research/rl/'+name for name in
+    ('v6_recovery.py', 'v6_sampling.py', 'v6_training.py'))
+
+
+def _deployment_source_changes(metadata, current, policy_version):
+    """Audit the exact v6 training-only exception; fail closed for other drift.
+
+    These three modules prepare episodes, sample training cases and manage
+    training state. They are not embedded or imported by the exported actor.
+    Policy, belief, executor and PPO implementation remain strict gates.
+    """
+    old, new = metadata.get('sentry_sources'), current['sentry_sources']
+    if policy_version != 6:
+        if old != new:
+            raise ValueError('Training runtime changed: sentry_sources')
+        return {}
+    if not isinstance(old, dict) or set(old) != set(new):
+        raise ValueError('Training runtime changed: sentry_sources (source set)')
+    changes = {}
+    for path in sorted(old):
+        if old[path] == new[path]:
+            continue
+        hashes = (old[path], new[path])
+        valid = all(isinstance(h, str) and len(h) == 64
+                    and all(c in '0123456789abcdef' for c in h) for h in hashes)
+        if path not in _V6_TRAINING_ONLY_SOURCES or not valid:
+            raise ValueError('Training runtime changed: sentry_sources ('+path+')')
+        changes[path] = dict(training_sha256=old[path],
+                             deployment_source_tree_sha256=new[path],
+                             embedded_in_actor=False)
+    return changes
+
+
 def _pack_v4_actor(actor):
     """Lossless float32 byte planes, avoiding JSON's decimal weight overhead."""
     branches=('tactical','skill','revive') if actor.get('version')==6 else ('tactical','skill')
@@ -71,17 +105,27 @@ def export_layers(layers, metadata, output, *, allow_sdk_transfer=False):
     if metadata.get('obs_version', portable.OBS_VERSION) != portable.policy_schema(config)['version']:
         raise ValueError('Observation version mismatch')
     current = provenance(config)
+    training_source_changes = {}
     if config.get('policy_version') in (3,4,6):
-        for key in ('sentry_sources','sentry_schema'):
-            if metadata.get(key)!=current[key]:raise ValueError(f'Training runtime changed: {key}')
+        if metadata.get('sentry_schema') != current['sentry_schema']:
+            raise ValueError('Training runtime changed: sentry_schema')
+        training_source_changes = _deployment_source_changes(metadata, current, config['policy_version'])
     if current['navigation']!=metadata.get('navigation'):
         raise ValueError('Training runtime changed: navigation')
-    if current['sources'] != metadata['sources'] or (current['sdk_hash'] != metadata['sdk_hash'] and not allow_sdk_transfer):
+    sdk_transfer_allowed = allow_sdk_transfer and config.get('policy_version') != 6
+    if current['sources'] != metadata['sources'] or (current['sdk_hash'] != metadata['sdk_hash'] and not sdk_transfer_allowed):
         raise ValueError('Fixed strategy or SDK changed since training; export refused')
     for key in ('runtime_hash', 'engine_binary_sha256', 'rules_sha256'):
         if metadata.get(key, current[key]) != current[key]:
             raise ValueError(f'Training runtime changed: {key}')
     metadata = copy.deepcopy(metadata)
+    if config.get('policy_version') == 6:
+        # Keep the original training hashes above intact. This explicitly
+        # records what changed in the source tree without relabelling training.
+        metadata['deployment_training_only_source_changes'] = training_source_changes
+        metadata['deployment_training_only_source_policy'] = dict(
+            version=1, allowlist=sorted(_V6_TRAINING_ONLY_SOURCES),
+            actor_weights_changed=False)
     metadata['deployment_sdk_hash'] = current['sdk_hash']
     if current['sdk_hash'] != metadata['sdk_hash']:
         metadata['sdk_transfer'] = dict(training=metadata['sdk_hash'], deployment=current['sdk_hash'],

@@ -1,7 +1,7 @@
 {
   "run_id": "sentry-v6-20261111-0333",
-  "source_tree": "cc3c46e314b1c86b771a96496b326eb0048ecfc7",
-  "source_files": 1452,
+  "source_tree": "73580ef2e66ff39f65239569ede6cc66dafd7a0b",
+  "source_files": 1458,
   "source_base": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
   "checkpoint": {
     "sha256": "2e01e30c1215a5770516326a12064632e1db559b3d1e924d3f3f5dce7a189a4b",
@@ -40,8 +40,56 @@
       "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
     }
   },
-  "final": null,
-  "campaign_status": "evaluating",
+  "final": {
+    "archive": "bundle.zip",
+    "bytes": 373286269,
+    "sha256": "50ad16014f51bac4be51ec656a5785be6b214e9b9e84b90b9d4162aafdf3d58a",
+    "parts": [
+      {
+        "name": "bundle.part-0000",
+        "bytes": 50331648,
+        "sha256": "bce194d7b11537d576ed055d5031d8f2a284f60350514048ad408f369b1d3406"
+      },
+      {
+        "name": "bundle.part-0001",
+        "bytes": 50331648,
+        "sha256": "3ac2a44cc32934696a246ede30c2fc95a2daaa7c58f08750beb90488ea59651c"
+      },
+      {
+        "name": "bundle.part-0002",
+        "bytes": 50331648,
+        "sha256": "d5f2a76404c52f6b05839e342905787954d3b0d9bd2d06f41ab08f98c4b6b672"
+      },
+      {
+        "name": "bundle.part-0003",
+        "bytes": 50331648,
+        "sha256": "211aed85fe8a45f7e89219edc8aa3b8f8335aa686086f0710e27e6815ffbacd2"
+      },
+      {
+        "name": "bundle.part-0004",
+        "bytes": 50331648,
+        "sha256": "1e4a2f69c058a6fee4b61e912769629eccb8965c57205f5b4e45fad9e2487783"
+      },
+      {
+        "name": "bundle.part-0005",
+        "bytes": 50331648,
+        "sha256": "7a8c6b7472f23cf9997d0c8a0780851557d94a2e8de33848992779cfc39a82ee"
+      },
+      {
+        "name": "bundle.part-0006",
+        "bytes": 50331648,
+        "sha256": "36fff6bf160ac50d149a5369d342bb7910c9ab43799794819a3517c253f5ecf7"
+      },
+      {
+        "name": "bundle.part-0007",
+        "bytes": 20964733,
+        "sha256": "f6d60a1ff5eb1f26fec47598889a1bbbf754e43b84e24ce1c6177a202d6084a5"
+      }
+    ],
+    "path": "final/50ad16014f51bac4be51ec656a5785be6b214e9b9e84b90b9d4162aafdf3d58a",
+    "original_name": "sentry-v6-20261111-0333.zip"
+  },
+  "campaign_status": "results_frozen",
   "raw_database_included": false,
   "shared_head_unchanged": true,
   "shared_index_unchanged": true

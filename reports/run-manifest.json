@@ -13,9 +13,9 @@
       "label": "baseline",
       "policy_version": 6
     },
-    "candidate-1c7ec9df4552": {
-      "path": "main/catalog/1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00.zip",
-      "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+    "candidate-0cae339943f6": {
+      "path": "main/catalog/0cae339943f6a7453ef6a6824b75c3ceb40e01c541fd673599ea37d4719a20cf.zip",
+      "sha256": "0cae339943f6a7453ef6a6824b75c3ceb40e01c541fd673599ea37d4719a20cf",
       "label": "candidate",
       "policy_version": 6
     }
@@ -76,7 +76,136 @@
       "learner_side": "blue"
     }
   },
-  "replays": {},
+  "replays": {
+    "training-worker-0-episode-00005": {
+      "path": "replays/training/worker-0-episode-00005.json",
+      "sha256": "9edd9e70f29ea81e18342fa1599148771f98934141442a536703560a386fea03",
+      "kind": "training",
+      "label": "worker-0-episode-00005",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 60.0,
+      "recording_end_reason": "episode_window",
+      "scenario_id": "f2732-2732_e2731-303_s2772_red",
+      "scenario_label_source": "recorded_runtime_side_lineups"
+    },
+    "training-worker-0-episode-00009": {
+      "path": "replays/training/worker-0-episode-00009.json",
+      "sha256": "53600eea0fa614a05bd061d02dbc5c8a0e128fe86141b385eeeefa227a4ab076",
+      "kind": "training",
+      "label": "worker-0-episode-00009",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 60.0,
+      "recording_end_reason": "episode_window",
+      "scenario_id": "f2731-2732_e2732-2731_s2772_red",
+      "scenario_label_source": "recorded_runtime_side_lineups"
+    },
+    "evaluation-main-rapier-blue-baseline": {
+      "path": "replays/evaluation/main-rapier-blue-baseline.json",
+      "sha256": "a7b40836cefc5e45491f9cfeea458c348f4a75001e72f7b25647a40f0906c0f9",
+      "kind": "evaluation",
+      "label": "main-rapier-blue-baseline",
+      "backend": "rapier",
+      "truncated": false,
+      "seconds": 60.0,
+      "recording_end_reason": "evaluation_complete",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "checkpoint_id": "baseline-1c7ec9df4552",
+      "case_id": "main-rapier-blue"
+    },
+    "evaluation-main-rapier-blue-candidate": {
+      "path": "replays/evaluation/main-rapier-blue-candidate.json",
+      "sha256": "fc766514fed5eddbbad03b05ccd94bc7f9a94b5156de1f9a120b4496e7ce9564",
+      "kind": "evaluation",
+      "label": "main-rapier-blue-candidate",
+      "backend": "rapier",
+      "truncated": false,
+      "seconds": 60.0,
+      "recording_end_reason": "evaluation_complete",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "checkpoint_id": "candidate-0cae339943f6",
+      "case_id": "main-rapier-blue"
+    },
+    "evaluation-main-rapier-red-baseline": {
+      "path": "replays/evaluation/main-rapier-red-baseline.json",
+      "sha256": "8981539917292c651189e4d1dd4796bd2b47400d9746fe69036ef7510eebb400",
+      "kind": "evaluation",
+      "label": "main-rapier-red-baseline",
+      "backend": "rapier",
+      "truncated": true,
+      "seconds": 25.1,
+      "recording_end_reason": "evaluation_censored",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+      "checkpoint_id": "baseline-1c7ec9df4552",
+      "case_id": "main-rapier-red"
+    },
+    "evaluation-main-rapier-red-candidate": {
+      "path": "replays/evaluation/main-rapier-red-candidate.json",
+      "sha256": "a627f74f8bd38cc9ed6c248026ad247f6282fdb475cfad49c0a163ad53ab5b20",
+      "kind": "evaluation",
+      "label": "main-rapier-red-candidate",
+      "backend": "rapier",
+      "truncated": false,
+      "seconds": 60.0,
+      "recording_end_reason": "evaluation_complete",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+      "checkpoint_id": "candidate-0cae339943f6",
+      "case_id": "main-rapier-red"
+    },
+    "evaluation-main-warp_kinematic-blue-baseline": {
+      "path": "replays/evaluation/main-warp_kinematic-blue-baseline.json",
+      "sha256": "aed4b7996c2ac3751efacac21ecb2f13d184a7be428072e375fa45f44f90057d",
+      "kind": "evaluation",
+      "label": "main-warp_kinematic-blue-baseline",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 34.3,
+      "recording_end_reason": "evaluation_censored",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "checkpoint_id": "baseline-1c7ec9df4552",
+      "case_id": "main-warp_kinematic-blue"
+    },
+    "evaluation-main-warp_kinematic-blue-candidate": {
+      "path": "replays/evaluation/main-warp_kinematic-blue-candidate.json",
+      "sha256": "b38800b97122b4564b8f5fed5d8c7bf09d336a9d4287c020b2dcf265f74af080",
+      "kind": "evaluation",
+      "label": "main-warp_kinematic-blue-candidate",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 42.5,
+      "recording_end_reason": "evaluation_censored",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "checkpoint_id": "candidate-0cae339943f6",
+      "case_id": "main-warp_kinematic-blue"
+    },
+    "evaluation-main-warp_kinematic-red-baseline": {
+      "path": "replays/evaluation/main-warp_kinematic-red-baseline.json",
+      "sha256": "ad07ee97569e40e12657bed814b117692a61157f3d8014a5cda83a959cde3291",
+      "kind": "evaluation",
+      "label": "main-warp_kinematic-red-baseline",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 35.4,
+      "recording_end_reason": "evaluation_censored",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+      "checkpoint_id": "baseline-1c7ec9df4552",
+      "case_id": "main-warp_kinematic-red"
+    },
+    "evaluation-main-warp_kinematic-red-candidate": {
+      "path": "replays/evaluation/main-warp_kinematic-red-candidate.json",
+      "sha256": "b4f40f8ab9b8fd89eb61222a0083247b383567315890431d6b1f6a6bf5de2832",
+      "kind": "evaluation",
+      "label": "main-warp_kinematic-red-candidate",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 42.6,
+      "recording_end_reason": "evaluation_censored",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+      "checkpoint_id": "candidate-0cae339943f6",
+      "case_id": "main-warp_kinematic-red"
+    }
+  },
   "radar_classifier": {
     "path": "radar-calibration/classifier.json",
     "sha256": "812a7a62f185fa4402afa6f11698dca9d34b57e74ed104ad0b8fcb5b5fcbbfd8"

@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333.zip",
+    "sha256": "50ad16014f51bac4be51ec656a5785be6b214e9b9e84b90b9d4162aafdf3d58a",
+    "bytes": 373286269
+  },
+  "relocation_exit_code": 0,
+  "verified_after_relocation": true,
+  "target_5600x_5070ti_verified": false,
+  "results_sha256": "7e626f7457a9ba91632f5ec825e51f6c85ff88ee5bce92c59b00de2714ac9512",
+  "source": "sealed bundle source, not mutable working tree"
+}

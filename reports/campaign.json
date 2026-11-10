@@ -1,5 +1,5 @@
 {
-  "status": "evaluating",
+  "status": "results_frozen",
   "budget": {
     "started_unix": 1794339204.825493,
     "deadline_unix": 1794346404.825493,
@@ -137,6 +137,13 @@
       "exit_code": 0,
       "timed_out": false,
       "log": "recovery-alive_weak-baseline.log"
+    },
+    {
+      "case_id": "recovery-alive_weak",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "recovery-alive_weak-candidate.log"
     }
   ],
   "allocation": {
@@ -158,6 +165,1415 @@
       "actor.json": "7a345dea0418bede0c45d4be44afc8418ad5fd0e746ae9f55258f0fd1e6172ac",
       "experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
       "coordinator-state.json": "479c7d131f9c70e12c9dfea4030ba9ec519f0ba84eaded616bb1f9c34b7b0ab9"
+    }
+  },
+  "selection": {
+    "version": 6,
+    "selected": "initialized.zip",
+    "v6_paired_improvement_verified": false,
+    "complete_pairs": 1,
+    "required_pairs": 8,
+    "missing": [
+      "main-warp_kinematic-red:baseline",
+      "main-warp_kinematic-red:candidate",
+      "main-warp_kinematic-blue:baseline",
+      "main-warp_kinematic-blue:candidate",
+      "main-rapier-red:baseline",
+      "recovery-free_ready:baseline",
+      "recovery-free_ready:candidate",
+      "recovery-paid_early:baseline",
+      "recovery-paid_early:candidate",
+      "recovery-unavailable:baseline",
+      "recovery-unavailable:candidate",
+      "recovery-alive_weak:baseline",
+      "recovery-alive_weak:candidate"
+    ],
+    "invalid_evidence": {
+      "main-warp_kinematic-red:baseline": [
+        "incomplete_trial",
+        "actor_legality",
+        "trace_horizon"
+      ],
+      "main-warp_kinematic-red:candidate": [
+        "incomplete_trial",
+        "actor_legality",
+        "trace_horizon"
+      ],
+      "main-warp_kinematic-blue:baseline": [
+        "incomplete_trial",
+        "actor_legality",
+        "trace_horizon"
+      ],
+      "main-warp_kinematic-blue:candidate": [
+        "incomplete_trial",
+        "actor_legality",
+        "trace_horizon"
+      ],
+      "main-rapier-red:baseline": [
+        "incomplete_trial",
+        "actor_legality",
+        "trace_horizon",
+        "tunnel_evidence"
+      ],
+      "recovery-free_ready:baseline": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-free_ready:candidate": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-paid_early:baseline": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-paid_early:candidate": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-unavailable:baseline": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-unavailable:candidate": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-alive_weak:baseline": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ],
+      "recovery-alive_weak:candidate": [
+        "incomplete_trial",
+        "execution_identity",
+        "evaluation_config",
+        "helper_identity",
+        "radar_identity",
+        "frozen_pool_changed",
+        "prefix_identity",
+        "recovery_prefix",
+        "actor_legality",
+        "invalid_metrics",
+        "trace_hash"
+      ]
+    },
+    "failed_gates": [
+      "main-rapier-blue:per_case_regression",
+      "aggregate_regression"
+    ],
+    "strict_improvement": false,
+    "control": [
+      38.29999999999996,
+      0.0
+    ],
+    "capture_seconds": [
+      44.849999999999994,
+      0.0
+    ],
+    "historical_best_replaced": false,
+    "complete_recordings": 2,
+    "recording_quota_bytes": 2147483648,
+    "reason": "retain_v6_migration_baseline_pending_evidence",
+    "evidence_scope": "Eight declared finite paired cases, not overall win rate or complete lineup coverage"
+  },
+  "web_acceptance": {
+    "status": "partial",
+    "started_utc": "2026-11-10T21:16:26.673Z",
+    "deadline_unix": 1794345509.970641,
+    "run_id": "sentry-v6-20261111-0333",
+    "url": "http://127.0.0.1:8767",
+    "api_stubbed": false,
+    "live_requested": false,
+    "gradient_updates": 0,
+    "checks": {
+      "catalog_ui": true,
+      "frozen_live_match": true,
+      "test_match_no_elo": true,
+      "saved_training_or_evaluation_replay": true
+    },
+    "errors": [],
+    "page_errors": [],
+    "console_errors": [],
+    "catalog": {
+      "run_id": "sentry-v6-20261111-0333",
+      "manifest_sha256": "80e7213762ed70b4e11479a55b5d29350d9f5c76d09bca6474e22bcebb5a55c9",
+      "checkpoint_ids": [
+        "baseline-1c7ec9df4552",
+        "candidate-0cae339943f6"
+      ],
+      "scenario_ids": [
+        "f2731-2732_e2731-2732_s2773_red",
+        "f2731-2732_e2731-2732_s2773_blue"
+      ]
+    },
+    "start_request": {
+      "mode": "research",
+      "research": {
+        "run_id": "sentry-v6-20261111-0333",
+        "checkpoint_id": "baseline-1c7ec9df4552",
+        "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+        "capability_profile_id": "evaluation-red",
+        "backend": "rapier"
+      },
+      "seed": 81001,
+      "duration": 20,
+      "save_mp4": false
+    },
+    "resumed_existing_match": true,
+    "previous_partial": "web-acceptance.json",
+    "owned_match_id": "36221c55243c4b39",
+    "live": {
+      "match_id": "36221c55243c4b39",
+      "maximum_tick": 400,
+      "simulation_seconds": 20,
+      "metadata": {
+        "api_version": 3,
+        "engine": "rust",
+        "rules": "rmuc-2027-v1.0.0-arena-v1",
+        "season": "2027",
+        "decision_timeout_s": 10,
+        "policy_timeout_limit": 3,
+        "roster": {
+          "red": [
+            1,
+            3,
+            4,
+            6,
+            7
+          ],
+          "blue": [
+            1,
+            3,
+            4,
+            6,
+            7
+          ]
+        },
+        "test_match": true,
+        "dt": 0.05,
+        "policy_interval": 2,
+        "seed": 81001,
+        "duration": 420,
+        "map": "rmuc2027",
+        "sandbox": "trusted-local",
+        "match_mode": "research",
+        "teams": {
+          "red": {
+            "name": "claude_opus55_xhigh_2027_squad",
+            "version": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+            "mode": "squad",
+            "agent": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh"
+            },
+            "display_name": "折叠哨兵 v6：恢复与复活选择 · baseline"
+          },
+          "blue": {
+            "name": "claude_opus55_xhigh_2027_squad",
+            "version": "dba14ab0764239ed",
+            "mode": "squad",
+            "agent": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh"
+            },
+            "display_name": "单机组队 2027"
+          }
+        },
+        "physics_backend": "rapier",
+        "navigation_mode": "adaptive",
+        "observation_profile": "sentry_referee_2027_v1",
+        "fixed_policy_hz": 10,
+        "learning_control_hz": 20,
+        "radar_classifier": {
+          "validated": false,
+          "classes": {
+            "wheel": {
+              "mean": [
+                0.22394354707092412,
+                0.615898652920699,
+                0.15695029775701902,
+                0.26
+              ],
+              "variance": [
+                0.01,
+                0.28522884933047077,
+                0.01957338359812127,
+                0.021400000000000006
+              ]
+            },
+            "fold": {
+              "mean": [
+                0.6255992891935229,
+                1.7723698055321326,
+                0.2009360205774849,
+                0.32142857142857145
+              ],
+              "variance": [
+                0.19043796181372433,
+                1.3004767010094194,
+                0.027155345251576958,
+                0.06668367346938775
+              ]
+            },
+            "omni": {
+              "mean": [
+                0.26951979695530653,
+                0.4729147950301317,
+                0.23196827699338682,
+                0.4666666666666667
+              ],
+              "variance": [
+                0.019493771104480796,
+                0.1562182633082743,
+                0.11447502796201443,
+                0.044722222222222226
+              ]
+            }
+          },
+          "temperature": 2,
+          "calibration": {
+            "version": 1,
+            "valid": false,
+            "independent_tracks": 69,
+            "episodes": 11,
+            "train_counts": {
+              "wheel": 5,
+              "fold": 14,
+              "omni": 12
+            },
+            "validation_counts": {
+              "wheel": 16,
+              "fold": 22,
+              "omni": 0
+            },
+            "train_episodes": [
+              "seed-20501",
+              "seed-20504",
+              "seed-20502",
+              "seed-20505",
+              "seed-20503",
+              "seed-20507",
+              "seed-20506"
+            ],
+            "validation_episodes": [
+              "seed-1284526274",
+              "seed-42",
+              "seed-43",
+              "seed-564939999"
+            ],
+            "thresholds": {
+              "minimum_tracks_per_class_per_split": 4,
+              "selective_accuracy": 0.7,
+              "per_class_coverage": 0.25,
+              "macro_accuracy": 0.5,
+              "brier": 0.6666666666666666
+            },
+            "label_source": "private_offline_chassis",
+            "runtime_input": "legal_radar_coordinate_history",
+            "reason": "insufficient_heldout_tracks"
+          }
+        },
+        "radar_classifier_hash": "a6679507381f305308eaa89a8f718b4f2bd5458fc786ea552cb76bfe4d4c5693",
+        "training_capabilities": {
+          "red:1": {
+            "mobility_profile": "nominal",
+            "mobility": {
+              "speed_reference_mps": 1,
+              "motor_force_max_n": 1,
+              "drive_efficiency": 1
+            },
+            "aim_profile": "weak",
+            "aim": {
+              "delay_s": 0.3,
+              "sigma_deg": 2.5,
+              "tau_s": 0.15
+            },
+            "aim_seed": 1483504453,
+            "protected_learner": false,
+            "observation_scope": "helper",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2711,
+            "nominal_drive_efficiency": 0.85
+          },
+          "red:3": {
+            "mobility_profile": "low",
+            "mobility": {
+              "speed_reference_mps": 0.75,
+              "motor_force_max_n": 0.8,
+              "drive_efficiency": 0.9
+            },
+            "aim_profile": "medium",
+            "aim": {
+              "delay_s": 0.15,
+              "sigma_deg": 1,
+              "tau_s": 0.15
+            },
+            "aim_seed": 474753180,
+            "protected_learner": false,
+            "observation_scope": "helper",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2731,
+            "nominal_drive_efficiency": 0.8
+          },
+          "red:4": {
+            "mobility_profile": "low",
+            "mobility": {
+              "speed_reference_mps": 0.75,
+              "motor_force_max_n": 0.8,
+              "drive_efficiency": 0.9
+            },
+            "aim_profile": "strong",
+            "aim": {
+              "delay_s": 0.05,
+              "sigma_deg": 0.25,
+              "tau_s": 0.15
+            },
+            "aim_seed": 2037198181,
+            "protected_learner": false,
+            "observation_scope": "helper",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2732,
+            "nominal_drive_efficiency": 0.85
+          },
+          "red:7": {
+            "mobility_profile": "nominal",
+            "mobility": {
+              "speed_reference_mps": 1,
+              "motor_force_max_n": 1,
+              "drive_efficiency": 1
+            },
+            "aim_profile": "learner",
+            "aim": {
+              "delay_s": 0,
+              "sigma_deg": 0,
+              "tau_s": 0.15
+            },
+            "aim_seed": 2051476960,
+            "protected_learner": true,
+            "observation_scope": "strict_sentry",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2773,
+            "nominal_drive_efficiency": 0.85
+          },
+          "blue:1": {
+            "mobility_profile": "nominal",
+            "mobility": {
+              "speed_reference_mps": 1,
+              "motor_force_max_n": 1,
+              "drive_efficiency": 1
+            },
+            "aim_profile": "weak",
+            "aim": {
+              "delay_s": 0.3,
+              "sigma_deg": 2.5,
+              "tau_s": 0.15
+            },
+            "aim_seed": 1556150079,
+            "protected_learner": false,
+            "observation_scope": "helper",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2711,
+            "nominal_drive_efficiency": 0.85
+          },
+          "blue:3": {
+            "mobility_profile": "low",
+            "mobility": {
+              "speed_reference_mps": 0.75,
+              "motor_force_max_n": 0.8,
+              "drive_efficiency": 0.9
+            },
+            "aim_profile": "medium",
+            "aim": {
+              "delay_s": 0.15,
+              "sigma_deg": 1,
+              "tau_s": 0.15
+            },
+            "aim_seed": 840118659,
+            "protected_learner": false,
+            "observation_scope": "helper",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2731,
+            "nominal_drive_efficiency": 0.8
+          },
+          "blue:4": {
+            "mobility_profile": "low",
+            "mobility": {
+              "speed_reference_mps": 0.75,
+              "motor_force_max_n": 0.8,
+              "drive_efficiency": 0.9
+            },
+            "aim_profile": "strong",
+            "aim": {
+              "delay_s": 0.05,
+              "sigma_deg": 0.25,
+              "tau_s": 0.15
+            },
+            "aim_seed": 347554981,
+            "protected_learner": false,
+            "observation_scope": "helper",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2732,
+            "nominal_drive_efficiency": 0.85
+          },
+          "blue:7": {
+            "mobility_profile": "low",
+            "mobility": {
+              "speed_reference_mps": 0.75,
+              "motor_force_max_n": 0.8,
+              "drive_efficiency": 0.9
+            },
+            "aim_profile": "medium",
+            "aim": {
+              "delay_s": 0.15,
+              "sigma_deg": 1,
+              "tau_s": 0.15
+            },
+            "aim_seed": 1355065051,
+            "protected_learner": false,
+            "observation_scope": "strict_sentry",
+            "calibration_scale": 1,
+            "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+            "model": 2773,
+            "nominal_drive_efficiency": 0.85
+          }
+        },
+        "capability_drift": {
+          "schema_hash": "676ae67ddbf96e70b3f69e119f24287473fe25312f8a3d19f9414ca4bdddbe67",
+          "spec": {
+            "target_interval_s": 15,
+            "time_constant_s": 20,
+            "speed_fraction": 0.1,
+            "force_fraction": 0.08,
+            "efficiency_fraction": 0.03,
+            "aim_sigma_fraction": 0.2,
+            "aim_delay_delta_s": 0.05,
+            "aim_history_s": 2,
+            "scope": "enemy_ground_only"
+          },
+          "seed": 185730,
+          "learner_side": "red"
+        },
+        "battle_settings": {
+          "timed_assembly": false
+        },
+        "rules_hash": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+        "engine_hash": "137619c58fbaaa8d865aec82ee62269723edeb4fe65ac1c5a76143793bfe445d",
+        "lineups": {
+          "red": [
+            {
+              "slot": 1,
+              "model": 2711
+            },
+            {
+              "slot": 3,
+              "model": 2731
+            },
+            {
+              "slot": 4,
+              "model": 2732
+            },
+            {
+              "slot": 6,
+              "model": 2761
+            },
+            {
+              "slot": 7,
+              "model": 2773
+            }
+          ],
+          "blue": [
+            {
+              "slot": 1,
+              "model": 2711
+            },
+            {
+              "slot": 3,
+              "model": 2731
+            },
+            {
+              "slot": 4,
+              "model": 2732
+            },
+            {
+              "slot": 6,
+              "model": 2761
+            },
+            {
+              "slot": 7,
+              "model": 2773
+            }
+          ]
+        },
+        "agents": {
+          "red": {
+            "1": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "3": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "4": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "6": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "7": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            }
+          },
+          "blue": {
+            "1": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "3": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "4": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "6": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            },
+            "7": {
+              "provider": "anthropic",
+              "model": "Claude Opus 5.5 xhigh",
+              "strategy": "单机组队 2027"
+            }
+          }
+        },
+        "rl": {
+          "config": {
+            "seed": 81001,
+            "team": "red",
+            "slot": 7,
+            "map": "rmuc2027",
+            "duration": 420,
+            "episode_seconds": 20,
+            "rl_seconds": 0.1,
+            "grid_m": 0.25,
+            "recover_enter": 0.25,
+            "recover_exit": 0.8,
+            "friendly": "/home/lx/rmuc2027/research/strategies/examples/claude_opus55_xhigh_2027_squad",
+            "opponent": "/home/lx/rmuc2027/research/strategies/examples/claude_opus55_xhigh_2027_squad",
+            "controllers": {
+              "red:7": {
+                "kind": "learning"
+              }
+            },
+            "rewards": {
+              "control": 0.01,
+              "outcome": 10,
+              "capture_seconds": 0.02,
+              "death": -1,
+              "paid_coins": -0.001,
+              "recovery": 0.2
+            },
+            "ppo": {
+              "n_steps": 64,
+              "batch_size": 64,
+              "n_epochs": 4,
+              "learning_rate": 1e-05,
+              "gamma": 0.999,
+              "gae_lambda": 0.99,
+              "ent_coef": 0.001,
+              "target_kl": 0.006,
+              "tactical_lr": 1e-05,
+              "revive_lr": 0.0003,
+              "critic_lr": 5e-05,
+              "tactical_target_kl": 0.006,
+              "near_roof_target_kl": 0.003,
+              "revive_target_kl": 0.01
+            },
+            "policy_version": 6,
+            "navigation_mode": "adaptive",
+            "sim_backend": "rapier",
+            "sim_device": "cuda:0",
+            "navigation_precompute": true,
+            "drones_enabled": true,
+            "timed_assembly": false,
+            "alternate_sides": false,
+            "policy_timeout_s": 10,
+            "lineups": {
+              "red": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2773
+              },
+              "blue": {
+                "1": 2711,
+                "3": 2731,
+                "4": 2732,
+                "6": 2761,
+                "7": 2773
+              }
+            },
+            "action_trace": true,
+            "checkpoint_seconds": 90,
+            "observation_profile": "sentry_referee_2027_v1",
+            "learning_control_hz": 20,
+            "training_summary": false,
+            "fixed_policy_hz": 10,
+            "github_backup_seconds": 300,
+            "scenario_sampling": false,
+            "capability_sampling": false,
+            "v4_capture_reward": 0.02,
+            "auxiliary_pool": {
+              "infantry": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/infantry/actor.json",
+              "heavy": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/heavy/actor.json"
+            },
+            "radar_classifier_path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/radar-calibration/classifier.json",
+            "scenario": {
+              "friendly_infantry": [
+                2731,
+                2732
+              ],
+              "enemy_infantry": [
+                2731,
+                2732
+              ],
+              "enemy_sentry": 2773,
+              "learner_side": "red",
+              "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+              "ordered_id": "f2731-2732_e2731-2732_s2773",
+              "quantity_id": "f110_e110_sT"
+            },
+            "training_capabilities": {
+              "red:1": {
+                "mobility_profile": "nominal",
+                "mobility": {
+                  "speed_reference_mps": 1,
+                  "motor_force_max_n": 1,
+                  "drive_efficiency": 1
+                },
+                "aim_profile": "weak",
+                "aim": {
+                  "delay_s": 0.3,
+                  "sigma_deg": 2.5,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 1483504453,
+                "protected_learner": false,
+                "observation_scope": "helper",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2711,
+                "nominal_drive_efficiency": 0.85
+              },
+              "red:3": {
+                "mobility_profile": "low",
+                "mobility": {
+                  "speed_reference_mps": 0.75,
+                  "motor_force_max_n": 0.8,
+                  "drive_efficiency": 0.9
+                },
+                "aim_profile": "medium",
+                "aim": {
+                  "delay_s": 0.15,
+                  "sigma_deg": 1,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 474753180,
+                "protected_learner": false,
+                "observation_scope": "helper",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2731,
+                "nominal_drive_efficiency": 0.8
+              },
+              "red:4": {
+                "mobility_profile": "low",
+                "mobility": {
+                  "speed_reference_mps": 0.75,
+                  "motor_force_max_n": 0.8,
+                  "drive_efficiency": 0.9
+                },
+                "aim_profile": "strong",
+                "aim": {
+                  "delay_s": 0.05,
+                  "sigma_deg": 0.25,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 2037198181,
+                "protected_learner": false,
+                "observation_scope": "helper",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2732,
+                "nominal_drive_efficiency": 0.85
+              },
+              "red:7": {
+                "mobility_profile": "nominal",
+                "mobility": {
+                  "speed_reference_mps": 1,
+                  "motor_force_max_n": 1,
+                  "drive_efficiency": 1
+                },
+                "aim_profile": "learner",
+                "aim": {
+                  "delay_s": 0,
+                  "sigma_deg": 0,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 2051476960,
+                "protected_learner": true,
+                "observation_scope": "strict_sentry",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2773,
+                "nominal_drive_efficiency": 0.85
+              },
+              "blue:1": {
+                "mobility_profile": "nominal",
+                "mobility": {
+                  "speed_reference_mps": 1,
+                  "motor_force_max_n": 1,
+                  "drive_efficiency": 1
+                },
+                "aim_profile": "weak",
+                "aim": {
+                  "delay_s": 0.3,
+                  "sigma_deg": 2.5,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 1556150079,
+                "protected_learner": false,
+                "observation_scope": "helper",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2711,
+                "nominal_drive_efficiency": 0.85
+              },
+              "blue:3": {
+                "mobility_profile": "low",
+                "mobility": {
+                  "speed_reference_mps": 0.75,
+                  "motor_force_max_n": 0.8,
+                  "drive_efficiency": 0.9
+                },
+                "aim_profile": "medium",
+                "aim": {
+                  "delay_s": 0.15,
+                  "sigma_deg": 1,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 840118659,
+                "protected_learner": false,
+                "observation_scope": "helper",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2731,
+                "nominal_drive_efficiency": 0.8
+              },
+              "blue:4": {
+                "mobility_profile": "low",
+                "mobility": {
+                  "speed_reference_mps": 0.75,
+                  "motor_force_max_n": 0.8,
+                  "drive_efficiency": 0.9
+                },
+                "aim_profile": "strong",
+                "aim": {
+                  "delay_s": 0.05,
+                  "sigma_deg": 0.25,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 347554981,
+                "protected_learner": false,
+                "observation_scope": "helper",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2732,
+                "nominal_drive_efficiency": 0.85
+              },
+              "blue:7": {
+                "mobility_profile": "low",
+                "mobility": {
+                  "speed_reference_mps": 0.75,
+                  "motor_force_max_n": 0.8,
+                  "drive_efficiency": 0.9
+                },
+                "aim_profile": "medium",
+                "aim": {
+                  "delay_s": 0.15,
+                  "sigma_deg": 1,
+                  "tau_s": 0.15
+                },
+                "aim_seed": 1355065051,
+                "protected_learner": false,
+                "observation_scope": "strict_sentry",
+                "calibration_scale": 1,
+                "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+                "model": 2773,
+                "nominal_drive_efficiency": 0.85
+              }
+            },
+            "evaluation": true,
+            "curriculum_seconds": 0,
+            "decision_window_seconds": 20
+          },
+          "sources": {
+            "friendly": {
+              "version": "dba14ab0764239ed",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "squad",
+                "robot": null,
+                "entries": {
+                  "1": "robot_1.py",
+                  "3": "robot_3.py",
+                  "4": "robot_4.py",
+                  "6": "robot_6.py",
+                  "7": "robot_7.py"
+                },
+                "hashes": {
+                  "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+                },
+                "version": "dba14ab0764239ed"
+              },
+              "hashes": {
+                "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              }
+            },
+            "opponent": {
+              "version": "dba14ab0764239ed",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "squad",
+                "robot": null,
+                "entries": {
+                  "1": "robot_1.py",
+                  "3": "robot_3.py",
+                  "4": "robot_4.py",
+                  "6": "robot_6.py",
+                  "7": "robot_7.py"
+                },
+                "hashes": {
+                  "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+                },
+                "version": "dba14ab0764239ed"
+              },
+              "hashes": {
+                "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              }
+            }
+          },
+          "training_sources": {
+            "session.py": "fe2a05a9e7c807cb4f4b122d22cdd2fad4d21884e842c50b6101c9708f9a5a43",
+            "env.py": "10474303ff3e15f945ed32e8ba5ab0ec92e14edb9aa759cd752525ebb0942346",
+            "learning.py": "f179da00f3f6223ee99bcf78bfaeef226cfba866e83c0b469a353a27dac7717d",
+            "campaign.py": "74430b03a51777dc22a4c09df3c5ff65ea42fdea1bfcbdae2ddab5febec4fbe3",
+            "intervention.py": "be39023feec763eec664c3f2d2a6f060004be1a7b353e64c54503ee202e15682",
+            "guided_campaign.py": "71ac74acd12b9636e1f2ab305cb928e5bd474cc518252b92452019a9320eae6f",
+            "sentry_training.py": "a8958bf18672db1057f20a51d3a5e0a5edd529e6e7f7262e029937ec4e1acffd",
+            "sentry_campaign.py": "9d410502b5891eca7938ca8298b5fc4d39da5176598b9f641080376f83116f53",
+            "v4_training.py": "51dda444e4c14b56f01df832ae9d81aacb9627234570418d1e06cc0a564b2605",
+            "v4_campaign.py": "c2e89a96d907a4f02dcc602056bb3182649cc1ce7a91d36949d6efe7a37ce06b",
+            "asymmetric_ppo.py": "0bb66ab79186c841a125926bab3e64c723796e76d71bf9ec83bd9f2f74f0498b",
+            "aux_policy.py": "036a333037e16cf473eb75b8a62ad1f63061ac462d719519a126068ac732d007",
+            "aux_training.py": "b0d8def51d7ae274d9703a9b4b54e74fc16a3d75e93481e8637d8d3f4b44aa24",
+            "privileged_aux.py": "88879bbf4502963169ad602f80e684be5fc40432ad47e6a4bd5988e955fb527f",
+            "capabilities.py": "574565ac07d0a371007405413a0a1ddf751eb97e4712a5c0ac42b8c4bd53b4e8",
+            "scenarios.py": "3d9cc845831af55888b5a634647d6f10f7b5ac1e717ef50593efa047e483e82a",
+            "radar_calibration.py": "ffba07e86655b830fdd5a1787a5731fad32c38d873862e8bf4280084ed975e6d"
+          },
+          "sdk_hash": "87ffdfafc26501d38b8091c5adfdad170e4ab087a3a802907b0ddb80a49fa57c",
+          "runtime_hash": "d0f8ad6e17b2fb077193df35677600aa06799a83e1d9009ca9d5fc438bd1d521",
+          "sentry_schema": {
+            "version": 6,
+            "obs_size": 775,
+            "action_size": 7,
+            "profile": "sentry_referee_2027_v1",
+            "schema_hash": "77b810ae43268a23cd66eb0f2fd2763b6a90e37a32b071b5167dbc6bbc0263e8",
+            "critic_size": 454,
+            "skill_obs_size": 37,
+            "belief_version": 1,
+            "revive_mask_size": 3,
+            "revive_categories": [
+              "wait",
+              "free",
+              "paid"
+            ]
+          },
+          "sentry_sources": {
+            "research/rmuc2027_research/rl/sentry_v3.py": "7331bbb3e79a4406117ef348eb3674fbe1e657f5719f5898dd2d138ffe2ece7a",
+            "packages/core/rmuc2027_core/sentry_protocol.py": "fa6523c76c90c5e8f3b8f88256078bb9b2fa8f51e0c04a74641f1cb2ac5d82fb",
+            "packages/core/rmuc2027_core/radar2027.py": "c8c2b255fda68c38b77d2577b02ea02acfcf75c400127436fe9d300173353d91",
+            "research/rmuc2027_research/rl/sentry_v4.py": "540887a7ed2b7d0261becea5395f669e18172f79898de3a8bc88b7d99ce6e564",
+            "research/rmuc2027_research/rl/sentry_v4_policy.py": "f4d28ff4f91b98e2affaf00818b538aab61477530f4e5ee0951e057664289374",
+            "research/rmuc2027_research/rl/critic_state.py": "2a65a81bd58e6e2baa1ec19a86b4ac601799dd2714ce096a308ef0826af48869",
+            "packages/core/rmuc2027_core/radar_inference.py": "1fc73eaa6248302f523ebd6024a5a13a772fb76b1b9d9bcd3d78957d0c18e835",
+            "research/rmuc2027_research/rl/sentry_v6.py": "3532891820ab73b1f95b38e97bff534ce9988904cf58bfd51baf317333d0570f",
+            "research/rmuc2027_research/rl/recovery_belief.py": "a1da13fed12230397ef260913cd8f247301cc59fe5326c3bc9dae0e4b594dc2d",
+            "research/rmuc2027_research/rl/sentry_v6_policy.py": "1258882036795c5205a741795b95987c11026b45903982138a9f762cd997c27e",
+            "research/rmuc2027_research/rl/v6_ppo.py": "c9654eb1965aef8baf5c2dde24c63b2704dc49ec296dddc23d42a05fa7b6742a",
+            "research/rmuc2027_research/rl/v6_training.py": "cb43d36f23566853a8bc619c4a2743d6ebaa1bc0ebf0546c158dd1957cf88bba",
+            "research/rmuc2027_research/rl/v6_recovery.py": "f27462e336c4c173be9232b3263fe67646c6a3c927b5b21f1fb70c32628f068b",
+            "research/rmuc2027_research/rl/v6_sampling.py": "1dc6b7f6c449a19ed60bc626f6b1ca5133a6e427a62dddfde668ff2bebfa200b"
+          },
+          "scenario_registry_hash": "6460f2fe1cd462e8d2994fb0be62d8d370d3bd8532be8e4d178137050f441285",
+          "capability_schema_hash": "676ae67ddbf96e70b3f69e119f24287473fe25312f8a3d19f9414ca4bdddbe67",
+          "auxiliary_pool": {
+            "infantry": {
+              "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/infantry/actor.json",
+              "sha256": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2"
+            },
+            "heavy": {
+              "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/heavy/actor.json",
+              "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+            }
+          },
+          "radar_classifier_sha256": "812a7a62f185fa4402afa6f11698dca9d34b57e74ed104ad0b8fcb5b5fcbbfd8",
+          "navigation": {
+            "precompute": true,
+            "preparation_sha256": "c9791016daf3df7f8b887fd85d4ef5202afbe5a022e15e1af612d50ed0767353"
+          },
+          "engine_binary_sha256": "d73efd758fa4e488dc592de32e9fd2d45819f6def95d85596cc514e8aa34361d",
+          "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+          "simulation": {
+            "backend": "rapier",
+            "dt": 0.008333333333333333
+          }
+        },
+        "training_recording": {
+          "worker": 0,
+          "episode": 1,
+          "learner_start_time": 0,
+          "prefix": null,
+          "policy_changes_during_episode": false
+        },
+        "policy_updates": [
+          {
+            "time": 0
+          }
+        ],
+        "ranked": false,
+        "research": {
+          "run_id": "sentry-v6-20261111-0333",
+          "manifest_sha256": "80e7213762ed70b4e11479a55b5d29350d9f5c76d09bca6474e22bcebb5a55c9",
+          "checkpoint_id": "baseline-1c7ec9df4552",
+          "checkpoint_sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+          "checkpoint_label": "baseline",
+          "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+          "capability_profile_id": "evaluation-red",
+          "capability_sha256": "c5f404d47dc6c0912f49e4caaf4827d414ac8d0dba1ef44ad9d18227e906c949",
+          "backend": "rapier",
+          "policy_version": 6,
+          "helpers": {
+            "infantry": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2",
+            "heavy": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+          },
+          "seed": 81001,
+          "horizon_seconds": 20,
+          "frozen": true,
+          "gradient_updates": 0
+        },
+        "match_id": "36221c55243c4b39",
+        "recording": {
+          "kind": "evaluation",
+          "frame_hz": 20,
+          "actor_hz": 10,
+          "requested_seconds": 20,
+          "recorded_seconds": 20,
+          "full_match": false,
+          "horizon_completed": true,
+          "truncated": false,
+          "end_reason": "horizon"
+        }
+      },
+      "result": {
+        "winner": null,
+        "reason": "stopped",
+        "time": 20,
+        "teams": {
+          "blue": {
+            "attack_damage": 14,
+            "base_loss_total": 0,
+            "base_lowest_hp": 10000,
+            "captured_seconds": 0,
+            "completed_difficulties": [],
+            "control": 0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 0,
+            "launcher_unlock_s": 300,
+            "level_cap": 5,
+            "max_base_gap": 0,
+            "max_control_gap": 0,
+            "next_tech_income": 0,
+            "purchased_17": 0,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 800,
+            "score": 14,
+            "small_bonus_xp": 0,
+            "tech_defense": 0,
+            "tech_income": 0,
+            "total_resources": 800
+          },
+          "red": {
+            "attack_damage": 28,
+            "base_loss_total": 0,
+            "base_lowest_hp": 10000,
+            "captured_seconds": 0,
+            "completed_difficulties": [],
+            "control": 0,
+            "energy_units_left": 6,
+            "fortress_ammo": 0,
+            "fortress_capacity": 0,
+            "kills": 0,
+            "launcher_unlock_s": 300,
+            "level_cap": 5,
+            "max_base_gap": 0,
+            "max_control_gap": 0,
+            "next_tech_income": 0,
+            "purchased_17": 0,
+            "purchased_42": 0,
+            "rebuild_credits": 0,
+            "resources": 800,
+            "score": 28,
+            "small_bonus_xp": 0,
+            "tech_defense": 0,
+            "tech_income": 0,
+            "total_resources": 800
+          }
+        },
+        "digest": "aa975bdec3dff30a40af7feaf708ec41f76273ea82e6fb85e871d6be1ec7f4de",
+        "policy_errors": 0
+      },
+      "diagnostics": {
+        "tick": 400,
+        "robots": 10,
+        "engine": "rust",
+        "recording": false,
+        "recordedFrames": 0,
+        "exportingVideo": false,
+        "videoFormat": "mp4",
+        "audioEnabled": true,
+        "mode": "live",
+        "wsMessages": 1,
+        "connected": true,
+        "prematch": null,
+        "post": null,
+        "music": true,
+        "audio": {
+          "state": "running",
+          "cue": "results",
+          "wanted": "results",
+          "track": "/assets/audio/results.m4a",
+          "scope": "live:36221c55243c4b39",
+          "startOffset": 0,
+          "position": 1.56,
+          "starts": 2,
+          "error": null,
+          "bgmVolume": 0.6,
+          "drones": 0,
+          "interfaceSounds": 6,
+          "interfaceCue": "select",
+          "announcer": {
+            "cue": null,
+            "starts": 0,
+            "queued": [],
+            "loaded": 6,
+            "error": null
+          }
+        },
+        "killAnnouncement": null,
+        "page": "arena",
+        "matchMode": "standard",
+        "bgmVolume": 0.6,
+        "camera": "orbit",
+        "selected": "red-1",
+        "fullscreen": false,
+        "prerollLeft": null
+      },
+      "replay": {
+        "path": "web-evidence/frozen-live-replay.json",
+        "bytes": 22235732,
+        "sha256": "5d05855333be3a5ff2328900e4356c6cc20cbbefacbc5768c5fe9af19e034998",
+        "format": "canonical-full-frames",
+        "source": "owned-frozen-ui-match",
+        "frame_count": 401,
+        "action_count": 400,
+        "frame_hz": 20,
+        "first_tick": 0,
+        "last_tick": 400
+      }
+    },
+    "replay": {
+      "id": "training-worker-0-episode-00005",
+      "run_id": "sentry-v6-20261111-0333",
+      "label": "worker-0-episode-00005",
+      "sha256": "9edd9e70f29ea81e18342fa1599148771f98934141442a536703560a386fea03",
+      "bytes": 60803268,
+      "kind": "training",
+      "backend": "warp_kinematic",
+      "checkpoint_id": null,
+      "scenario_id": "f2732-2732_e2731-303_s2772_red",
+      "truncated": true,
+      "seconds": 60,
+      "recording_end_reason": "episode_window",
+      "hash_verified": true,
+      "diagnostics": {
+        "tick": 1,
+        "robots": 10,
+        "engine": "rust",
+        "recording": false,
+        "recordedFrames": 0,
+        "exportingVideo": false,
+        "videoFormat": "mp4",
+        "audioEnabled": true,
+        "mode": "replay",
+        "wsMessages": 1,
+        "connected": true,
+        "prematch": null,
+        "post": null,
+        "music": false,
+        "audio": {
+          "state": "suspended",
+          "cue": null,
+          "wanted": "match",
+          "track": null,
+          "scope": null,
+          "startOffset": null,
+          "position": null,
+          "starts": 4,
+          "error": null,
+          "bgmVolume": 0.6,
+          "drones": 0,
+          "interfaceSounds": 13,
+          "interfaceCue": "select",
+          "announcer": {
+            "cue": null,
+            "starts": 0,
+            "queued": [],
+            "loaded": 6,
+            "error": null
+          }
+        },
+        "killAnnouncement": null,
+        "page": "arena",
+        "matchMode": "standard",
+        "bgmVolume": 0.6,
+        "camera": "orbit",
+        "selected": "red-1",
+        "fullscreen": false,
+        "prerollLeft": null
+      }
+    },
+    "finished_utc": "2026-11-10T21:17:09.397Z",
+    "within_web_deadline": true,
+    "automated_checks_status": "passed",
+    "visual_review": {
+      "reviewed_unix": 1794345485.424096,
+      "artifact": "web-evidence/saved-replay.png",
+      "full_3d_assets_ready": false,
+      "loading_overlay_visible": true,
+      "limitation": "Canonical full-frame playback and timeline advancement passed, but the screenshot still shows the Blender/glTF asset loading overlay; complete 3D scene readiness was not demonstrated within this web subwindow."
+    },
+    "visual_assets_ready": false,
+    "core_checks_recovered": true,
+    "first_attempt": "web-acceptance-attempt1.json",
+    "recovery_evidence": "web-acceptance-resumed.json",
+    "first_attempt_errors": [
+      "apiRequestContext.get: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - → GET http://127.0.0.1:8767/api/state\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n    at get (/home/lx/rmuc2027/scripts/v6_web_acceptance.cjs:58:77)\n    at main (/home/lx/rmuc2027/scripts/v6_web_acceptance.cjs:97:17)"
+    ],
+    "acceptance_scope": "One frozen Rapier match only; resumed browser inspection did not start a second match.",
+    "limitations": [
+      "The original browser attempt timed out on /api/state while inference held the server lock.",
+      "The same match completed 20 simulated seconds and canonical replay playback checks recovered.",
+      "Full 3D asset readiness was not demonstrated: saved replay screenshot retains the Blender/glTF loading overlay."
+    ]
+  },
+  "results_frozen_unix": 1794345816.060146,
+  "training": {
+    "actual_samples": 1800,
+    "total_samples": 12110,
+    "completed_updates": 28,
+    "accepted_actor_steps": 90,
+    "published_accepted_actor_steps": 90,
+    "unpublished_accepted_actor_steps": 0,
+    "unpublished_completed_updates": 0,
+    "unpublished_observed_samples": 8,
+    "published_skill_unchanged": true,
+    "published_checkpoint_sha256": "0cae339943f6a7453ef6a6824b75c3ceb40e01c541fd673599ea37d4719a20cf",
+    "rejected_actor_steps": 15,
+    "optimized_samples": 26048,
+    "skill_unchanged": true,
+    "wall_seconds": 1384.5329514830082,
+    "demonstration_updates_during_ppo": 0,
+    "partial_rollout_discarded": 8,
+    "status": "finished",
+    "error": null,
+    "checkpoint_samples": 12102,
+    "checkpoint": "main/checkpoint-ready.json",
+    "deadline_unix": 1794340809.7392118,
+    "published_completed_updates": 28,
+    "published_samples": 1792,
+    "publication_verified": true
+  },
+  "limitations": [
+    "finite paired cases only",
+    "no MJWarp this round",
+    "target computer not connected"
+  ],
+  "first_package_attempt": {
+    "exit_code": 1,
+    "log": "package.log",
+    "error": "export rejected training-only recovery preparation source change"
+  },
+  "release_repair": {
+    "reviewed_unix": 1794345571.4648032,
+    "budget_unchanged": true,
+    "web_status": "partial",
+    "core_web_checks_recovered": true,
+    "visual_assets_ready": false,
+    "original_error_retained": "web-acceptance-attempt1.json",
+    "export_gate_fix_validation": {
+      "success": true,
+      "cpu_only": true,
+      "physics_steps": 0,
+      "model_updates": 0,
+      "wall_seconds": 6.383516980989953,
+      "model_sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+      "actor_parity_max_error": 4.375935935552189e-07,
+      "actor_float32_sha256": "a83535fedca032acee0787d30a91d38714c0a35252d2b086ba123320a49e610d",
+      "submission_version": "6c0388d97673c086",
+      "sentry_source_bytes": 457212,
+      "original_artifacts_unchanged": {
+        "data/research/sentry-v6-20261111-0333/main/selected.zip": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+        "data/research/sentry-v6-20261111-0333/main/experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
+        "target/release/rmuc-sim": "d73efd758fa4e488dc592de32e9fd2d45819f6def95d85596cc514e8aa34361d"
+      },
+      "training_only_changes": {
+        "research/rmuc2027_research/rl/v6_recovery.py": {
+          "training_sha256": "ce28052bc120ec3c0710324600bd7eb46049b85dd7e1eaacebbb48e45768ad12",
+          "deployment_source_tree_sha256": "f27462e336c4c173be9232b3263fe67646c6a3c927b5b21f1fb70c32628f068b",
+          "embedded_in_actor": false
+        }
+      }
+    },
+    "source_freeze_requested": true,
+    "candidate_promotion": false,
+    "bundle_external_radar_fix": {
+      "problem": "external radar resource path shadowed stage directory, breaking RNG/sampler manifest",
+      "source": "research/rmuc2027_research/rl/v4_bundle.py",
+      "regression": "test_external_auxiliary_radar_preserves_stage_rng_and_sampler_bindings",
+      "reviewed_unix": 1794345707.457884
+    },
+    "export_retry_contract": {
+      "existing_export": "recreated to temporary path and all member hashes must match",
+      "overwritten": false,
+      "reviewed_unix": 1794345815.4158628
     }
   }
 }
