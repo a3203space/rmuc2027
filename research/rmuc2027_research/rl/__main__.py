@@ -10,7 +10,7 @@ import signal
 import sys
 import time
 
-from .portable import OBS_SIZE
+from .portable import OBS_SIZE, policy_schema
 from .session import ArenaSession, DEFAULT_CONFIG, load_config, provenance
 
 
@@ -42,9 +42,9 @@ def random_run(config, steps, output):
         initialization = time.perf_counter()-started
         with (output/'actions.jsonl').open('w') as stream:
             for index in range(steps):
-                action = [rng.uniform(-1, 1), rng.uniform(-1, 1)]
+                action = [rng.uniform(-1, 1) for _ in range(policy_schema(config)['action_size'])]
                 obs, reward, terminated, truncated, info = session.step(action)
-                assert len(obs) == OBS_SIZE and all(math.isfinite(v) and -1 <= v <= 1 for v in obs)
+                assert len(obs) == policy_schema(config)['obs_size'] and all(math.isfinite(v) and -1 <= v <= 1 for v in obs)
                 assert math.isfinite(reward)
                 stream.write(json.dumps({'step': index, 'reward': reward, **info}, allow_nan=False)+'\n')
                 if terminated or truncated:
@@ -63,7 +63,7 @@ def check(config, cycles, steps, output, engine_only=False):
     started = time.perf_counter()
     cfg = copy.deepcopy(config)
     cfg['episode_seconds'] = max(cfg['episode_seconds'], steps*cfg['rl_seconds'])
-    actions = [[random.Random(700+i).uniform(-1, 1), random.Random(900+i).uniform(-1, 1)] for i in range(steps)]
+    actions = [[random.Random(700+i+200*j).uniform(-1, 1) for j in range(policy_schema(cfg)['action_size'])] for i in range(steps)]
     traces, pids, memory = [], [], []
     session = ArenaSession(cfg)
     try:
@@ -90,7 +90,7 @@ def check(config, cycles, steps, output, engine_only=False):
         session.battle.match.process.kill()
         session.battle.match.process.wait()
         try:
-            session.step([0, 0])
+            session.step([0.] * policy_schema(cfg)['action_size'])
             raise AssertionError('Dead engine was silently accepted')
         except (OSError, RuntimeError):
             pass
@@ -137,7 +137,7 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
         try:
             vec.reset()
             initialization = time.perf_counter()-started
-            actions = np.zeros((count, 2), dtype=np.float32)
+            actions = np.zeros((count, policy_schema(config)['action_size']), dtype=np.float32)
             rng=np.random.default_rng(config['seed']+901)
             warmup_begin = time.perf_counter()
             vec.step(actions)  # exclude lazy model conversion and kernel compilation
@@ -156,7 +156,7 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
             completed=np.zeros(count,dtype=np.int64)
             for _ in range(steps):
                 if action_pattern=='uniform-random':
-                    actions=rng.uniform(-1,1,(count,2)).astype(np.float32)
+                    actions=rng.uniform(-1,1,(count,policy_schema(config)['action_size'])).astype(np.float32)
                 _, rewards, dones, infos = vec.step(actions)
                 assert np.isfinite(rewards).all()
                 simulated+=np.asarray([info['sampled_simulation_seconds'] for info in infos])
@@ -223,6 +223,7 @@ def main():
             p.add_argument('--wall-seconds', type=float)
             p.add_argument('--additional-steps', type=int)
             p.add_argument('--resume', type=Path)
+            p.add_argument('--elapsed-wall-seconds', type=float, default=0., help='Previously consumed training time for curriculum continuation')
             p.add_argument('--num-envs', type=int, default=1)
             p.add_argument('--device', choices=('cpu', 'cuda'), default='cpu')
         else:
@@ -233,14 +234,17 @@ def main():
             p.add_argument('--min-realtime-factor',type=float,default=5.)
     p = sub.add_parser('evaluate')
     p.add_argument('--model', type=Path, required=True)
+    p.add_argument('--sim-backend', choices=('rapier', 'mjwarp', 'warp_kinematic'), default='rapier')
     p.add_argument('--run-dir', type=Path, required=True)
     p.add_argument('--seeds', type=int, nargs='+', default=[1001])
     p.add_argument('--sides', choices=('red', 'blue'), nargs='+', default=['red', 'blue'])
     p.add_argument('--duration', type=int, default=420)
     p.add_argument('--device', choices=('cpu', 'cuda'), default='cpu')
+    p.add_argument('--allow-sdk-transfer', action='store_true')
     p = sub.add_parser('export')
     p.add_argument('--model', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--allow-sdk-transfer', action='store_true')
     p = sub.add_parser('compose')
     p.add_argument('--exports', type=Path, nargs='+', required=True)
     p.add_argument('--output', type=Path, required=True)
@@ -266,16 +270,16 @@ def main():
             if args.additional_steps is not None and not args.resume:
                 raise ValueError('--additional-steps requires --resume')
             train(config, args.run_dir, args.additional_steps if args.additional_steps is not None else args.total_steps,
-                args.num_envs, args.device, args.resume, args.wall_seconds)
+                args.num_envs, args.device, args.resume, args.wall_seconds, args.elapsed_wall_seconds)
         elif args.command == 'evaluate':
             from .learning import evaluate
-            evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device)
+            evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device, args.sim_backend, args.allow_sdk_transfer)
         elif args.command == 'compose':
             from .exporting import compose_exports
             print(json.dumps(compose_exports(args.exports, args.output)), flush=True)
         elif args.command == 'export':
             from .exporting import export_model
-            print(json.dumps(export_model(args.model, args.output)), flush=True)
+            print(json.dumps(export_model(args.model, args.output, allow_sdk_transfer=args.allow_sdk_transfer)), flush=True)
         elif args.command == 'benchmark':
             if args.steps < 1:
                 raise ValueError('steps must be positive')

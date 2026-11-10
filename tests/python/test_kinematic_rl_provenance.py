@@ -12,6 +12,8 @@ class KinematicProvenanceTests(unittest.TestCase):
         self.assertTrue(record['experimental'])
         self.assertIn('arena.py',record['files'])
         self.assertIn('traversal.py',record['files'])
+        self.assertIn('dynamics.py',record['files'])
+        self.assertEqual(record['motion_protocol_version'],2)
         self.assertIn('pose.py',record['files'])
         self.assertIn('contacts.py',record['files'])
         self.assertIn('batching.py',record['files'])

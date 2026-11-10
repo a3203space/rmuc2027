@@ -4,6 +4,10 @@ This exact source is embedded in exported submissions. No referee snapshot,
 reward or info dictionary is accepted by the feature encoder.
 """
 import math
+try:
+    from . import sentry_v3, sentry_v4
+except (ImportError, KeyError):
+    pass  # Exported submissions embed the same module below this source.
 
 try:
     import sdk as _sdk
@@ -14,6 +18,23 @@ OBS_VERSION = 1
 OBS_SIZE = 116
 SLOTS = (1, 3, 4, 6, 7)
 MODES = ("policy", "dead", "recover", "tipped", "unreachable")
+LOCOMOTION_PHASES = ('route', 'approach', 'fold', 'cross', 'exit', 'runup', 'launch', 'airborne', 'settle', 'recover')
+LOCOMOTION_SIZE = 36
+
+
+def policy_schema(config=None):
+    version = (config or {}).get('policy_version', 1)
+    if version == 4:
+        return sentry_v4.schema()
+    if version == 5:
+        from .privileged_aux import schema
+        return schema()
+    if version == 3:
+        return sentry_v3.schema()
+    if version not in (1, 2):
+        raise ValueError('Unsupported policy version')
+    return {'version': version, 'obs_size': OBS_SIZE+(LOCOMOTION_SIZE if version == 2 else 0),
+            'action_size': 5 if version == 2 else 2}
 
 
 def _ratio(value, maximum):
@@ -26,12 +47,16 @@ def own_robot(obs, slot=7):
     return next(r for r in obs['robots'] if r['slot'] == slot)
 
 
-def encode_observation(obs, state, slot=7, rl_seconds=1.0):
+def encode_observation(obs, state, slot=7, rl_seconds=1.0, config=None):
     """116 bounded features, with blue coordinates rotated into the red frame.
 
     self 18 + four allies * 7 + five visible enemy slots * 8 + public match 6
     + four public control positions * 4 + controller memory 8.
     """
+    if policy_schema(config)['version'] == 4:
+        return sentry_v4.encode(obs,state)
+    if policy_schema(config)['version'] == 3:
+        return sentry_v3.encode(obs,state)
     me = own_robot(obs, slot)
     team = obs['team']
     other = 'blue' if team == 'red' else 'red'
@@ -79,7 +104,39 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0):
     values += [(obs['time']-state.get('goal_time', obs['time']))/rl_seconds]
     if len(values) != OBS_SIZE or not all(math.isfinite(v) for v in values):
         raise ValueError('Non-finite or incompatible actor observation')
+    if policy_schema(config)['version'] == 2:
+        values += locomotion_features(me, obs, state)
+    if len(values) != policy_schema(config)['obs_size'] or not all(math.isfinite(v) for v in values):
+        raise ValueError('Non-finite or incompatible locomotion observation')
     return [max(-1.0, min(1.0, float(v))) for v in values]
+
+
+def locomotion_features(robot, obs, state):
+    nav = state.get('navigation', {})
+    ctx = _sdk.locomotion_context(robot, obs, nav)
+    d = _sdk._design(robot)
+    lo, hi = d.get('leg_min_m', 0.), d.get('leg_max_m', 1.)
+    leg = lambda x: 2*(x-lo)/max(.01, hi-lo)-1
+    legs = robot.get('legs') or [lo, lo]
+    roof = ctx['roof'] or dict(gap=5., along=0., across=0.)
+    a = robot.get('heading', 0.)
+    vx, vy = robot.get('vx', 0.), robot.get('vy', 0.)
+    angular = robot.get('angular_velocity', [0., 0., 0.])
+    skills = nav.get('executed_skills', {})
+    goal = state.get('goal') or [robot['x'], robot['y']]
+    sign = 1. if obs['team']=='red' else -1.
+    values = [float(ctx['can_jump']), float(ctx['can_fold']), float(ctx['legged']),
+        float(d.get('leg_type')=='serial'), float(robot.get('grounded', True)), robot.get('upright', 1.),
+        robot.get('vz', 0.)/5, leg(legs[0]), leg(legs[1]), robot.get('transform_progress', 0.),
+        ctx['cooldown']/max(.1, d.get('jump_cooldown_s', 1.)), float(ctx['can_unfold']),
+        roof['gap']/5, roof['along']/5, roof['across']/5,
+        (vx*math.cos(a)+vy*math.sin(a))/5, (-vx*math.sin(a)+vy*math.cos(a))/5,
+        angular[0]/5, angular[1]/5, leg(skills.get('leg_height') or lo),
+        float(nav.get('fold_intent', False)), float(nav.get('jump_held', False)),
+        sign*(goal[0]-robot['x'])/28, sign*(goal[1]-robot['y'])/15,
+        *[float(nav.get('phase', 'route')==phase) for phase in LOCOMOTION_PHASES],
+        float(bool(nav.get('rejected'))), float(state.get('course_kind')=='flat_jump')]
+    return values
 
 
 class NavigationBackend:
@@ -171,9 +228,20 @@ class SdkNavigator(NavigationBackend):
 
 
 def select_goal(obs, state, action, navigator, config):
-    if len(action) != 2 or not all(math.isfinite(float(v)) for v in action):
-        raise ValueError('Expected two finite normalized coordinates')
+    schema = policy_schema(config)
+    if len(action) != schema['action_size'] or not all(math.isfinite(float(v)) for v in action):
+        raise ValueError(f"Expected {schema['action_size']} finite normalized actions")
     clipped = [max(-1.0, min(1.0, float(v))) for v in action]
+    state.update(supplied_action=list(action), clipped_action=clipped)
+    if schema['version'] in (3,4):
+        state['sentry_intent'] = dict(zip(('fold','jump','spin','fire'),clipped[2:]))
+    if schema['version'] == 2:
+        state['locomotion_intent'] = dict(zip(('transform', 'leg_height', 'jump'), clipped[2:]))
+        if state.get('course_goal') is not None:
+            state.update(goal=list(state['course_goal']), goal_time=obs['time'], proposed_goal=list(state['course_goal']))
+            return
+        if 'goal_time' in state and obs['time'] >= state['goal_time'] and obs['time']-state['goal_time'] < .5-1e-8:
+            return
     w, h = obs['arena']['width'], obs['arena']['height']
     proposed = [(clipped[0]+1)*w/2, (clipped[1]+1)*h/2]
     if obs['team'] == 'blue':
@@ -208,6 +276,8 @@ def learning_ready(robot, state):
 
 
 def fixed_opening(obs, state, config, baseline):
+    if state.get('course_goal') is not None:
+        return None
     if config['slot'] != 1:
         return None
     if learning_ready(own_robot(obs, config['slot']), state):
@@ -222,6 +292,10 @@ def fixed_opening(obs, state, config, baseline):
 
 def execute_goal(obs, state, navigator, config, baseline):
     """Movement arbitration; weapon and resource operations remain rule modules."""
+    if policy_schema(config)['version'] == 4:
+        return sentry_v4.execute(obs,state,navigator,config)
+    if policy_schema(config)['version'] == 3:
+        return sentry_v3.execute(obs,state,navigator,config)
     robot = own_robot(obs, config['slot'])
     ctx = baseline.Context(obs, state.setdefault('execution', {}))
     fields = {}
@@ -244,7 +318,8 @@ def execute_goal(obs, state, navigator, config, baseline):
     else:
         mode = 'policy' if goal is not None else 'unreachable'
     move = navigator.command(robot, goal, obs) if goal is not None else (0.0, 0.0)
-    fields.update(_sdk.navigate_action(robot, goal, obs, state.setdefault('navigation', {}))
+    fields.update(_sdk.navigate_action(robot, goal, obs, state.setdefault('navigation', {}),
+                  locomotion_intent=state.get('locomotion_intent'))
                   if goal is not None else {'move': move})
     move = fields['move']
     if robot['alive']:
@@ -264,6 +339,8 @@ def execute_goal(obs, state, navigator, config, baseline):
 
 def mlp_forward(features, layers):
     """Deterministic actor mean, from exported Linear/Tanh layers (no torch)."""
+    if isinstance(layers,dict) and layers.get('version')==4:
+        return sentry_v4.portable_forward(features,layers)
     values = features
     for index, layer in enumerate(layers):
         values = [sum(a*b for a, b in zip(row, values))+bias

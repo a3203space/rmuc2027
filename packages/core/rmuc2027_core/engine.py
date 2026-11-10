@@ -78,8 +78,25 @@ def binary_path():
 
 
 class Match:
-    def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None, physics_adapter=None):
+    def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None, physics_adapter=None, observation_profile=None, training_capabilities=None, radar_classifier=None):
         self.training_summary = False
+        self.training_capabilities = copy.deepcopy(training_capabilities or {})
+        self.training_capabilities_initial=copy.deepcopy(self.training_capabilities)
+        self.capability_drift=None
+        self._aim_executors = {}
+        self._aim_references = {}
+        if self.training_capabilities:
+            from rmuc2027_research.rl.capabilities import AimNoiseExecutor,SlowCapabilityDrift
+            protected=[seat for seat,p in self.training_capabilities.items() if p.get('protected_learner')]
+            if protected:
+                self.capability_drift=SlowCapabilityDrift(self.training_capabilities,int(seed)+104729,
+                    learner_side=protected[0].split(':')[0])
+            for seat, profile in self.training_capabilities.items():
+                team, slot = seat.split(':')
+                self._aim_executors[seat] = AimNoiseExecutor(profile['aim'], profile.get('aim_seed',int(seed)*1000+(100 if team=='blue' else 0)+int(slot)))
+        if observation_profile not in (None,'sentry_referee_2027_v1'):
+            raise ValueError('Unknown observation profile')
+        self.sentry_gateway = None
         self.external_physics = physics_adapter
         environment = dict(os.environ)
         environment.pop('RMUC_EXTERNAL_PHYSICS', None)
@@ -107,7 +124,9 @@ class Match:
             self._reader=threading.Thread(target=self._read_output,args=(self.process.stdout,self._responses),daemon=True)
             self._reader.start()
         try:
-            self._frame = self._request({"op": "init", "seed": int(seed), "duration": duration, "map": map_name, "lineups": lineups, "battle_settings": battle_settings})
+            self._frame = self._request({"op": "init", "seed": int(seed), "duration": duration, "map": map_name, "lineups": lineups, "battle_settings": battle_settings, "observation_profile":observation_profile, "training_capabilities":self.training_capabilities or None})
+            self._aim_references={f'{r["team"]}:{r["slot"]}':[r['aim'],r['pitch']] for r in self._frame['robots']
+                                  if f'{r["team"]}:{r["slot"]}' in self._aim_executors}
             self._static = {key: self._frame[key] for key in STATIC_FRAME_KEYS if key in self._frame}
             # The latest compact step's JSON, for callers that store frames without static fields.
             self.raw_frame = None
@@ -115,6 +134,12 @@ class Match:
             expected = hashlib.sha256(rule_path.read_bytes()).hexdigest()
             if self._frame.get("rules_hash") != expected:
                 raise RuntimeError("Rust engine contains old rules; rebuild packages/simulation/Cargo.toml")
+            if observation_profile:
+                from .sentry_protocol import SentryGateway
+                self.sentry_gateway=SentryGateway(self._frame)
+                if radar_classifier is not None:
+                    from .radar_inference import ChassisClassifier
+                    for inference in self.sentry_gateway.inference.values():inference.classifier=ChassisClassifier(radar_classifier)
         except BaseException:
             self.close()
             raise
@@ -124,7 +149,7 @@ class Match:
             self._ensure_available()
             # Only explicit, pure engine queries preserve the current-state cache.
             # Unknown operations invalidate conservatively, including failed writes.
-            if request.get('op') not in ('observation','observations','operator_observation','snapshot','digest','terrain_probe'):
+            if request.get('op') not in ('observation','observations','operator_observation','snapshot','digest','terrain_probe','sentry_sensors'):
                 self._observation_cache.clear()
             payload = json.dumps(request, allow_nan=False, separators=(",", ":")).encode() + b"\n"
             try:
@@ -208,8 +233,32 @@ class Match:
         raise AttributeError(name)
 
     def step(self, commands):
-        frame, line = self._request({"op": "training_step" if self.training_summary else "step", "commands": commands, "static": False}, raw=True)
+        if self.capability_drift:
+            self.training_capabilities=self.capability_drift.update(self._frame['time'])
+            for seat,executor in self._aim_executors.items():executor.set_profile(self.training_capabilities[seat]['aim'])
+        if self._aim_executors:
+            commands=copy.deepcopy(commands)
+            for robot in self._frame['robots']:
+                team, slot=robot['team'],str(robot['slot'])
+                executor=self._aim_executors.get(f'{team}:{slot}')
+                if executor is not None:
+                    action=commands.setdefault(team,{}).setdefault(slot,{})
+                    aim=action.get('aim');pitch=action.get('pitch')
+                    desired=self._aim_references[f'{team}:{slot}']
+                    if aim is not None:desired[0]=aim
+                    if pitch is not None:desired[1]=pitch
+                    result=executor.step(self._frame['time'],*desired)
+                    action['aim']=result['aim'] if result['ready'] else robot['aim']
+                    action['pitch']=result['pitch'] if result['ready'] else robot['pitch']
+                    if not result['ready']:action['fire']=False
+        if self.sentry_gateway:
+            if self.training_summary:raise ValueError('Strict sentry profile requires full referee frames')
+            commands={**commands,**{team:{**commands.get(team,{}),'7':self.sentry_gateway.command(team,commands.get(team,{}).get('7',{}))} for team in ('red','blue')}}
+            commands['radar_effects']=self.sentry_gateway.radar.effects(self._frame)
+        frame, line = self._request({"op": "training_step" if self.training_summary else "step", "commands": commands, "static": False,
+                                    "training_capabilities":self.training_capabilities or None}, raw=True)
         self._frame = dict(sorted({**frame, **self._static}.items()))
+        if self.sentry_gateway:self.sentry_gateway.update(self._frame)
         self.raw_frame = line.rstrip(b"\n")
         # Frames are treated as immutable once returned; callers may still extend their events.
         return {**self._frame, "events": list(self._frame["events"])}
@@ -221,12 +270,20 @@ class Match:
             cached=self._observation_cache.get(key) if _CACHE_POLICY_OBSERVATIONS else None
             if cached is not None:
                 return _response_json.loads(cached[1])
+            if self.sentry_gateway and (slots is None or 7 in slots):
+                if slots != (7,):raise ValueError('Strict sentry requires its own single-slot controller')
+                sensors=self._request({'op':'sentry_sensors','team':team})
+                value=self.sentry_gateway.observation(team,sensors['targets'])
+                line=json.dumps(value,allow_nan=False,separators=(',',':')).encode()+b'\n'
+                self._remember_observation(key,['7'],line)
+                return value
             value,line=self._request({"op":"observation","team":team,"slots":slots},raw=True)
             self._remember_observation(key,value['controlled_ids'],line)
             return value
 
     def compact_observation(self, team, slots=None):
         """Reuse the immutable map for local callers making per-player observations."""
+        if self.sentry_gateway:return self.observation(team,slots)
         value = self._request({"op": "observation", "team": team, "slots": slots, "static": False})
         return {"arena": self._static["arena"], **value}
 
@@ -243,6 +300,10 @@ class Match:
         """
         with self.lock:
             self._ensure_available()
+            if self.sentry_gateway:
+                # Separate strict and legacy recipients, preserving the batch result contract.
+                values=[self.observation(team,slots) for team,slots in viewers]
+                return [v['controlled_ids'] for v in values],[json.dumps(v,allow_nan=False,separators=(',',':')).encode()+b'\n' for v in values]
             viewers=[(team,*self._viewer(team,slots)) for team,slots in viewers]
             results=[self._observation_cache.get(key) if _CACHE_POLICY_OBSERVATIONS else None for _,_,key in viewers]
             missing=[i for i,result in enumerate(results) if result is None]

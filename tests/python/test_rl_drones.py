@@ -1,6 +1,6 @@
 import unittest
 from rmuc2027_core.engine import Match
-from rmuc2027_core.sdk import navigate_action
+from rmuc2027_core.sdk import DESIGNS, navigate_action
 
 class SceneTests(unittest.TestCase):
     def test_no_drones_but_hangars_remain(self):
@@ -15,8 +15,14 @@ class SceneTests(unittest.TestCase):
             self.assertTrue(any(r.get('drones', []) for r in match.snapshot()['robots']))
 
     def test_serial_airborne_then_settle(self):
-        for model in (305,2772):
-            robot = dict(model_slot=model, team='red', x=9., y=7.5,
+        # 305 no longer advertises step climbing. The serial stair state
+        # machine is exercised by the current 2772 sentry hardware contract.
+        for model in (2772,):
+            design = DESIGNS[str(model)]
+            self.assertEqual(design['leg_type'], 'serial')
+            self.assertTrue(design['capabilities']['jump'])
+            self.assertGreater(design['capabilities']['step_climb_m'], 0.)
+            robot = dict(model_slot=model, role=design['role'], team='red', x=9., y=7.5,
                          grounded=False, alive=True, upright=1.)
             state = {'goal':[14.,7.5], 'entry':{'phase':'align','since':0.,'jumps':1,'last_jump':0.}}
             obs = {'time':.5,'arena':{'layout_revision':'chapter4-2027-v1'}}

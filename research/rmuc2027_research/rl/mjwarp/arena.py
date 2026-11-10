@@ -308,6 +308,11 @@ class ArenaPhysics:
                 model.body_ipos[i] = mp['local_com']
                 model.body_iquat[i] = [iq[3], *iq[:3]]
                 model.body_inertia[i] = [1/max(v, 1e-8)**2 for v in mp['inv_principal_inertia_sqrt']]
+                # Free-body constraint impedance uses these derived weights.
+                # Updating mass/inertia alone leaves the compiled unloaded
+                # values in place during leg motion, folding and arm loading.
+                model.body_invweight0[i, 0] = 1/model.body_mass[i]
+                model.body_invweight0[i, 1] = np.mean(1/model.body_inertia[i])
 
                 joint = model.body_jntadr[i]; q = model.jnt_qposadr[joint]; v = model.jnt_dofadr[joint]
                 cpu.qpos[q:q+7] = [*pose['pos'], *pose['quat']]

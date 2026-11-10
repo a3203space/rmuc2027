@@ -172,6 +172,13 @@ def prepare_match(args, stack):
                 raise ValueError('This viewer mode supports only one RL sentry on one team')
             learned_side = team
     cfg['team'] = learned_side or side
+    if getattr(args,'scenario_id',None):
+        if cfg.get('policy_version')!=4:raise ValueError('--scenario-id requires a v4 checkpoint')
+        from ..scenarios import scenario_registry
+        case=next((case for case in scenario_registry() if case.scenario_id==args.scenario_id),None)
+        if case is None:raise ValueError('Unknown scenario id; use the v4 scenario registry')
+        if case.learner_side!=cfg['team']:raise ValueError('Scenario side must match --rl-team')
+        cfg['lineups']=case.lineups();cfg['scenario']=case.to_dict()
     return cfg, sources, learned_side
 
 
@@ -182,6 +189,7 @@ def main():
     parser.add_argument('--blue', help='Blue scripted strategy submission directory')
     parser.add_argument('--rl-model', help='Frozen sentry PPO checkpoint (.zip); no training occurs')
     parser.add_argument('--rl-team', choices=('red', 'blue'), help='RL sentry side; defaults to training/config side')
+    parser.add_argument('--scenario-id',help='One registered v4 hardware scenario, including learner colour')
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--duration', type=int, default=420)
@@ -200,7 +208,8 @@ def main():
             cfg, sources, rl_team = prepare_match(args, stack)
         except (ValueError, OSError, KeyError) as exc:
             parser.error(str(exc))
-        description = f'{rl_team}:7 frozen RL; other robots scripted' if rl_team else 'scripted AI; no RL model loaded'
+        description = (f'{rl_team}:7 frozen RL; auxiliary pool={list(cfg.get("auxiliary_pool",{}))}'
+                       if rl_team else 'scripted AI; no RL model loaded')
         print(f'Native MJWarp viewer: {description}; space pauses, mouse rotates/zooms.', flush=True)
         print(f"RED={sources['red']} BLUE={sources['blue']}", flush=True)
         run_view(args, cfg, sources, rl_team)
@@ -211,11 +220,26 @@ def run_view(args, cfg, sources, rl_team=None):
     from rmuc2027_core.engine import DT
     view = NativeView(labels=not args.no_labels)
     view.rl_team = rl_team
+    overrides={};capabilities={}
+    if cfg.get('auxiliary_pool'):
+        from ..aux_policy import load_portable
+        from ..privileged_aux import AuxController
+        from ..session import resource
+        for side in ('red','blue'):
+            for slot in (1,3,4):
+                role='heavy' if slot==1 else 'infantry'
+                if role in cfg['auxiliary_pool']:
+                    overrides[(side,slot)]=AuxController(dict(cfg,team=side,slot=slot),load_portable(resource(cfg['auxiliary_pool'][role])))
+    if cfg.get('capability_sampling'):
+        from ..capabilities import CapabilitySampler
+        capabilities=CapabilitySampler(args.seed).sample(cfg['lineups'],cfg['team'])
+    classifier=json.loads(Path(cfg['radar_classifier_path']).read_text()) if cfg.get('radar_classifier_path') else None
     with Battle(sources['red'], sources['blue'], args.seed, args.duration, cfg['map'], sandbox='trusted-local', side_lineups=cfg.get('lineups'),
                 timeout=cfg['policy_timeout_s'], record_replay=False,
                 navigation_mode=cfg['navigation_mode'], battle_settings={'drones_enabled': cfg['drones_enabled'], 'timed_assembly': cfg['timed_assembly']},
                 fixed_policy_hz=cfg['fixed_policy_hz'], learning_control_hz=cfg['learning_control_hz'],
-                physics_backend='mjwarp', sim_device=args.device) as battle:
+                physics_backend='mjwarp', sim_device=args.device,observation_profile=cfg.get('observation_profile'),
+                controller_overrides=overrides,training_capabilities=capabilities,radar_classifier=classifier) as battle:
         if rl_team:
             battle.metadata['frozen_rl'] = {'team': rl_team, 'slot': 7,
                 'submission': str(sources[rl_team]),

@@ -4,6 +4,7 @@ from collections import deque
 from collections.abc import Sequence
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import queue
@@ -27,6 +28,99 @@ CPU_LIMIT = 1.0
 STARTUP_LIMIT = {"docker": 60, "trusted-local": 15}
 # A stalled process is stopped after three consecutive missed decision windows.
 POLICY_TIMEOUT_LIMIT = 3
+
+ACTION_FIELDS = frozenset({"move", "aim", "pitch", "fire", "power", "profile", "buy_ammo",
+    "remote_heal", "revive", "deploy", "support", "altitude", "pick_unit", "assembly",
+    "assembly_insert", "assembly_translate", "assembly_rotate", "assembly_confirm", "rune_start",
+    "heading", "crouch", "rescue", "yaw_rate", "brake", "leg_height", "jump", "lean", "arm",
+    "arm2", "pickup_arm", "transform", "install_launcher", "assembly_core", "assembly_lift",
+    "assembly_flip", "assembly_rotate2", "posture", "posture_enhanced", "drones", "sentry_cmd"})
+
+
+def validate_actions(actions, controlled, has_messages=False, *, dynamic_messages=False,
+                     robots=None, team=None, observation_profile=None, roster=None):
+    """One protocol boundary for sandbox policies AND in-process controllers.
+
+    Engine rules remain authoritative for range/contact/timing. This boundary
+    checks ownership, finite types, physical role capabilities and message scope.
+    It grants no extra actuation privileges to omniscient auxiliary actors.
+    """
+    if not isinstance(actions, dict): raise ValueError('Invalid action object')
+    if not set(actions) <= {str(k) for k in controlled}: raise ValueError('Attempt to control an unowned robot')
+    fields = ACTION_FIELDS | ({'messages'} if has_messages else set())
+    boolean = {'fire', 'remote_heal', 'revive', 'deploy', 'support', 'pick_unit', 'assembly_insert',
+               'assembly_translate', 'assembly_confirm', 'rune_start', 'crouch', 'brake', 'transform',
+               'install_launcher', 'assembly_lift', 'assembly_flip', 'posture_enhanced'}
+    numeric = {'pitch', 'power', 'altitude', 'assembly_rotate', 'assembly_rotate2', 'heading',
+               'yaw_rate', 'leg_height', 'lean'}
+    def number(v): return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+    def vector(v, sizes): return isinstance(v, (tuple, list)) and len(v) in sizes and all(number(x) for x in v)
+    for slot, action in actions.items():
+        if not isinstance(action, dict) or not set(action) <= fields: raise ValueError('Action contains unsupported fields')
+        if len(json.dumps(action, allow_nan=False).encode()) > 1024: raise ValueError('Each robot action must be <=1 KiB')
+        for name in boolean & action.keys():
+            if not isinstance(action[name], bool): raise ValueError(f'{name} must be boolean')
+        for name in numeric & action.keys():
+            if not number(action[name]): raise ValueError(f'{name} must be finite')
+        if 'aim' in action and action['aim'] is not None and not number(action['aim']): raise ValueError('aim must be finite or null')
+        if 'jump' in action and not isinstance(action['jump'], bool) and not number(action['jump']): raise ValueError('jump must be finite')
+        if 'move' in action and not vector(action['move'], (2, 3)): raise ValueError('move must contain finite numbers')
+        for name in ('assembly', 'assembly_core', 'pickup_arm'):
+            if name in action and (not isinstance(action[name], int) or isinstance(action[name], bool) or action[name] < 0): raise ValueError(f'{name} must be a nonnegative integer')
+        if 'buy_ammo' in action:
+            order = action['buy_ammo']
+            if not isinstance(order, dict) or set(order)-{'amount', 'remote'}: raise ValueError('Invalid ammo order')
+            if 'remote' in order and not isinstance(order['remote'], bool): raise ValueError('Ammo remote must be boolean')
+            if 'amount' in order and (not isinstance(order['amount'], int) or isinstance(order['amount'], bool) or order['amount'] < 0): raise ValueError('Ammo amount must be nonnegative integer')
+        for name in ('arm', 'arm2'):
+            if name not in action: continue
+            arm = action[name]
+            if not isinstance(arm, dict) or set(arm)-{'stow', 'joints', 'tip', 'dir', 'frame', 'roll', 'grip'}: raise ValueError('Invalid arm command')
+            for key, length in (('joints', 7), ('tip', 3), ('dir', 3)):
+                if key in arm and not vector(arm[key], (length,)): raise ValueError('Invalid arm vector')
+            if 'frame' in arm and arm['frame'] not in ('world', 'robot'): raise ValueError('Invalid arm frame')
+            if 'stow' in arm and not isinstance(arm['stow'], bool): raise ValueError('Invalid arm stow flag')
+            for key in ('roll', 'grip'):
+                if key in arm and not number(arm[key]): raise ValueError('Invalid arm scalar')
+        if 'drones' in action:
+            if not isinstance(action['drones'], dict): raise ValueError('Invalid drone commands')
+            for index, command in action['drones'].items():
+                if not str(index).isdigit() or not isinstance(command, dict) or set(command)-{'move', 'goto', 'launch', 'dock', 'land'}: raise ValueError('Invalid drone command')
+                for key in ('move', 'goto'):
+                    if key in command and not vector(command[key], (3,)): raise ValueError('Invalid drone vector')
+                for key in ('launch', 'dock', 'land'):
+                    if key in command and not isinstance(command[key], bool): raise ValueError('Invalid drone flag')
+        if 'messages' in action:
+            validate_messages(action['messages'], slot, dynamic_messages)
+            if observation_profile in ('privileged_aux_2027_v1', 'outpost_drone_script_v1') and action['messages']:
+                raise ValueError('Privileged auxiliary/drone controllers cannot send messages')
+        if observation_profile == 'privileged_aux_2027_v1' and set(action) & {'deploy', 'support', 'altitude', 'posture', 'posture_enhanced', 'drones', 'sentry_cmd'}:
+            raise ValueError('Auxiliary profile attempted unsupported role operation')
+        if robots is None: continue
+        robot = next((r for r in robots if str(r['slot']) == slot and (team is None or r['team'] == team)), None)
+        if robot is None: raise ValueError('Unknown controlled robot')
+        # Training summaries deliberately omit immutable hardware fields. Those
+        # fields come from Battle's initial engine roster, never policy output or
+        # a privileged observation added to the restricted actor's view.
+        if roster is not None:
+            static = roster.get((robot['team'], slot))
+            if static is None: raise ValueError('Missing trusted action roster')
+            robot = {**robot, **static}
+        if 'role' not in robot:
+            # RMUC 2027 has fixed roles per registered seat. Model-dependent
+            # capabilities below still require authoritative hardware context.
+            role = {1: 'heavy', 3: 'infantry', 4: 'infantry', 6: 'aerial', 7: 'sentry'}.get(int(slot))
+            if role is None: raise ValueError('Unknown 2027 role slot')
+            robot = {**robot, 'role': role}
+        heavy = {'pick_unit', 'assembly', 'assembly_insert', 'assembly_translate', 'assembly_rotate', 'assembly_rotate2', 'assembly_confirm', 'rescue', 'arm', 'arm2', 'pickup_arm', 'install_launcher', 'assembly_core', 'assembly_lift', 'assembly_flip'}
+        if robot['role'] != 'heavy' and any(action.get(k) for k in heavy): raise ValueError('Heavy-only action')
+        if robot['role'] != 'sentry' and set(action) & {'posture', 'posture_enhanced', 'sentry_cmd'}: raise ValueError('Sentry-only action')
+        if robot['role'] != 'aerial' and 'drones' in action: raise ValueError('Aerial-only action')
+        if robot['role'] != 'infantry' and action.get('profile'): raise ValueError('Infantry-only profile')
+        if 'transform' in action and not robot.get('transform_allowed', False): raise ValueError('Model cannot transform')
+        if robot.get('chassis_type') != 'wheel_legged' and ('leg_height' in action or action.get('jump') or action.get('lean')): raise ValueError('Wheel-legged action on another chassis')
+        if 'arm2' in action and robot.get('arm_count', 0) < 2: raise ValueError('Second arm unavailable')
+    return actions
 
 
 class FrameLog(Sequence):
@@ -242,23 +336,8 @@ class Policy:
             raise ValueError(response["error"])
         self.navigation_trace = response.get("navigation_trace", {})
         actions = response.get("actions")
-        if not isinstance(actions, dict):
-            raise ValueError("Invalid action object")
-        if not set(actions) <= controlled:
-            raise ValueError("Attempt to control an unowned robot")
-        fields = {"move", "aim", "pitch", "fire", "power", "profile", "buy_ammo", "remote_heal", "revive", "deploy", "support", "altitude", "pick_unit", "assembly", "assembly_insert", "assembly_translate", "assembly_rotate", "assembly_confirm", "rune_start", "heading", "crouch", "rescue", "yaw_rate", "brake", "leg_height", "jump", "lean", "arm", "arm2", "pickup_arm", "transform",
-                  # 2027: heavy launcher and assembly steps, sentry posture, aerial system.
-                  "install_launcher", "assembly_core", "assembly_lift", "assembly_flip", "assembly_rotate2", "posture", "posture_enhanced", "drones"}
-        if has_messages:
-            fields.add("messages")
-        for slot, action in actions.items():
-            if not isinstance(action, dict) or not set(action) <= fields:
-                raise ValueError("Action contains unsupported fields")
-            if len(json.dumps(action, allow_nan=False).encode()) > 1024:
-                raise ValueError("Each robot action must be <=1 KiB")
-            if "messages" in action:
-                validate_messages(action["messages"], slot, self.dynamic_messages)
-        return actions
+        return validate_actions(actions, controlled, has_messages,
+                                dynamic_messages=self.dynamic_messages)
 
     def close(self):
         self.disabled = True

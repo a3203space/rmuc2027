@@ -1,8 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor, Future
 from pathlib import Path
-import json, time, threading, hashlib
+import copy, json, time, threading, hashlib
 from rmuc2027_core.engine import Match, POLICY_INTERVAL, DT, SLOT_IDS, RULES_PROFILE, STATIC_FRAME_KEYS, decode_response_json
-from rmuc2027_core.policy import FrameLog, Policy, EncodedObservation, POLICY_TIMEOUT_LIMIT
+from rmuc2027_core.policy import FrameLog, Policy, EncodedObservation, POLICY_TIMEOUT_LIMIT, validate_actions
 from rmuc2027_core.referee import validate_referee
 from rmuc2027_core.submissions import load_submission
 from rmuc2027_core.communication import TeamCommunication, validate_messages
@@ -11,22 +11,36 @@ from .decks import prepare_decks
 from .profiles import load_profile
 
 class Battle:
-    def __init__(self, red, blue, seed=42, duration=420, map_name=None, sandbox="docker", timeout=0.2, deadline=None, stop_event=None, decks=None, team_lineup=None, practice_lineup=False, free_team_strategies=None, battle_settings=None, controller_overrides=None, record_replay=True, physics_backend="rapier", sim_device="cuda:0", fixed_policy_hz=10, learning_control_hz=10, navigation_mode="legacy", side_lineups=None):
+    def __init__(self, red, blue, seed=42, duration=420, map_name=None, sandbox="docker", timeout=0.2, deadline=None, stop_event=None, decks=None, team_lineup=None, practice_lineup=False, free_team_strategies=None, battle_settings=None, controller_overrides=None, record_replay=True, physics_backend="rapier", sim_device="cuda:0", fixed_policy_hz=10, learning_control_hz=10, navigation_mode="legacy", side_lineups=None, observation_profile=None, training_capabilities=None, radar_classifier=None):
         # Overrides implement Policy.decide/close and replace single-slot entries.
         # They receive exactly the same slot-scoped observation as that entry.
         if side_lineups is not None and (team_lineup is not None or decks is not None):
             raise ValueError("Independent lineups cannot be combined with shared lineups or decks")
         overrides = dict(controller_overrides or {})
+        if len({id(p) for p in overrides.values()}) != len(overrides):
+            raise ValueError('Each controlled seat requires its own controller state')
+        auxiliary = any(getattr(p, 'observation_profile', None) == 'privileged_aux_2027_v1' for p in overrides.values())
+        if auxiliary or observation_profile == 'privileged_aux_2027_v1':
+            observation_profile = 'sentry_referee_2027_v1'
+        self._seat_policies = {}
+        self._aux_snapshot_tick, self._aux_snapshot = None, None
         if fixed_policy_hz not in (5, 10):
             raise ValueError('fixed_policy_hz must be 5 or 10')
-        if learning_control_hz not in (2, 5, 10):
-            raise ValueError('learning_control_hz must be 2, 5 or 10')
-        if navigation_mode not in ("legacy", "predictive"):
+        if learning_control_hz not in (2, 5, 10, 20):
+            raise ValueError('learning_control_hz must be 2, 5, 10 or 20')
+        for source in (red,blue):
+            meta=Path(source)/'rl-metadata.json' if source else None
+            if meta and meta.is_file() and json.loads(meta.read_text()).get('config',{}).get('policy_version') in (3, 4):
+                observation_profile='sentry_referee_2027_v1'
+        self.observation_profile=observation_profile
+        if navigation_mode not in ("legacy", "predictive", "adaptive"):
             raise ValueError("Unknown navigation mode")
         if decks is None and red is not None and blue is not None:
             from rmuc2027_core.deployment import deployment_settings
             battle_settings = deployment_settings((red, blue), battle_settings)
         self.timed_assembly = bool((battle_settings or {}).get("timed_assembly", False))
+        if auxiliary and self.timed_assembly:
+            raise ValueError('Full auxiliary RL requires physical assembly from tick zero')
         self.assembly_states = {}
         self.motion_trace = False
         self.navigation_mode = navigation_mode
@@ -75,7 +89,8 @@ class Battle:
             # Explicit experimental selection; full acceptance is still pending.
             from ..rl.warp_kinematic.batching import make_adapter
             adapter = make_adapter(sim_device)
-        self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False
+        classifier_options = {'radar_classifier': radar_classifier} if radar_classifier is not None else {}
+        self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter, observation_profile=observation_profile, training_capabilities=training_capabilities, **classifier_options), sandbox, [], False
         if self.timed_assembly:
             # Fixed opening navigation executes in this process. Build its
             # static clearance graph before timed policy decisions begin.
@@ -92,14 +107,28 @@ class Battle:
                          "map": map_name, "sandbox": sandbox, "match_mode":"deck" if self.deck_mode else "standard", "teams": {}}
         self.metadata['physics_backend'] = physics_backend
         self.metadata['navigation_mode'] = navigation_mode
+        self.metadata['observation_profile'] = observation_profile
         self.metadata['fixed_policy_hz'] = fixed_policy_hz
         self.metadata['learning_control_hz'] = learning_control_hz
+        if radar_classifier is not None:
+            self.metadata['radar_classifier'] = copy.deepcopy(radar_classifier)
+            self.metadata['radar_classifier_hash'] = hashlib.sha256(json.dumps(radar_classifier, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        if getattr(self.match, 'training_capabilities_initial', None):
+            from ..rl.capabilities import DRIFT, SCHEMA_HASH
+            self.metadata['training_capabilities'] = copy.deepcopy(self.match.training_capabilities_initial)
+            drift = getattr(self.match, 'capability_drift', None)
+            self.metadata['capability_drift'] = None if drift is None else dict(
+                schema_hash=SCHEMA_HASH, spec=copy.deepcopy(DRIFT), seed=drift.seed,
+                learner_side=drift.learner_side)
         if physics_backend in ('mjwarp', 'warp_kinematic'):
             self.metadata['sim_device'] = sim_device
         if battle_settings:
             self.metadata.update({"battle_settings": battle_settings, "test_match": True})
         self.frames, self.actions, self.diagnostics = FrameLog(self.match.snapshot()), [], []
         self._latest_frame = self.match.snapshot()
+        self._action_roster = {(r['team'], str(r['slot'])): {
+            key: r[key] for key in ('role', 'chassis_type', 'transform_allowed', 'arm_count') if key in r
+        } for r in self._latest_frame['robots']}
         self.metadata["rules_hash"] = self.frames[0]["rules_hash"]
         self.metadata["engine_hash"] = self.frames[0]["engine_hash"]
         self.held_commands = {"red": {}, "blue": {}}
@@ -143,10 +172,36 @@ class Battle:
                         raise TimeoutError("Practice development window ended")
                     slots = None if manifest["mode"] == "team" else [int(key)]
                     override_key = (team, int(key)) if slots else None
+                    if observation_profile and slots == [6] and override_key not in overrides:
+                        from ..rl.privileged_aux import OutpostDroneController
+                        overrides[override_key] = OutpostDroneController()
+                    if observation_profile and slots==[7] and override_key not in overrides:
+                        metadata_file=Path(source)/'rl-metadata.json'
+                        if metadata_file.is_file():
+                            if json.loads(metadata_file.read_text()).get('config',{}).get('policy_version') not in (3, 4):
+                                raise ValueError('Historical sentry weights cannot use the v3 observation profile')
+                        else:
+                            from ..rl.session import ReferenceSentryController,load_config
+                            overrides[override_key]=ReferenceSentryController(load_config(dict(
+                                policy_version=3,rl_seconds=.1,navigation_mode='adaptive',friendly=str(source),
+                                sim_backend=physics_backend,navigation_precompute=False)))
                     policy = overrides.pop(override_key) if override_key in overrides else Policy(
                         path, seed * 100 + (0 if team == "red" else 10) + (int(key) if slots else 0), sandbox, timeout,
                         expected_digest=manifest["hashes"][manifest["entries"][key]],deadline=deadline,stop_event=stop_event)
                     self.policies.append((team, slots, policy))
+                    profile_name = getattr(policy, 'observation_profile', None)
+                    if profile_name == 'privileged_aux_2027_v1':
+                        if slots is None or len(slots) != 1 or slots[0] == 7:
+                            raise ValueError('Privileged policy requires one non-sentry seat')
+                        robot = next(r for r in self.match.robots if r['team'] == team and r['slot'] == slots[0])
+                        if robot['role'] not in ('infantry', 'heavy'):
+                            raise ValueError('Privileged profile is infantry/heavy only')
+                    if slots is not None:
+                        for slot in slots: self._seat_policies[(team, slot)] = policy
+                    if observation_profile and slots == [7]:
+                        policy.control_hz=20
+                    if observation_profile and slots is None:
+                        raise ValueError('Strict sentry profile requires distributed/squad controllers')
             if overrides:
                 raise ValueError("Controller overrides must replace existing single-slot entries")
         except BaseException:
@@ -169,17 +224,34 @@ class Battle:
         self.pending_referee.append(value)
 
     def observation(self, team, slots):
-        observation = self.match.observation(team, slots)
-        inboxes={slot:self.communication.inboxes[team][slot] for slot in observation["controlled_ids"]}
+        profile = self.seat_profile(team, slots)
+        if profile == 'privileged_aux_2027_v1':
+            from ..rl.privileged_aux import build_observation
+            if self._aux_snapshot_tick != self.match.tick:
+                self._aux_snapshot = self.match.snapshot(); self._aux_snapshot_tick = self.match.tick
+            observation = build_observation(self._aux_snapshot, team, slots[0],
+                capabilities=getattr(self.match, 'training_capabilities', {}))
+        else:
+            observation = self.match.observation(team, slots)
+        inboxes={slot:[] if (self.observation_profile and slot=='7') or profile in ('privileged_aux_2027_v1', 'outpost_drone_script_v1') else self.communication.inboxes[team][slot] for slot in observation["controlled_ids"]}
         observation["message_inboxes"] = inboxes
         observation["navigation_mode"] = self.navigation_mode
         observation["messages"] = [message for inbox in inboxes.values() for message in inbox]
         return observation
 
+    def seat_profile(self, team, slots):
+        if slots is not None and len(slots) == 1:
+            if slots[0] == 7 and self.observation_profile: return 'sentry_referee_2027_v1'
+            return getattr(self._seat_policies.get((team, slots[0])), 'observation_profile', None)
+        return None
+
     def policy_interval(self, policy):
+        if getattr(policy,'control_hz',None)==20:return 1
         return self.learning_policy_interval if getattr(policy, "is_learning_controller", False) else (POLICY_INTERVAL if id(policy) in self.override_ids else self.fixed_policy_interval)
 
     def fixed_assembly_controls_slot(self,team,slots):
+        if self.seat_profile(team, slots) == 'privileged_aux_2027_v1':
+            return False
         if not self.timed_assembly or slots != [1]:
             return False
         robot=next(r for r in self._latest_frame['robots'] if r['team']==team and r['slot']==1)
@@ -190,7 +262,13 @@ class Battle:
 
     def encoded_observations(self, policies):
         """The same observations as `observation`, fetched together and left encoded."""
-        controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
+        if any(self.seat_profile(team, slots) in ('privileged_aux_2027_v1', 'outpost_drone_script_v1') for team, slots, _ in policies):
+            values = [self.observation(team, slots) for team, slots, _ in policies]
+            controlled = [v['controlled_ids'] for v in values]
+            # Strip the fields appended below, preserving one authoritative path.
+            lines = [json.dumps({k:v for k,v in value.items() if k not in ('message_inboxes','messages','navigation_mode')}, allow_nan=False, separators=(',', ':')).encode()+b'\n' for value in values]
+        else:
+            controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
         encoded = []
         for (team, slots, policy), ids, line in zip(policies, controlled, lines):
             additions={}
@@ -204,7 +282,8 @@ class Battle:
                     self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
                 additions.update(navigation_mode=self.navigation_mode,policy_dt=self.policy_interval(policy)*DT)
                 if self.motion_trace:additions['motion_trace']=True
-            inboxes = {slot: self.communication.inboxes[team][slot] for slot in ids}
+            profile = self.seat_profile(team, slots)
+            inboxes = {slot: [] if (self.observation_profile and slot=='7') or profile in ('privileged_aux_2027_v1', 'outpost_drone_script_v1') else self.communication.inboxes[team][slot] for slot in ids}
             messages = [message for inbox in inboxes.values() for message in inbox]
             # Append both keys last, in the order `observation` adds them.
             additions.update(message_inboxes=inboxes,messages=messages)
@@ -221,7 +300,7 @@ class Battle:
             if self.record_replay:
                 self.frames[-1] = self._latest_frame
             return self._latest_frame
-        policy_tick = bool(self.policies) and self.match.tick % POLICY_INTERVAL == 0
+        policy_tick = bool(self.policies) and any(self.match.tick % self.policy_interval(p)==0 for _,_,p in self.policies)
         # Disabled policies return no actions, so they need no observation.
         due = [item for item in self.policies if self.match.tick % self.policy_interval(item[2]) == 0] if policy_tick else []
         deciding = [item for item in due if not item[2].disabled]
@@ -241,6 +320,9 @@ class Battle:
             actions, error = future.result()
             owned = ({str(slot) for slot in slots} if slots is not None else
                      {str(robot['slot']) for robot in self.match.robots if robot['team'] == team})
+            validate_actions(actions, owned, True, dynamic_messages=getattr(p, 'dynamic_messages', False),
+                             robots=self.match.robots, team=team, observation_profile=self.seat_profile(team, slots),
+                             roster=self._action_roster)
             if not set(actions) <= owned or set(actions) & set(commands[team]):
                 raise ValueError("Controller returned an unowned or multiply controlled robot")
             for slot, action in actions.items():
@@ -248,7 +330,7 @@ class Battle:
                 messages = action.pop("messages", [])
                 if messages:
                     outgoing.append((team, slot, messages))
-                if self.navigation_mode == 'predictive':
+                if self.navigation_mode == 'predictive' and self.seat_profile(team, slots) != 'privileged_aux_2027_v1':
                     from rmuc2027_core.sdk import predictive_navigation
                     obs = self.navigation_observations[id(p)]
                     robot = next(r for r in obs['robots'] if str(r['slot']) == slot and r['team'] == team)
@@ -278,7 +360,11 @@ class Battle:
                 merged[team].update(commands[team])
             commands = merged
         self.held_commands = commands
-        communications = self.communication.route(outgoing, self.match.tick, self.match.tick + POLICY_INTERVAL) if policy_tick else []
+        if self.observation_profile:
+            outgoing=[(team,slot,[m for m in messages if m['to']!='7']) for team,slot,messages in outgoing if slot!='7']
+        communications = self.communication.route(outgoing, self.match.tick, self.match.tick + POLICY_INTERVAL) if self.match.tick % POLICY_INTERVAL==0 else []
+        if self.observation_profile:
+            for team in ('red','blue'):self.communication.inboxes[team]['7']=[]
         if self.pending_referee:
             commands = {**commands, "referee": self.pending_referee}
             self.pending_referee = []
@@ -286,7 +372,9 @@ class Battle:
         # or repeated during the held-action tick. Replay verification uses the
         # recorded robot commands; strategies are not re-executed.
         if self.record_replay:
-            self.actions.append({**commands, "communication": communications} if communications else commands)
+            # Record policy commands BEFORE Match's capability executors. Replay
+            # re-applies the recorded initial profiles/RNG exactly once.
+            self.actions.append(copy.deepcopy({**commands, "communication": communications} if communications else commands))
         frame = self.match.step(commands)
         frame["events"].extend(failures)
         # Reuse the engine's encoding unless policy errors were added to the events.

@@ -23,6 +23,26 @@ class NavigationTests(unittest.TestCase):
         path = sdk._complete_route(graph,(1.,1.),(3.,1.))
         self.assertEqual(path,[(1.,2.),(3.,2.),(3.,1.)])
 
+    def test_heavy_workbench_route_reaches_goal_inside_only_safety_margin(self):
+        graph=sdk._prepare_chapter4(sdk._REFERENCE_ARENA,'red',False,.429)
+        goal=(1.22,12.825)
+        path=sdk._complete_route(graph,(13.06924,6.70042),goal)
+        self.assertTrue(path)
+        self.assertEqual(path[-1],goal)
+        robot=dict(team='red',x=3.2814,y=10.65626,model_slot=2711,radius=.389,speed_reference_mps=3.)
+        state=dict(trajectory_goal=list(goal),trajectory=[(3.281,10.655),goal])
+        fields=sdk._trajectory_move(robot,goal,dict(arena=sdk._REFERENCE_ARENA,policy_dt=.1),state)
+        self.assertEqual(state['trajectory'],[goal])
+        self.assertGreater(sum(v*v for v in fields['move']),.001)
+
+    def test_complete_route_near_goal_keeps_pedestal_as_obstacle(self):
+        graph=sdk._prepare_chapter4(sdk._REFERENCE_ARENA,'blue',False)
+        start=(16.,1.8);goal=(16.881168202514765,4.27379453665575)
+        path=sdk._complete_route(graph,start,goal)
+        self.assertTrue(path)
+        self.assertNotEqual(path[0],goal)
+        self.assertTrue(graph[2](start,path[0]))
+
     def test_predictive_stop_and_legacy_unchanged(self):
         graph = ([],[],lambda *a: True,lambda *a: {})
         robot = dict(id='red:7',team='red',x=2.,y=2.,vx=0.,vy=0.,radius=.3,speed_reference_mps=3.)
@@ -45,6 +65,21 @@ class NavigationTests(unittest.TestCase):
             self.assertGreater(move[0],0)
             self.assertLess(move[0],1)
 
+    def test_existing_peer_margin_allows_escape_but_not_approach(self):
+        graph = ([],[],lambda *a: True,lambda *a: {})
+        robot = dict(id='red:7',team='red',x=2.,y=2.,vx=0.,vy=0.,radius=.3,speed_reference_mps=3.)
+        peer = dict(id='red:4',x=2.65,y=2.,radius=.3,vx=0.,vy=0.)
+        obs = dict(navigation_mode='predictive',policy_dt=.1,
+                   arena=dict(width=28,height=15),robots=[robot,peer])
+        with patch.object(sdk,'_prepare_chapter4',return_value=graph), patch.object(sdk,'_design',return_value={}):
+            escaping = sdk.predictive_navigation(robot,{'move':(-1.,0.)},obs,{})
+            approaching = sdk.predictive_navigation(robot,{'move':(1.,0.)},obs,{})
+            self.assertLess(escaping['move'][0], 0.)
+            self.assertTrue(approaching['brake'])
+            # Moving traffic still receives the complete predictive margin.
+            peer['vx']=-.2
+            self.assertTrue(sdk.predictive_navigation(robot,{'move':(-1.,0.)},obs,{}).get('brake'))
+
 
     def test_training_presets_keep_working_navigation(self):
         from rmuc2027_research.rl.session import load_config
@@ -60,6 +95,6 @@ class NavigationTests(unittest.TestCase):
         robot = {'id':'red-7'}
         fields = {'move':(1.,0.), 'heading':.2, 'power':150}
         with patch.object(sdk, '_navigate_action_legacy', return_value=fields):
-            result = sdk.navigate_action(robot,(10.,5.),{'navigation_mode':'legacy'}, {})
+            result = sdk.navigate_action(robot,(10.,5.),{'navigation_mode':'legacy','time':0.}, {})
             self.assertEqual(result, fields)
             self.assertNotIn('brake',result)

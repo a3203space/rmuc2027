@@ -18,6 +18,17 @@ def parameters(design):
     return [0.,0.,0.,0.],[0.,mass,0.,0.],ride
 
 
+def resting_origin(design):
+    """Nominal support height when an initial pose is already airborne."""
+    leg,support,ride=parameters(design)
+    if leg[1]<=0:return ride
+    load=support[1]*9.81*.5
+    length=leg[2]-load/support[0]
+    if length<leg[0]-.01:
+        length=(support[0]*leg[2]+40000.*(leg[0]-.01)-load)/(support[0]+40000.)
+    return support[3]+length-support[2]
+
+
 @wp.func
 def loaded_origin(command: float, minimum: float, support: wp.vec4):
     load=support[1]*9.81*.5

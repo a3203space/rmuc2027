@@ -67,6 +67,80 @@ research/.venv/bin/python -m rmuc2027_research migrate-model \
 
 只接受已记录的原运行时与相同观测/动作契约，不通过修改原哈希绕过兼容检查。输出目录必须不存在。迁移后可恢复训练、评估和导出；不声称与旧引擎逐帧一致或胜率提升。
 
+### 全机型运动策略与两小时实际时间预算
+
+`policy_version: 2` 使用 152 维公开观测和 5 维动作：目标坐标、折叠意图、腿高、跳跃意图。目标每 0.5 秒更新，特殊动作按 10 Hz 更新；无对应机构的动作会屏蔽。展开前检查完整高度是否能离开顶棚，跳跃使用上升沿、接地与冷却保护。原 v1 的 116 维观测、二维动作及旧检查点接口保留。
+
+以下命令为 17 个合法地面型号分别训练模型。所有训练进程共用一个不超过 7200 秒的墙钟预算，包含启动、环境初始化、采样、PPO 更新、保存及进程清理。轮腿或折叠机型得到普通机型两倍份额；预算中保留 120 秒收尾。普通型号前 40%、特殊型号前 60% 的份额训练运动课程，之后进入完整比赛。课程包含通行、适用的过洞/登阶以及轮腿平地跳跃；完整比赛不使用停驻课程对手。
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.campaign \
+  --output data/research/locomotion-two-hours \
+  --wall-seconds 7200 --num-envs 1 --device cpu
+```
+
+并行环境数量应以本机测速结果为准。单环境按回合种子轮换红蓝方，适合各型号仅有数分钟、又需要完成 420 秒比赛的预算。`--device cpu` 只指定小型 PPO 网络，物理仍使用 `cuda:0`。`campaign.json` 记录各型号实际时间、更新状态、检查点与总耗时；`training.json` 中 `actor_updated: false` 表示没有完成有效梯度更新，不能当作已训练模型。权重每 60 秒原子保存，课程结果和运动指标写入 `episodes.jsonl`。训练准备和冻结策略评估分别计时；两小时预算不保证每个机型都收敛。
+
+中断后可用相同 `--output` 加 `--resume-campaign` 续训。它沿用最初的截止时间（中断间隔也计入）、扣除每个型号已消耗的份额，并从检查点继续剩余课程；不会重新获得两小时。原始失败记录保留在 `attempts`，后续尝试使用独立目录。
+
+追加训练必须使用另行确认的绝对墙钟截止时间。`guided_campaign` 读取 JSON 中的
+`deadline_unix`，准备、示范采集、失败状态纠正与后续 PPO 都计入同一个期限，
+恢复准备任务也不会重置时钟。2026-11-10 的追加三小时期限记录在
+`data/research/locomotion-extension-plan.json`，为北京时间 15:19:46。
+
+允许人工干预时，可先运行 `python -m rmuc2027_research.rl.guided_campaign prepare`
+并传入 `--initial` 原始 campaign 目录、`--prepared` 新准备目录与 `--deadline-file`。
+它使用公开观测和 SDK 动作生成示范，再在冻结 actor 的失败轨迹上补充监督标签。
+示范只用于训练，部署仍由 152 维观测、5 维动作的 actor 决定特殊动作。
+低频起跳脉冲与持续跳跃意图分别平衡，避免平均误差很低却从不起跳。
+每轮复查的种子相差 12，保持 `%3`、`%4` 决定的课程类型不变；未完成双边
+测试不能算通过，后一次纠正退步时保留较好的已验证检查点。
+
+准备恢复使用 `--resume`。完成后以同一组路径运行 `guided_campaign continue`，
+另传 `--output` 新训练目录。重装模型先分配 70% 时间学习运动课程，其他模型为
+50%，其余尝试完整比赛，避免固定装配耗尽预算而没有策略更新。重装的固定装配
+仍须由裁判确认武器安装后才允许对局学习；装配未完成时记录具体停止原因，保存
+已经完成的课程学习结果。普通机型不执行无适用动作的监督拟合。
+
+`python -m rmuc2027_research.rl.selection --campaign <续训目录> --prepared <准备目录>
+--output <新评估目录>` 在训练过程中检查已完成模型的 Rapier、Warp 和 MJWarp
+课程；应为评估留出 GPU 显存与采样余量。`--resume` 恢复时仅复用权重哈希、SDK
+哈希、后端及全部六次冻结尝试均匹配的完整报告，未完成报告保留后重测。
+纠正后的初始化与 PPO 结果使用相同种子、双边和课程；
+先选 Rapier 候选，三后端全过后停止检查备用权重，否则补测备用候选并比较。
+若某候选即使剩余两后端全过，也无法追平已验证候选的稳定成功次数，则记录原因并跳过其 GPU 复查。
+按稳定成功数、倾覆时间、完成时间选择并导出，保留所有候选及评估，不自动用最后
+一个权重覆盖更好结果。加 `--deadline-file` 后，允许在已经批准的训练截止前，
+对 Rapier 成功数退步的 PPO 权重做一次示范恢复并重新验证；恢复更新单独记录。
+冻结评估本身不更新梯度，单独计时。此选择集上的结果不能替代
+独立场景泛化、完整比赛胜率或更高样本数的迁移验收。
+
+纠正课程使用可达的通行目标，平地跳跃从真实出生位置起跳，过洞后要求展开完成。
+旧权重使用 `validation --guided-courses` 可在同一组新课程中重测；旧课程与新课程
+的成功率不能直接归因于学习改善。`learning-rate.json` 还可设置正数 `target_kl`，
+在完整 rollout 之间应用，帮助限制过大的策略更新。
+
+2026-11-10 本机这轮已完成 17 型号训练和导出，最后训练记录早于确认截止约 100 秒。
+结果见[进度与限制](research-progress.md#全型号运动策略与失败方向干预2026-11-10限时训练与验证完成)和
+[冻结验证汇总](validation/locomotion-training-20261110.json)。部署目录为
+`data/research/locomotion-selected/<型号>/export`；检查点、部署策略、源码和相关示范数据的
+本地包为 `data/research/locomotion-models-20261110.zip`，SHA-256 记录在同目录的
+`locomotion-release-index.json`。模型包只包含选中版本，其他候选与详细过程记录继续保留在原实验目录。
+
+冻结模型可以分别用 `evaluate --sim-backend warp_kinematic`、`--sim-backend mjwarp`、`--sim-backend rapier` 评估。能力校准入口如下；该入口测试 SDK 控制器，不代表已训练策略的比赛胜率：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.warp_kinematic.calibration \
+  --backends rapier warp_kinematic mjwarp --control-hz 10 \
+  --seeds 7 42 91 --horizon 60 --output data/research/locomotion-calibration
+```
+
+已训练 actor 的课程测试使用 `python -m rmuc2027_research.rl.validation --campaign <训练目录> --backend <后端> --stage course --output <新目录>`；默认种子 42/43/44、红蓝双方，覆盖适用的通行、能力和跳跃课程。`--stage match` 改为完整比赛，`--replay` 保存回放，`--export` 同时生成标准策略包。验证固定 actor 均值、检查源码与权重哈希且不更新参数。Rapier 回放做确定性重算；CUDA 后端只验证快照结构，明确标记不属于 Rapier 确定性复现。
+
+SDK 修复之后，旧权重默认仍拒绝直接导出或验证。仅在明确进行控制器迁移实验时给 `export`、`evaluate` 或 `validation` 加 `--allow-sdk-transfer`：原训练 SDK 哈希不改写，额外记录新部署/评估 SDK 哈希，权重保持不变；观测、动作执行接口、规则、引擎和固定策略的兼容检查继续生效。该选项不代表迁移效果已通过。
+
+运动帧 v2 传输实际近似姿态、角速度与腿长，空中轨迹保留起跳动量。Warp 仍为降阶动力学近似；MJWarp 继续求解刚体接触，并同步更新载荷对应的质量、惯量与约束权重。校准报告保留失败轨迹，并分别判断到达、稳定停留、翻倒和时间差。
+
 ### 特殊底盘目标点导航
 
 公共 SDK 的 `navigate_action(robot, point, observation, state)` 返回完整动作字段，调用方为每个机器人保存独立状态，再通过 `action(**fields)` 下发。原 `navigate()` 仍返回二维移动方向。默认策略及策略库的公共行驶入口已接入新接口，目标点训练执行层同样保留跳跃、腿高和折叠指令。
@@ -339,3 +413,48 @@ research/.venv/bin/python -m rmuc2027_research.rl compose \
 `rl-metadata.json` 中的 `deployment` 保存所需阵容和装配设置。网页和 CLI 对战会读取
 所选导出包的要求，自动应用装配模式、概率、耗时及无人机开关；双方要求冲突或显式
 参数与训练要求冲突时拒绝启动。网页后端短局已验证，浏览器画面与完整训练模型对局仍需验收。
+
+### 2027 哨兵裁判接口 v3（2026-11-10）
+
+新配置为 `configs/rl/sentry-referee-2771.json`、`sentry-referee-2772.json`、
+`sentry-referee-2773.json`。三者使用 `sentry_referee_2027_v1`：策略 10 Hz、
+独立规控 20 Hz、物理 120 Hz。393 维观测的名称、缩放和来源见
+[逐维表](validation/sentry-v3-observations-20261110.csv)。动作依次为目标 x、目标 y、
+折叠、跳跃、小陀螺、开火；腿高与速度由规控决定。低血量不会让规控替换策略目的地。
+
+裁判数据按对应命令的 1/3/10 Hz 或事件时机更新，包含有效位、数据年龄和收发时间。
+3 Hz 使用有理时钟，接收量化到下一个 50 ms 比赛帧；不把真值补进失效报文。
+雷达转发共享 0x0301 的 30 Hz 上行和收方带宽限制；0x0305 小地图单独限制 5 Hz。
+己方地面队友坐标由雷达跟踪转发，020B 为协议允许的后备来源；空中系统的未提供坐标
+保持无效。默认理想定位、理想雷达跟踪与已成功解码的无线波形，故障可注入；没有图像训练。
+自瞄独立选择可检测、无遮挡、弹道可达的最近存活敌方机器人，策略只决定是否开火。
+
+0x0120 使用累计计数和成功回执，重复发送不重复扣费，失败按字段顺序阻断后续操作。
+加固面积公式未定义时拒绝加固、保持默认装甲。0203 测速模块与枪口同向，正北为 0°、
+顺时针为正，与底盘定位角分开。0303 必须显式配置实际选手端来源 ID；训练不注入指令。
+
+过洞期间规控禁止小陀螺，检查实际角速度低于 0.2 rad/s、航向误差小于 5° 才允许前进；
+安全退出后恢复策略旋转请求。队友堵入口时按编号排队、退让后重新靠近入口，策略目标不变。
+Warp 修复了瞬时转向和 3 rad/s 限幅，使用受扭矩、惯量约束的转向积分；MJWarp 沿用动力学执行。
+[验证记录](validation/sentry-v3-preflight-20261110.json)包含持续旋转请求下两个 GPU 后端的完整过洞结果。
+这些公共几何模型与理想模块不能替代实车标定。
+
+本轮统一实际时间预算为 7200 秒，最后 1500 秒用于冻结验证和导出：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.sentry_campaign run \
+  --output data/research/sentry-referee-v3-new-run --wall-seconds 7200 --num-envs 2
+```
+
+2026-11-10 运行位于 `data/research/sentry-referee-v3-20261110`。
+`budget.json` 固定起止时间，`campaign.json` 记录状态，`source.zip` 保存启动源码，
+每型号保留初始化、检查点、优化器、动作和来源哈希。v3 不接受旧 152 维或 v2 权重冒充新接口；
+短冻结测试不代表 420 秒整局胜率。对局查看（训练完成后使用实际选中的检查点路径）：
+
+```bash
+research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.viewer \
+  --rl-model data/research/sentry-referee-v3-20261110/selected-final/2773/model.zip \
+  --rl-team red --device cuda:0 --seed 1001 --duration 420
+```
+
+原生窗口需在桌面终端启动；空格暂停，鼠标旋转和缩放。

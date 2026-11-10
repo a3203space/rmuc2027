@@ -14,8 +14,17 @@ import warp as wp
 from .arena import ArenaMotion
 from .protocol import DT, MotionFrame
 from .uploads import HostUploads
+from .pose import resting_origin
 
 active_service = None
+
+DRIVE_UPLOAD_FIELDS = frozenset(('speed_reference_mps', 'motor_force_max_n', 'drive_efficiency'))
+
+
+def topology_signature(robots):
+    """Only uploaded drive scalars may differ when reusing a topology."""
+    return json.dumps([({k:v for k,v in r['design'].items() if k not in DRIVE_UPLOAD_FIELDS},
+                        r['radius'],r['role']) for r in robots],sort_keys=True,separators=(',',':'))
 
 
 @wp.kernel
@@ -23,13 +32,15 @@ def restore_state(state: wp.array2d(dtype=float),starts: wp.array(dtype=wp.vec3)
                   elapsed: wp.array(dtype=float),durations: wp.array(dtype=float),cooldown: wp.array(dtype=float),
                   status: wp.array(dtype=wp.int32),fall: wp.array(dtype=float),altitude: wp.array(dtype=float),
                   offsets: wp.array(dtype=wp.vec2),base: wp.array(dtype=float),flight: wp.array(dtype=wp.int32),
-                  leg_command: wp.array(dtype=float)):
+                  leg_command: wp.array(dtype=float), latched: wp.array(dtype=float)):
     i=wp.tid()
     starts[i]=wp.vec3(state[i,0],state[i,1],state[i,2]);ends[i]=wp.vec3(state[i,3],state[i,4],state[i,5])
     elapsed[i]=state[i,6];durations[i]=state[i,7];cooldown[i]=state[i,8];status[i]=int(state[i,9])
     fall[i]=state[i,10];altitude[i]=state[i,11];offsets[i]=wp.vec2(state[i,12],state[i,13])
     base[i]=state[i,14];flight[i]=int(state[i,15])
     leg_command[i]=state[i,16]
+    latched[i]=0.0
+    if state.shape[1]>17:latched[i]=state[i,17]
 
 
 class BatchClient:
@@ -49,7 +60,7 @@ class BatchClient:
 
     def step_frame(self,request):
         if self.closed:raise RuntimeError('Adapter closed')
-        if (request.get('op')!='kinematic_frame' or request.get('version')!=1 or
+        if (request.get('op')!='kinematic_frame' or request.get('version') not in (1,2) or
             request.get('sequence')!=self.next_sequence or request.get('substeps')!=6 or abs(request.get('dt',0)-DT)>1e-12):
             raise ValueError('Invalid motion request identity')
         ids=tuple(r['id'] for r in request['robots'])
@@ -57,9 +68,11 @@ class BatchClient:
             self.ids=ids
             self.arena=request['arena']
             self.designs=[r['design'] for r in request['robots']]
-            self.scene_signature=json.dumps(request['arena'],sort_keys=True,separators=(',',':'))
-            self.design_signature=json.dumps([(r['design'],r['radius'],r['role']) for r in request['robots']],sort_keys=True,separators=(',',':'))
+            self.scene_signature=json.dumps([request['version'],request['arena']],sort_keys=True,separators=(',',':'))
+            self.design_signature=topology_signature(request['robots'])
         if ids!=self.ids:raise ValueError('Robot order changed')
+        for design,robot in zip(self.designs,request['robots']):
+            design.update({k:v for k,v in robot.get('drive_parameters',{}).items() if k in DRIVE_UPLOAD_FIELDS})
         response=self.service.submit(self,request)
         self.next_sequence+=1
         return response
@@ -90,10 +103,10 @@ class WorldBatch:
                       arena=items[0][0].arena or items[0][1]['arena'])
         if engine.motion is None:
             engine.initialize(combined)
-            self.upload=wp.empty((len(robots),17),dtype=float,device=engine.device)
+            self.upload=wp.empty((len(robots),18 if engine.extended else 17),dtype=float,device=engine.device)
             self.restore_command=wp.launch(restore_state,len(robots),inputs=[self.upload,engine.jump_start,
                 engine.jump_end,engine.jump_elapsed,engine.jump_duration,engine.jump_cooldown,engine.jump_status,
-                engine.fall_speed,engine.motion.flight_z,engine.motion.height_offsets,engine.base,engine.motion.flight,engine.leg_command],
+                engine.fall_speed,engine.motion.flight_z,engine.motion.height_offsets,engine.base,engine.motion.flight,engine.leg_command,engine.jump_latched],
                 device=engine.device,record_cmd=True)
         states=[]
         for (client,request),span in zip(items,slices):
@@ -102,7 +115,13 @@ class WorldBatch:
             if client.state is None:
                 floor=engine.terrain.heights([r['pos'][:2] for r in bodies])
                 base=np.asarray([r['pos'][2] for r in bodies])-floor
-                state=np.zeros((len(bodies),17),dtype=np.float32)
+                airborne=np.asarray([engine.extended and not r.get('grounded',True) and r['role']!='aerial' for r in bodies])
+                base[airborne]=np.asarray([resting_origin(d) for d in designs])[airborne]
+                state=np.zeros((len(bodies),18 if engine.extended else 17),dtype=np.float32)
+                state[airborne,9]=4.;state[airborne,15]=1.
+                if engine.extended:
+                    state[:,10]=[r['velocity'][2] for r in bodies]
+                    state[:,11]=[r['pos'][2] for r in bodies]
                 state[:,12]=base
                 state[:,13]=base+np.asarray([d.get('muzzle_z_m',.4)+.06 for d in designs])
                 state[:,14]=base
@@ -112,6 +131,7 @@ class WorldBatch:
                 authoritative=np.asarray([r['pos'] for r in request['robots']])
                 changed=np.linalg.norm(authoritative-client.expected_positions,axis=1)>.05
                 state[np.ix_(changed,[6,8,9,10,15])]=0.
+                if engine.extended:state[changed,17]=0.
                 reset_pose=changed & np.asarray([r.get('grounded',True) for r in bodies],dtype=bool)
                 if reset_pose.any():
                     bodies=request['robots']
@@ -131,6 +151,9 @@ class WorldBatch:
         results=[]
         for (client,request),span in zip(items,slices):
             frame=MotionFrame(client.ids,response.positions[:,span],response.velocities[:,span],response.headings[:,span],response.folded[:,span],response.grounded[:,span])
+            if response.rotations is not None:
+                frame=MotionFrame(frame.ids,frame.positions,frame.velocities,frame.headings,frame.folded,frame.grounded,
+                                  response.rotations[:,span],response.angular_velocities[:,span],response.legs[:,span])
             client.state=engine.last_state[span].copy()
             client.expected_positions=frame.positions[-1].copy()
             results.append(frame if frames else frame.response(request['sequence']))

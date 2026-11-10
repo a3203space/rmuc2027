@@ -1,0 +1,87 @@
+{
+  "schema": {
+    "version": 3,
+    "obs_size": 393,
+    "action_size": 6,
+    "profile": "sentry_referee_2027_v1",
+    "schema_hash": "e43bda1e2c35e3ceb873535f288c53b8e26a75100ecc23fbfb0717c1e7bba032"
+  },
+  "actions": [
+    "goal_x",
+    "goal_y",
+    "fold",
+    "jump",
+    "spin",
+    "fire"
+  ],
+  "tests": {
+    "sentry_python": 28,
+    "navigation_python": 9,
+    "rust": 72
+  },
+  "confirmed": {
+    "armor_undefined": "reject; default armor",
+    "0203": "north zero; clockwise positive; same direction as muzzle"
+  },
+  "pending": {
+    "0303_client_id": "requires explicit configured source; no commander orders injected in training"
+  },
+  "clocks": {
+    "actor_hz": 10,
+    "navigation_hz": 20,
+    "physics_hz": 120,
+    "delivery_quantum_seconds": 0.05
+  },
+  "limitations": [
+    "Ideal localization and autoaim modules; no camera training",
+    "Ideal radar tracker and decoded wireless feed with injectable failure",
+    "Public physical proxies; not measured robot CAD or hardware validation",
+    "Short frozen trials do not establish full-match win rates"
+  ],
+  "spin_tunnel": {
+    "warp_kinematic": {
+      "final": {
+        "time": 35.0,
+        "x": 12.008645057678223,
+        "y": 7.508941173553467,
+        "fold": 0.0,
+        "omega": 6.283157230487632,
+        "phase": "route",
+        "guard": false,
+        "accepted": {
+          "fold": false,
+          "jump": false,
+          "spin": true,
+          "fire": false
+        }
+      },
+      "passed": [
+        "red_road_tunnel_roof"
+      ],
+      "samples": 350,
+      "guard_violations": 0
+    },
+    "mjwarp": {
+      "final": {
+        "time": 35.0,
+        "x": 12.031723976135254,
+        "y": 7.587251663208008,
+        "fold": 0.0,
+        "omega": 5.72227232886825,
+        "phase": "route",
+        "guard": false,
+        "accepted": {
+          "fold": false,
+          "jump": false,
+          "spin": true,
+          "fire": false
+        }
+      },
+      "passed": [
+        "red_road_tunnel_roof"
+      ],
+      "samples": 350,
+      "guard_violations": 0
+    }
+  }
+}

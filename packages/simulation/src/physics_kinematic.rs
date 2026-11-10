@@ -13,6 +13,12 @@ pub(crate) struct MotionFrame {
     pub headings: Vec<Vec<f64>>,
     pub folded: Vec<Vec<f64>>,
     pub grounded: Vec<Vec<bool>>,
+    #[serde(default)]
+    rotations: Vec<Vec<[f64; 4]>>,
+    #[serde(default)]
+    angular_velocities: Vec<Vec<[f64; 3]>>,
+    #[serde(default)]
+    legs: Vec<Vec<[f64; 2]>>,
     #[serde(skip)]
     passive_at_start: Vec<bool>,
 }
@@ -20,7 +26,7 @@ pub(crate) struct MotionFrame {
 impl MotionFrame {
     pub(crate) fn parse(value: Value, sequence: u64, ids: &[String]) -> Result<Self, String> {
         let frame: Self = serde_json::from_value(value).map_err(|e| e.to_string())?;
-        if frame.op != "kinematic_frame_result" || frame.version != 1
+        if frame.op != "kinematic_frame_result" || !(1..=2).contains(&frame.version)
             || frame.sequence != sequence || frame.ids != ids
             || !frame.dt.is_finite() || (frame.dt - PHYSICS_DT).abs() > 1e-12 {
             return Err("Kinematic frame identity or timestep mismatch".into());
@@ -38,6 +44,18 @@ impl MotionFrame {
             .any(|v| !v.is_finite()) || frame.folded.iter().flatten().any(|v| !(0.0..=1.0).contains(v)) {
             return Err("Invalid kinematic numeric state".into());
         }
+        if frame.version == 2 {
+            let sizes = [frame.rotations.iter().map(Vec::len).collect::<Vec<_>>(),
+                frame.angular_velocities.iter().map(Vec::len).collect(),
+                frame.legs.iter().map(Vec::len).collect()];
+            if sizes.iter().any(|s| s.len()!=6 || s.iter().any(|n| *n!=ids.len()))
+                || frame.rotations.iter().flatten().any(|q| q.iter().any(|v| !v.is_finite())
+                    || (q.iter().map(|v| v*v).sum::<f64>()-1.).abs()>0.0003)
+                || frame.angular_velocities.iter().flatten().flatten().any(|v| !v.is_finite())
+                || frame.legs.iter().flatten().flatten().any(|v| !v.is_finite() || *v < -0.01) {
+                return Err("Invalid version two attitude or leg samples".into());
+            }
+        }
         Ok(frame)
     }
 }
@@ -52,16 +70,19 @@ impl PhysicsWorld {
             let disabled=!r.alive || now<r.power_cutoff_until || r.battery_remaining_wh<=0.0 || r.deployed;
             json!({"id":r.id,"model":r.model_slot,"team":r.team,"role":r.role,
                 "pos":[r.x,r.y,r.z],"velocity":[r.vx,r.vy,r.vz],"heading":r.heading,
-                "folded":r.transform_progress,"grounded":r.grounded,
+                "folded":r.transform_progress,"grounded":r.grounded,"quaternion":r.quaternion,"angular_velocity":r.angular_velocity,"mass_kg":r.mass_kg,
                 "enabled":r.alive && now>=r.power_cutoff_until && r.battery_remaining_wh>0.0 && !r.deployed,
                 "alive":r.alive,"radius":r.radius,"power_limit":r.power_limit,
                 "motor_budget":drive_motor_budget(r,a,&self.designs[i],on_humps,disabled),
                 "fly_pass":r.fly_pass,
                 "move":a.mv,"heading_goal":a.heading,"yaw_rate":a.yaw_rate,
                 "transform":a.transform.unwrap_or(a.crouch),"jump":a.jump,
-                "coast":a.coast,"leg_height":a.leg_height,"design":if sequence==0 {self.designs[i].clone()} else {Value::Null}})
+                "coast":a.coast,"leg_height":a.leg_height,
+                "drive_parameters":{"speed_reference_mps":self.designs[i]["speed_reference_mps"],
+                    "motor_force_max_n":self.designs[i]["motor_force_max_n"],"drive_efficiency":self.designs[i]["drive_efficiency"]},
+                "design":if sequence==0 {self.designs[i].clone()} else {Value::Null}})
         }).collect();
-        let request=json!({"op":"kinematic_frame","version":1,"sequence":sequence,
+        let request=json!({"op":"kinematic_frame","version":2,"sequence":sequence,
             "dt":PHYSICS_DT,"substeps":6,"time":now,"robots":entries,
             "arena":if sequence==0 {serde_json::to_value(arena).unwrap()} else {Value::Null}});
         {
@@ -107,21 +128,34 @@ impl PhysicsWorld {
             }
             let heading_rate=((r.heading-previous_heading+std::f64::consts::PI)
                 .rem_euclid(std::f64::consts::TAU)-std::f64::consts::PI)/PHYSICS_DT;
-            let rotation=UnitQuaternion::from_axis_angle(&Vector::z_axis(),r.heading);
+            let predicted_pose=!r.deployed && r.role!="aerial" && (r.powered || frame.passive_at_start.get(i)==Some(&true));
+            let rotation=if frame.version==2 && predicted_pose {
+                let q=frame.rotations[sample][i];
+                UnitQuaternion::new_normalize(nalgebra::Quaternion::new(q[3],q[0],q[1],q[2]))
+            } else if frame.version==2 {
+                let q=r.quaternion;
+                UnitQuaternion::new_normalize(nalgebra::Quaternion::new(q[3],q[0],q[1],q[2]))
+            } else {UnitQuaternion::from_axis_angle(&Vector::z_axis(),r.heading)};
             let pose=Isometry::from_parts(Translation::new(r.x,r.y,r.z),rotation);
             self.bodies[h].set_position(pose,true);
             self.bodies[h].set_linvel(vector![r.vx,r.vy,r.vz],true);
             self.bodies[h].set_angvel(vector![0.0,0.0,heading_rate],true);
             self.bodies[h].reset_forces(true);self.bodies[h].reset_torques(true);
             let rot=rotation.quaternion();r.quaternion=[rot.i,rot.j,rot.k,rot.w];
-            r.angular_velocity=[0.0,0.0,heading_rate];
-            r.upright=1.0;r.tipped=false;r.self_righting=false;
-            if d["chassis_type"]=="wheel_legged" && r.grounded {
-                for (wheel,side) in [-1.,1.].iter().enumerate() {
+            r.angular_velocity=if frame.version==2 && predicted_pose {frame.angular_velocities[sample][i]} else {[0.0,0.0,heading_rate]};
+            if frame.version==2 && predicted_pose {r.angular_velocity[2]+=heading_rate;}
+            self.bodies[h].set_angvel(vector![r.angular_velocity[0],r.angular_velocity[1],r.angular_velocity[2]],true);
+            r.upright=(rotation*Vector::z()).z;
+            r.tipped=r.role!="aerial" && r.upright<0.5;
+            r.self_righting=r.tipped && d["leg_type"]=="serial" && r.powered;
+            if frame.version==2 && predicted_pose && d["chassis_type"]=="wheel_legged" {r.legs=frame.legs[sample][i];}
+            if d["chassis_type"]=="wheel_legged" && (r.grounded || frame.version==2) {
+                if frame.version==1 { for (wheel,side) in [-1.,1.].iter().enumerate() {
                     let y=side*n(d,"track_m")*0.5;
                     let x=r.x-r.heading.sin()*y;let y=r.y+r.heading.cos()*y;
                     r.legs[wheel]=(r.z+n(d,"hip_height_m")-height_at(arena,x,y)-n(d,"wheel_radius_m"))
                         .clamp(n(d,"leg_min_m")-0.01,n(d,"leg_max_m"));
+                }
                 }
                 let changed=self.colliders[self.hulls[i]].shape().as_compound().map_or(true,|shape| {
                     (0..2).any(|wheel|shape.shapes().get(wheel+2).map_or(true,|(pose,_)|

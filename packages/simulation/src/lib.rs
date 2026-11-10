@@ -7,6 +7,7 @@ mod physics;
 mod pickup;
 mod rulebook;
 mod season2027;
+mod sentry_protocol;
 mod structures;
 mod vision;
 
@@ -547,6 +548,9 @@ pub struct Engine {
     pub positions: BTreeMap<String, season2027::PositionState>,
     /// 2027 large rune activations per team (each shrinks the detecting rings).
     rune_large_count: BTreeMap<String, u32>,
+    pub strict_sentry: bool,
+    sentry_ledger: BTreeMap<String, sentry_protocol::Ledger>,
+    radar_effects: Value,
 }
 fn dist(x: f64, y: f64, a: f64, b: f64) -> f64 {
     (x - a).hypot(y - b)
@@ -1284,6 +1288,9 @@ impl Engine {
             })
             .collect();
         let mut engine = Self {
+            strict_sentry: false,
+            sentry_ledger: BTreeMap::new(),
+            radar_effects: json!({}),
             seed,
             duration,
             tick: 0,
@@ -1372,6 +1379,18 @@ impl Engine {
     pub fn time(&self) -> f64 {
         (((self.tick as f64 * DT) + self.micro_time) * 1e9).round() / 1e9
     }
+    pub fn configure_training_capabilities(&mut self, profiles: &Value) -> Result<(), String> {
+        let profiles = profiles.as_object().ok_or("Training capabilities must be a seat map")?;
+        for (seat, profile) in profiles {
+            let index = self.robots.iter().position(|r| format!("{}:{}", r.team, r.slot) == *seat)
+                .ok_or_else(|| format!("Unknown training capability seat: {}", seat))?;
+            if self.robots[index].role == "aerial" { return Err("Ground drive profile on aerial seat".into()); }
+            let nominal = &self.robot_models[&self.robots[index].design_slot().to_string()];
+            self.physics.as_mut().ok_or("Physics unavailable")?
+                .set_training_drive(index, &profile["mobility"], nominal)?;
+        }
+        Ok(())
+    }
     fn roster(&self) -> Value {
         if self.robots.iter().any(|r| r.model_slot.is_some()) {
             json!({"red":self.robots.iter().filter(|r|r.team=="red").map(|r|r.slot).collect::<Vec<_>>(),
@@ -1419,7 +1438,9 @@ impl Engine {
     /// Minimal bookkeeping state for headless RL; policy vision is requested separately.
     pub fn training_snapshot(&self) -> Value {
         let robots: Vec<Value> = self.robots.iter().map(|r| json!({
-            "id":r.id,"team":r.team,"slot":r.slot,"alive":r.alive,"weak":r.weak
+            "id":r.id,"team":r.team,"slot":r.slot,"alive":r.alive,"weak":r.weak,
+            "x":r.x,"y":r.y,"vx":r.vx,"vy":r.vy,"grounded":r.grounded,
+            "upright":r.upright,"tipped":r.tipped
         })).collect();
         json!({"tick":self.tick,"time":self.time(),"status":self.status,
             "winner":self.winner,"reason":self.reason,"robots":robots,
@@ -1438,6 +1459,9 @@ impl Engine {
         "bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.rune_snapshots(),"assemblies":self.assembly_snapshots(),"roster":roster,"teams":self.teams,"zones":self.zones,"projectiles":self.projectiles,"events":self.events});
         {
             frame["season"] = json!("2027");
+            if self.strict_sentry {
+                frame["sentry_referee"] = self.sentry_telemetry();
+            }
             frame["positions"] = self.position_snapshots();
             for (i, robot) in frame["robots"].as_array_mut().unwrap().iter_mut().enumerate() {
                 robot["fire_block_reason"] = json!(self.fire_block_reason_2027(i).unwrap_or(""));
@@ -1946,6 +1970,9 @@ impl Engine {
             return;
         }
         self.status = "running".into();
+        if self.strict_sentry {
+            self.radar_effects = commands.get("radar_effects").cloned().unwrap_or_else(||json!({}));
+        }
         self.events.clear();
         self.referee_recent_events
             .retain(|e| e["tick"].as_u64().unwrap_or(0) + 4 >= self.tick);

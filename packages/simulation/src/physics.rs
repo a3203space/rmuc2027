@@ -145,6 +145,7 @@ pub struct PhysicsWorld {
     jump_until: Vec<f64>,
     jump_ready: Vec<f64>,
     jump_strength: Vec<f64>,
+    jump_held: Vec<bool>,
     tuck_until: Vec<f64>,
     /// Serial-leg hip angle (see `Robot::hip_angle`) and self-righting state: when the robot
     /// was first seen upset, whether it is righting, since when, and the hip angle it ends
@@ -304,6 +305,31 @@ pub fn arm_ik(arm: &Value, tip: Point<f64>, dir: Vector<f64>, roll: f64, grip: f
 }
 
 impl PhysicsWorld {
+    /// Private per-seat drive variation for research. Public model descriptions and
+    /// referee power limits remain unchanged; all backends consume these designs.
+    pub fn set_training_drive(&mut self, index: usize, multipliers: &Value, nominal: &Value) -> Result<(), String> {
+        let fields = ["speed_reference_mps", "motor_force_max_n", "drive_efficiency"];
+        let object = multipliers.as_object().ok_or("mobility must be an object")?;
+        if object.keys().any(|k| !fields.contains(&k.as_str())) {
+            return Err("Only drive reference, force and efficiency may be varied".into());
+        }
+        let mut design = self.designs.get(index).ok_or("Unknown drive seat")?.clone();
+        for field in fields {
+            let scale = object.get(field).and_then(Value::as_f64).unwrap_or(1.0);
+            if !scale.is_finite() || !(0.5..=2.0).contains(&scale) {
+                return Err("Drive multiplier must be finite in [0.5,2]".into());
+            }
+            let base = nominal[field].as_f64().ok_or("Missing nominal drive parameter")?;
+            let value = base * scale;
+            if field == "drive_efficiency" && !(0.0..=1.0).contains(&value) {
+                return Err("Drive efficiency must not exceed one".into());
+            }
+            design[field] = json!(value);
+        }
+        self.designs[index] = design;
+        Ok(())
+    }
+
     pub fn new(arena: &Arena, robots: &[Robot], designs: &BTreeMap<String, Value>) -> Self {
         let mut world = Self {
             external_colliders: BTreeMap::new(),
@@ -338,6 +364,7 @@ impl PhysicsWorld {
             jump_until: Vec::new(),
             jump_ready: Vec::new(),
             jump_strength: Vec::new(),
+            jump_held: Vec::new(),
             tuck_until: Vec::new(),
             hip_angle: Vec::new(),
             upset_since: Vec::new(),
@@ -505,6 +532,7 @@ impl PhysicsWorld {
                 world.jump_until.push(-1.0);
                 world.jump_ready.push(0.0);
                 world.jump_strength.push(0.0);
+            world.jump_held.push(false);
                 world.tuck_until.push(-1.0);
                 world.hip_angle.push(0.0);
                 world.upset_since.push(-1.0);
@@ -568,6 +596,7 @@ impl PhysicsWorld {
             world.jump_until.push(-1.0);
             world.jump_ready.push(0.0);
             world.jump_strength.push(0.0);
+            world.jump_held.push(false);
             world.tuck_until.push(-1.0);
             world.hip_angle.push(0.0);
             world.upset_since.push(-1.0);
@@ -1274,13 +1303,14 @@ impl PhysicsWorld {
                 && floor_angle.is_some_and(|f| (f - self.hip_angle[i]).abs() < 0.35);
             if legged {
                 // Jump: legs push at a fixed thrust until they reach full length, then tuck.
-                if powered && a.jump > 0.0 && r.grounded && !righting && now >= self.jump_ready[i] {
+                if powered && a.jump > 0.0 && !self.jump_held[i] && r.grounded && !righting && now >= self.jump_ready[i] {
                     self.jump_until[i] = now + n(d, "jump_duration_s");
                     self.jump_strength[i] = a.jump;
                     self.jump_ready[i] = now + n(d, "jump_cooldown_s");
                     self.arm_events
                         .push(json!({"type":"jump","robot":r.id,"strength":a.jump}));
                 }
+                self.jump_held[i] = a.jump > 0.0 && powered;
                 if powered && now < self.jump_until[i] {
                     leg_thrust = r.mass_kg
                         * 9.81
@@ -1776,7 +1806,9 @@ impl PhysicsWorld {
                 }
             }
             if r.transform_allowed {
-                let target = if a.transform.unwrap_or(a.crouch) {
+                let target = if !powered {
+                    r.transform_progress
+                } else if a.transform.unwrap_or(a.crouch) {
                     1.0
                 } else {
                     0.0
@@ -1791,6 +1823,7 @@ impl PhysicsWorld {
                 let mut folded = d.clone();
                 folded["muzzle_z_m"] = json!(muzzle);
                 let proposed = Self::hull(&folded, false, None, true, None).build();
+                let standing = Self::hull(d, false, None, true, None).build();
                 let clear = progress >= r.transform_progress
                     || self
                         .queries
@@ -1798,7 +1831,7 @@ impl PhysicsWorld {
                             &self.bodies,
                             &self.colliders,
                             &pose,
-                            proposed.shape(),
+                            standing.shape(),
                             QueryFilter::default().exclude_rigid_body(h),
                         )
                         .is_none();
@@ -2703,6 +2736,17 @@ pub fn armor_normal(r: &Robot, face: usize) -> Vector<f64> {
     let a = face as f64 * std::f64::consts::FRAC_PI_2;
     let tilt = 15.0_f64.to_radians();
     q(r) * vector![a.cos() * tilt.cos(), a.sin() * tilt.cos(), tilt.sin()]
+}
+pub fn armor_coordinates_mm(r:&Robot,face:usize,point:[f64;3]) -> [i16;2] {
+    let p=q(r).inverse()*vector![point[0]-r.x,point[1]-r.y,point[2]-r.z];
+    let a=face as f64*std::f64::consts::FRAC_PI_2;
+    let (nx,ny)=(a.cos(),a.sin());let tilt=15.0_f64.to_radians();
+    let normal=vector![nx*tilt.cos(),ny*tilt.cos(),tilt.sin()];
+    let distance=r.chassis_size_m[face%2]/2.-r.armor_inset_m+r.armor_mount_offset_m;
+    let z=if face%2==1 {r.armor_side_center_z_m.unwrap_or(r.armor_center_z_m)} else {r.armor_center_z_m};
+    let offset=p-vector![nx*distance,ny*distance,z]-normal*r.armor_hit_face_offset_m;
+    [((offset.dot(&vector![-ny,nx,0.])+0.0675)*1000.).round() as i16,
+     ((offset.dot(&vector![-nx*tilt.sin(),-ny*tilt.sin(),tilt.cos()])+0.0625)*1000.).round() as i16]
 }
 pub fn face_at_point(r: &Robot, point: [f64; 3]) -> usize {
     let local = q(r).inverse() * vector![point[0] - r.x, point[1] - r.y, point[2] - r.z];

@@ -364,7 +364,7 @@ impl Engine {
         }
     }
     /// The level a robot counts as when killed (sentry counts as level 1).
-    fn xp_level(&self, i: usize) -> u32 {
+    pub(super) fn xp_level(&self, i: usize) -> u32 {
         if self.robots[i].role == "sentry" {
             1
         } else {
@@ -616,7 +616,9 @@ impl Engine {
                     1.0
                 };
                 self.robots[i].respawn_progress += rate * DT;
-                if self.robots[i].respawn_progress + 1e-8 >= self.robots[i].respawn_required {
+                if self.robots[i].respawn_progress + 1e-8 >= self.robots[i].respawn_required
+                    && (!self.strict_sentry || self.robots[i].role != "sentry"
+                        || self.sentry_ledger.get(&self.robots[i].id).map(|l| l.free_confirm).unwrap_or(false)) {
                     self.respawn_2027(i, false);
                 }
             } else if whole {
@@ -661,7 +663,7 @@ impl Engine {
         }
         self.update_rune_motor_2027();
     }
-    fn supply_heal_rate(&self, i: usize) -> f64 {
+    pub(super) fn supply_heal_rate(&self, i: usize) -> f64 {
         let r = &self.robots[i];
         let h = &self.rules["heal"];
         let base = if self.time() >= n(h, "late_start_s") && self.disengaged_2027(i) {
@@ -671,14 +673,14 @@ impl Engine {
         };
         base * self.logistics(&r.team)
     }
-    fn on_controlled_outpost(&self, i: usize) -> bool {
+    pub(super) fn on_controlled_outpost(&self, i: usize) -> bool {
         let r = &self.robots[i];
         ["red", "blue"].iter().any(|owner| {
             self.fully_controls(&format!("{owner}_outpost"), &r.team)
                 && self.contacted_zone_2027(i, "outpost", Some(owner))
         })
     }
-    fn disengaged_2027(&self, i: usize) -> bool {
+    pub(super) fn disengaged_2027(&self, i: usize) -> bool {
         let r = &self.robots[i];
         r.alive
             && self.time() - r.last_shot_time >= 6.0 - 1e-8
@@ -876,6 +878,13 @@ impl Engine {
         })
     }
     fn rulebook_rpc_2027(&mut self, i: usize, rpc: &Value) {
+        if self.strict_sentry && self.robots[i].role == "sentry" {
+            self.sentry_command(i, rpc);
+        } else {
+            self.legacy_rulebook_rpc_2027(i, rpc);
+        }
+    }
+    pub(super) fn legacy_rulebook_rpc_2027(&mut self, i: usize, rpc: &Value) {
         let now = self.time();
         let r = self.robots[i].clone();
         if r.red_card {
@@ -927,7 +936,8 @@ impl Engine {
                         "local_batch"
                     },
                 ) as u32;
-                let amount = order["amount"].as_u64().unwrap_or(batch as u64).min(1000) as u32;
+                let cap = if self.strict_sentry && r.role=="sentry" {2047} else {1000};
+                let amount = order["amount"].as_u64().unwrap_or(batch as u64).min(cap) as u32;
                 let cost = if batch > 0 {
                     amount as f64 / batch as f64
                         * n(&v, if remote { "remote_cost" } else { "local_cost" })
@@ -1375,7 +1385,9 @@ impl Engine {
             let actor = &mut self.robots[i];
             actor.attack_multiplier = attack;
             actor.defense_buff = defense;
-            actor.vulnerability = vuln;
+            actor.vulnerability = vuln.max(if self.strict_sentry {
+                self.radar_effects["vulnerability"][&r.id].as_f64().unwrap_or(0.).clamp(0.,0.4)
+            } else {0.});
             actor.cooling_multiplier = cooling;
             actor.cooling_bonus = extra;
             actor.invulnerable = inv;
@@ -1669,7 +1681,7 @@ impl Engine {
             }
             let angle = direction[1].atan2(direction[0]);
             let pitch = direction[2].atan2(direction[0].hypot(direction[1]));
-            self.event("shot", json!({"robot":r.id,"team":r.team,"role":r.role,"x":origin[0],"y":origin[1],"z":origin[2],"muzzle_origin":true,"angle":angle,"pitch":pitch}));
+            self.event("shot", json!({"robot":r.id,"team":r.team,"role":r.role,"projectile_id":self.next_projectile-1,"source":r.id,"x":origin[0],"y":origin[1],"z":origin[2],"muzzle_origin":true,"angle":angle,"pitch":pitch}));
         }
     }
     fn dispersed_shot_direction_2027(&mut self, direction: [f64; 3], heavy: bool) -> [f64; 3] {
@@ -1694,10 +1706,13 @@ impl Engine {
         })
     }
     pub(super) fn robot_hit_2027(&mut self, index: usize, p: &Projectile, x: f64, y: f64, z: f64) {
-        let target = &self.robots[index];
+        let target = self.robots[index].clone();
+        // Privileged diagnostic evidence; the sentry gateway only publishes
+        // explicitly encoded referee packets, never these attribution fields.
+        self.event("projectile_contact", json!({"projectile_id":p.id,"source":p.source,
+            "robot":target.id,"team":p.team,"target_team":target.team,"x":x,"y":y,"z":z}));
         if !target.alive
             || target.role == "aerial"
-            || self.robot_invulnerable_2027(index)
             || p.damage <= 0.0
         {
             return;
@@ -1706,8 +1721,9 @@ impl Engine {
         if heavy && !self.heavy_42_enabled(&p.team) {
             return;
         }
-        let face = physics::face_at_point(target, [x, y, z]);
-        let normal = physics::armor_normal(target, face);
+        let face = physics::face_at_point(&target, [x, y, z]);
+        let normal = physics::armor_normal(&target, face);
+        let hit_xy = physics::armor_coordinates_mm(&target,face,[x,y,z]);
         let velocity = self
             .physics
             .as_ref()
@@ -1740,7 +1756,14 @@ impl Engine {
         if self.time() - target.armor_hit_times[face] < interval - 1e-8 {
             return;
         }
-        let amount = (p.damage * (1.0 - target.defense_buff + target.vulnerability))
+        if self.strict_sentry {
+            self.event("armor_hit",json!({"robot":target.id,"team":p.team,"target_team":target.team,"projectile_id":p.id,"source":p.source,"armor_id":face,"armor_xy_mm":hit_xy}));
+            // Local armor detection precedes the server's immunity/damage verdict.
+            self.robots[index].armor_hit_times[face]=self.time();
+        }
+        if self.robot_invulnerable_2027(index) {return;}
+        let armor = self.adaptive_armor_multiplier(&target.team,hit_xy,0.135*0.125);
+        let amount = (p.damage * armor * (1.0 - target.defense_buff + target.vulnerability))
             .round()
             .max(0.0)
             .min(target.hp);
@@ -1765,7 +1788,7 @@ impl Engine {
         );
         self.event(
             "hit",
-            json!({"robot":self.robots[index].id,"team":p.team,"x":x,"y":y,"z":z,"damage":amount}),
+            json!({"robot":self.robots[index].id,"team":p.team,"projectile_id":p.id,"source":p.source,"x":x,"y":y,"z":z,"damage":amount,"armor_xy_mm":hit_xy}),
         );
         if self.robots[index].hp <= 0.0 {
             let lambda = self.logistics(&self.robots[index].team.clone());
@@ -1906,7 +1929,13 @@ impl Engine {
         if self.time() - b.armor_hit_times[plate.face] < interval - 1e-8 {
             return;
         }
-        let damage = (p.damage * (1.0 - self.structure_defense(team, outpost)))
+        let (u,v,_) = structures::coordinates(&plate,[x,y,z]);
+        let hit_xy = [((u+plate.width/2.)*1000.).round() as i16,((v+plate.height/2.)*1000.).round() as i16];
+        if self.strict_sentry {
+            self.event("armor_hit",json!({"team":p.team,"target_team":team,"structure":if outpost {"outpost"} else {"base"},"armor_id":plate.face,"armor_xy_mm":hit_xy}));
+        }
+        let armor = self.adaptive_armor_multiplier(team,hit_xy,plate.width*plate.height);
+        let damage = (p.damage * armor * (1.0 - self.structure_defense(team, outpost)))
             .round()
             .max(0.0);
         let source = self.robots.iter().position(|r| r.id == p.source);
@@ -1939,7 +1968,7 @@ impl Engine {
         );
         self.event(
             if outpost { "outpost_hit" } else { "base_hit" },
-            json!({"team":p.team,"target_team":team,"x":x,"y":y,"z":z,"damage":actual}),
+            json!({"team":p.team,"target_team":team,"x":x,"y":y,"z":z,"damage":actual,"armor_xy_mm":hit_xy}),
         );
     }
     /// Applies structure damage and its consequences; returns the HP actually removed.

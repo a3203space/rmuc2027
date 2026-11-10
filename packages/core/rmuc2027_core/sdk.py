@@ -170,7 +170,7 @@ def action(move=(0.0, 0.0), aim=None, fire=False, skill=False, pitch=0.04, upgra
     if skill or upgrade is not None:
         raise ValueError("Unsupported action; use the documented game operations")
     allowed = {"profile", "power", "altitude", "buy_ammo", "remote_heal", "revive", "deploy", "support", "pick_unit", "assembly", "assembly_insert", "assembly_translate", "assembly_rotate", "assembly_confirm", "rune_start", "heading", "crouch", "rescue", "yaw_rate", "brake", "leg_height", "jump", "lean", "arm", "arm2", "pickup_arm", "transform", "messages",
-               "install_launcher", "assembly_core", "assembly_lift", "assembly_flip", "assembly_rotate2", "posture", "posture_enhanced", "drones"}
+               "install_launcher", "assembly_core", "assembly_lift", "assembly_flip", "assembly_rotate2", "posture", "posture_enhanced", "drones", "sentry_cmd"}
     if not set(operations) <= allowed:
         raise ValueError("Unknown action operation")
     # A move from `navigate` that backs a chassis off the road bumps keeps its heading.
@@ -1112,8 +1112,10 @@ def _stationary_teammate_detour(robot, point, fields, observation, state):
     return result
 
 
-def navigate_action(robot, point, observation, state):
+def navigate_action(robot, point, observation, state, *, locomotion_intent=None):
     """Opt-in sampled local avoidance using only the controller's observation."""
+    if observation.get('navigation_mode') == 'adaptive' or locomotion_intent is not None:
+        return _adaptive_navigation(robot, point, observation, state, locomotion_intent)
     if observation['time']<state.get('time',-1):state.clear()
     design=_design(robot)
     armed_parallel=(robot.get('alive',True) and design.get('chassis_type')=='wheel_legged'
@@ -1170,7 +1172,8 @@ def predictive_navigation(robot, fields, observation, state):
     if magnitude < .001:
         return fields
     arena = observation['arena']
-    graph = _prepare_chapter4(arena, robot['team'], robot.get('transform_progress', 0) >= .99)
+    graph = _prepare_chapter4(arena, robot['team'], robot.get('transform_progress', 0) >= .99,
+                             robot.get('radius', .28)+.04)
     clear, inside = graph[2:]
     start = (robot['x'], robot['y'])
     near = inside(start, True)
@@ -1201,12 +1204,18 @@ def predictive_navigation(robot, fields, observation, state):
                 gain = min(1., decel*.05/max(length, 1e-9))
                 velocity = (velocity[0]+dv[0]*gain, velocity[1]+dv[1]*gain)
                 nxt = (pos[0]+velocity[0]*.05, pos[1]+velocity[1]*.05)
-                if not (radius < nxt[0] < arena['width']-radius and radius < nxt[1] < arena['height']-radius) or not clear(pos, nxt, near, True):
+                if not (radius < nxt[0] < arena['width']-radius and radius < nxt[1] < arena['height']-radius) or not clear(pos, nxt, near, observation.get('navigation_terrain_strict',True)):
                     valid = False
                     break
+                # A parked peer may already lie inside the inflated safety
+                # margin at spawn. Permit separation, never closer approach;
+                # otherwise every escape command is rejected forever.
                 if any(math.hypot(nxt[0]-r['x']-r.get('vx',0)*t,
                                   nxt[1]-r['y']-r.get('vy',0)*t)
-                       < radius+r.get('radius',.28)+.08+.05*t for r in obstacles):
+                       < min(radius+r.get('radius',.28)+.08+.05*t,
+                             math.hypot(start[0]-r['x'],start[1]-r['y'])
+                             if math.hypot(r.get('vx',0.),r.get('vy',0.))<.15 else float('inf'))-1e-6
+                       for r in obstacles):
                     valid = False
                     break
                 pos = nxt
@@ -1227,20 +1236,28 @@ def predictive_navigation(robot, fields, observation, state):
 
 
 def _complete_route(graph, start, goal):
-    """Recover the whole Dijkstra route, then remove only visible intermediate vertices."""
+    """Recover the route, allowing the reachable side of a near-obstacle goal."""
     nodes, edges, clear, inside = graph
     near = inside(start, True)
-    if clear(start, goal, near, True):
+    near_goal = {k:max(0., gap or 0.) for k,gap in inside(goal, True).items()}
+    def guards(a,b):
+        ignored = dict(near) if a == start else {}
+        if b == goal:
+            for k,gap in near_goal.items():
+                if k not in ignored: ignored[k]=gap
+                elif ignored[k] is not None: ignored[k]=min(ignored[k],gap)
+        return ignored
+    if clear(start, goal, guards(start,goal), True):
         return [goal]
-    costs = _route_costs(graph, goal, set(), True)
-    index = _route(graph, start, goal, near, set(), True)
+    costs = _route_costs(graph, goal, near_goal, True)
+    index = _route(graph, start, goal, near, near_goal, True)
     if index is None:
         return []
     path, visited = [], set()
     while index not in visited:
         visited.add(index)
         path.append(nodes[index])
-        if clear(nodes[index], goal, (), True):
+        if clear(nodes[index], goal, near_goal, True):
             path.append(goal)
             break
         choices = [(distance_ + costs.get(j, float('inf')), j)
@@ -1252,7 +1269,7 @@ def _complete_route(graph, start, goal):
         return []
     result, anchor = [], start
     while path:
-        visible = [i for i, point in enumerate(path) if clear(anchor, point, near if anchor == start else (), True)]
+        visible = [i for i, point in enumerate(path) if clear(anchor, point, guards(anchor,point), True)]
         if not visible:
             return []
         i = max(visible)
@@ -1263,13 +1280,25 @@ def _complete_route(graph, start, goal):
 
 
 def _trajectory_move(robot, goal, obs, state):
-    graph = _prepare_chapter4(obs['arena'], robot['team'], robot.get('transform_progress',0) >= .99)
+    graph = _prepare_chapter4(obs['arena'], robot['team'], robot.get('transform_progress',0) >= .99,
+                             robot.get('radius', .28)+.04)
     start, goal = (robot['x'], robot['y']), tuple(goal)
+    def segment_clear(point):
+        ignored = graph[3](start,True)
+        if point == goal:
+            for k,gap in graph[3](goal,True).items():
+                gap=max(0.,gap or 0.)
+                if k not in ignored:ignored[k]=gap
+                elif ignored[k] is not None:ignored[k]=min(ignored[k],gap)
+        return graph[2](start,point,ignored,False)
     path = state.get('trajectory', [])
-    if state.get('trajectory_goal') != list(goal) or not path or not graph[2](start, path[0], graph[3](start,True),True):
+    # Keep a committed segment through small footprint-height changes near a
+    # corner. Replanning it every tick can alternate the previous/next vertex.
+    # The full route and predictive motion guard still check both wheel edges.
+    if state.get('trajectory_goal') != list(goal) or not path or not segment_clear(path[0]):
         path = _complete_route(graph, start, goal)
         state['trajectory_goal'] = list(goal)
-    while len(path)>1 and math.dist(start,path[0]) < .2 and graph[2](start,path[1],graph[3](start,True),True):
+    while len(path)>1 and math.dist(start,path[0]) < .2 and segment_clear(path[1]):
         path = path[1:]
     state['trajectory'] = path
     if not path:
@@ -1291,11 +1320,348 @@ def _trajectory_move(robot, goal, obs, state):
         arrival = min(reference, math.sqrt(decel*.2/max(.05,math.sin(turn/2))))
     limit = max(0., math.sqrt((decel*period)**2+arrival**2+2*decel*max(0.,gap-.1))-decel*period)
     move = _square_to_bumps(robot,target,obs['arena'])
+    if math.isclose(math.hypot(*move),.02,abs_tol=1e-8) and gap>.2:
+        return {'move':move,'brake':True}
+    # Intermediate corners need centimetre-level tracking: the general helper's
+    # 5 cm dead zone can stop short of the next segment's visibility boundary.
+    if len(path)>1 and gap<.2 and gap>1e-6:
+        crawl=max(.12,min(.4,gap*2.))
+        move=((target[0]-start[0])/gap*crawl/reference,
+              (target[1]-start[1])/gap*crawl/reference)
     # Keep terrain-specific heading semantics and avoid changing a deliberate alignment.
     if isinstance(move,_HeldMove):
         return {'move': move, 'heading':move.heading}
     scale = min(1.,limit/max(reference*math.hypot(*move),1e-9))
-    return {'move': (move[0]*scale,move[1]*scale)}
+    climbing=any(t['kind']=='ramp' and t.get('slope_deg',0)>=10
+                 and point_in_polygon(robot['x'],robot['y'],t['polygon']) for t in obs['arena'].get('terrain',[]))
+    if climbing and len(path)>1 and math.hypot(*move)>.001:
+        # A proportional slowdown halfway up a steep entrance can request less
+        # force than gravity. Carry the ramp crossing through its next vertex.
+        norm=math.hypot(*move)
+        scale=max(scale,.6/norm)
+    on_bumps=any(t['kind']=='bumps' and t['x']<=start[0]<=t['x']+t['w']
+                 and t['y']<=start[1]<=t['y']+t['h'] for t in obs['arena'].get('terrain',[]))
+    if design.get('leg_type')=='serial' and any(move) and not on_bumps:
+        scale=min(scale,1.5/max(reference*math.hypot(*move),1e-9))
+    fields={'move': (move[0]*scale,move[1]*scale)}
+    if climbing:fields['power']=120
+    if design.get('arm_count',0)>0 and on_bumps:
+        fields['power']=180
+    return fields
+
+
+def locomotion_context(robot, observation, state):
+    """Public geometry and feedback shared by navigation and portable actors.
+
+    Coordinates use the robot's actual frame, including rotated tunnel roofs.
+    No referee state or backend-specific data is read here.
+    """
+    d = _design(robot)
+    p = (robot['x'], robot['y'])
+    radius = robot.get('radius', .28)
+    roofs = []
+    for wall in observation['arena'].get('obstacles', []):
+        if 'tunnel_roof' not in wall.get('id', ''):
+            continue
+        angle = wall.get('rotation', 0.)
+        axis = (math.cos(angle), math.sin(angle))
+        center = (wall['x']+wall['w']/2, wall['y']+wall['h']/2)
+        along = (p[0]-center[0])*axis[0]+(p[1]-center[1])*axis[1]
+        across = -(p[0]-center[0])*axis[1]+(p[1]-center[1])*axis[0]
+        gap = math.hypot(max(0., abs(along)-wall['w']/2-radius),
+                         max(0., abs(across)-wall['h']/2-radius))
+        roofs.append(dict(wall=wall, axis=axis, center=center, along=along,
+                          across=across, gap=gap))
+    roof = min(roofs, key=lambda r:r['gap']) if roofs else None
+    under = [r for r in roofs if r['gap'] <= .04]
+    standing_top = robot.get('z', 0.)+d.get('muzzle_z_m', .4)+.06
+    can_unfold = not any(standing_top+.025 > r['wall'].get('bottom', 0.) for r in under)
+    now = observation.get('time', 0.)
+    cooldown = max(0., state.get('last_jump', -100.)+d.get('jump_cooldown_s', .9)-now)
+    stable = (robot.get('grounded', True) and robot.get('upright', 1.) >= .95
+              and abs(robot.get('vz', 0.)) < .2 and not robot.get('tipped', False))
+    return dict(roof=roof, can_unfold=can_unfold, cooldown=cooldown, stable=stable,
+                can_jump=bool(d.get('capabilities', {}).get('jump')),
+                can_fold=bool(d.get('transform_allowed')),
+                legged=d.get('chassis_type') == 'wheel_legged')
+
+
+def _adaptive_navigation(robot, goal, obs, state, intent):
+    """Capability-aware trajectory tracking with policy-owned skill decisions.
+
+    Scripted users get the same controller with automatic skill requests. Policy
+    users choose those requests; guards may stop motion but never invent a jump.
+    Every state belongs to one robot and is serializable by the policy worker.
+    """
+    now = obs['time']
+    if not robot.get('alive', True):
+        state.clear()
+        return {'move': (0., 0.)}
+    if now < state.get('time', -1):
+        state.clear()
+    state['time'] = now
+    d = _design(robot)
+    ctx = locomotion_context(robot, obs, state)
+    p = (robot['x'], robot['y'])
+    speed = math.hypot(robot.get('vx', 0.), robot.get('vy', 0.))
+    radius = robot.get('radius', .28)
+    period = max(.05, obs.get('policy_dt', .1))
+    reference = max(.1, robot.get('speed_reference_mps', d.get('speed_reference_mps', 3.)))
+    decel = max(.3, min(d.get('brake_force_max_n', 100.)/max(1., robot.get('mass_kg', d.get('mass_kg', 25.))),
+                         d.get('tire_friction', .5)*9.81)*.6)
+    if ctx['stable']:
+        state.setdefault('stable_since', now)
+    else:
+        state.pop('stable_since', None)
+    if state.get('goal') != list(goal):
+        previous_goal=state.get('goal')
+        def beyond_central_approach(target):
+            if target is None:return False
+            x,y=target
+            if robot['team']=='blue':x,y=obs['arena']['width']-x,obs['arena']['height']-y
+            return x>10.5 and 3<y<12
+        same_passage_destination=(beyond_central_approach(previous_goal)
+                                  and beyond_central_approach(goal))
+        state['goal'] = list(goal)
+        state.pop('trajectory', None)
+        # Complete an occupied passage or airborne manoeuvre before replanning.
+        if ctx['can_unfold'] and robot.get('grounded', True):
+            # Goal jitter beyond the same central approach must not turn a
+            # safely exiting robot back through the passage it just crossed.
+            if not same_passage_destination:
+                state.pop('passage', None)
+                state.pop('passed_passages', None)
+            route=state.get('jump_route')
+            same_crossing=(route is not None and (goal[0]-route['end'])*route['direction']>0
+                and abs(goal[1]-route['lane'])<4.5)
+            # A small tactical target change beyond the same step does not
+            # invalidate a staged run-up. A target on this side still cancels it.
+            if not same_crossing:state.pop('jump_route', None)
+    fields = {'move': (0., 0.)}
+    state['rejected'] = []
+    state['waiting_peer_active'] = False
+    phase = 'route'
+    passage = state.get('passage')
+    flip = robot['team'] == 'blue'
+    local_x = obs['arena']['width']-p[0] if flip else p[0]
+    local_goal = (obs['arena']['width']-goal[0], obs['arena']['height']-goal[1]) if flip else goal
+    central = 10.5 < local_goal[0] < 17.5 and 3 < local_goal[1] < 12
+    if ctx['can_fold'] and passage is None:
+        roof = ctx['roof']
+        # The road tunnel is the validated central approach. Other passages are
+        # selected when the intended segment intersects their physical opening.
+        candidates = [w for w in obs['arena'].get('obstacles', [])
+                      if w.get('id') == robot['team']+'_road_tunnel_roof']
+        if central and local_x < 10. and candidates:
+            roof = locomotion_context({**robot, 'x':candidates[0]['x']+candidates[0]['w']/2,
+                                       'y':candidates[0]['y']+candidates[0]['h']/2}, obs, state)['roof']
+        if roof and roof['wall']['id'] not in state.get('passed_passages', []):
+            wall, axis, center = roof['wall'], roof['axis'], roof['center']
+            a = (p[0]-center[0])*axis[0]+(p[1]-center[1])*axis[1]
+            b = (goal[0]-center[0])*axis[0]+(goal[1]-center[1])*axis[1]
+            t = -a/(b-a) if abs(b-a)>1e-8 else -1.
+            crossing = (p[0]+t*(goal[0]-p[0]), p[1]+t*(goal[1]-p[1]))
+            lateral = abs(-(crossing[0]-center[0])*axis[1]+(crossing[1]-center[1])*axis[0])
+            if (central and local_x < 10. and wall['id'] == robot['team']+'_road_tunnel_roof'
+                    or 0 <= t <= 1 and lateral < wall['h']/2-radius):
+                sign = 1. if a < 0. else -1.
+                axis = [axis[0]*sign, axis[1]*sign]
+                passage = state['passage'] = dict(center=center, axis=axis,
+                    half=wall['w']/2, width=wall['h'], since=now, id=wall['id'])
+    auto_fold = not ctx['can_unfold']
+    want_jump = False
+    if passage:
+        c, axis = passage['center'], passage['axis']
+        along = (p[0]-c[0])*axis[0]+(p[1]-c[1])*axis[1]
+        lateral = -(p[0]-c[0])*axis[1]+(p[1]-c[1])*axis[0]
+        clearance = passage['half']+radius+.12
+        heading = math.atan2(axis[1], axis[0])
+        error = abs((heading-robot.get('heading', heading)+math.pi)%math.tau-math.pi)
+        approach = (c[0]-axis[0]*(clearance+.4), c[1]-axis[1]*(clearance+.4))
+        queue_peer = next((r for r in obs.get('robots',[]) if r.get('id')!=robot.get('id')
+            and r.get('team')==robot.get('team') and r.get('slot',99)<robot.get('slot',0)
+            and r.get('role')!='aerial' and 'x' in r and 'y' in r
+            and math.dist((r['x'],r['y']),approach)<radius+r.get('radius',.28)+.3),None)
+        auto_fold = (abs(lateral)<passage['width']/2+.3 and
+                     along > -clearance-max(.5, speed*(d.get('transform_time_s', .8)+period)))
+        if along > clearance and ctx['can_unfold']:
+            state.setdefault('passed_passages', []).append(passage['id'])
+            state.pop('passage', None)
+            passage = None
+            phase = 'exit'
+            auto_fold = False
+        elif queue_peer is not None and along < -clearance:
+            # Give the lower-numbered peer room to align at a shared entrance.
+            # This changes only the local staging waypoint, never the policy goal.
+            holding=(approach[0]-axis[0]*1.2,approach[1]-axis[1]*1.2)
+            fields=_trajectory_move(robot,holding,obs,state)
+            if math.dist(p,holding)<.18:fields.update(move=(0.,0.),brake=True)
+            state['wait_for_peer']=queue_peer['id']
+            state['waiting_peer_active']=True
+            passage['since']=now
+            phase='approach'
+        elif now-passage['since'] > 25.:
+            state.pop('passage', None)
+            fields = {'move': (0., 0.), 'brake': True}
+            state['rejected'].append('passage_timeout')
+            phase = 'recover'
+        elif (along < -clearance-.45 or
+              abs(lateral)>.12 and (along < -clearance-.3 or abs(lateral)>passage['width']/2-radius)):
+            phase = 'approach'
+            fields = _trajectory_move(robot, approach, obs, state)
+            fields = _stationary_teammate_detour(robot, approach, fields, obs, state)
+        else:
+            phase = 'cross' if along >= -clearance else 'fold'
+            fields['heading'] = heading
+            folded = robot.get('transform_progress', 0.) >= .99
+            if not folded or error > .12:
+                fields.update(move=(0., 0.), brake=True)
+            else:
+                # Preserve sufficient tyre force on the 15-degree entrance;
+                # the physical drive already halves speed while folded.
+                desired = reference*.6
+                fields['power'] = 120
+                correction = max(-.3, min(.3, -lateral*1.8))
+                fields['move'] = (axis[0]*desired/reference-axis[1]*correction,
+                                  axis[1]*desired/reference+axis[0]*correction)
+    route = state.get('jump_route')
+    if not passage and phase == 'route' and ctx['can_jump'] and d.get('capabilities', {}).get('step_climb_m', 0)>0:
+        if central and local_x < 10.3 and now >= state.get('retry_after', -1.):
+            terrain = {t.get('id'):t for t in obs['arena'].get('terrain', [])}
+            band = terrain.get('central_'+robot['team']+'_band')
+            rim = terrain.get('central_'+robot['team']+'_rim')
+            if band and rim and route is None:
+                direction = -1. if flip else 1.
+                edge = band['x']+band['w'] if flip else band['x']
+                lane = band['y']+band['h']/2
+                route = state['jump_route'] = dict(edge=edge, lane=lane, direction=direction,
+                    end=(rim['x']-radius-.25 if flip else rim['x']+rim['w']+radius+.25),
+                    second_edge=(rim['x']+rim['w'] if flip else rim['x']),stage=0,since=now, staged=False)
+        if route:
+            sign, lane = route['direction'], route['lane']
+            if (d.get('arm_count',0)>0 and route.get('stage',0)==0 and ctx['stable']
+                    and now-state.get('last_jump',-100.)>.7 and state.get('last_jump',-100.)>route['since']
+                    and (p[0]-route['edge'])*sign>.35 and (p[0]-route['second_edge'])*sign<.15):
+                route.update(edge=route['second_edge'],stage=1,staged=False,since=now)
+                route.pop('retreat',None)
+            heading = math.pi if sign<0 else 0.
+            along = (p[0]-route['edge'])*sign
+            error = abs((heading-robot.get('heading', heading)+math.pi)%math.tau-math.pi)
+            phase = 'runup'
+            fields.update(heading=heading, leg_height=d.get('leg_min_m', .12))
+            runup_length = .65 if route.get('stage')==1 else 1.2
+            staging = (route['edge']-sign*runup_length, lane)
+            if (not route.get('staged') and math.dist(p,staging)<.2 and speed<.25):
+                route.update(staged=True,since=now)
+            if (state.get('last_jump', -100.)>route['since'] and now-state['last_jump']>2.
+                    and (p[0]-route['end'])*sign<-.15):
+                route['retreat']=True
+            if (p[0]-route['end'])*sign >= -.15 and ctx['stable']:
+                phase = 'settle'
+                fields.update(move=(0., 0.), brake=True)
+                if now-state.get('stable_since', now) >= .3:
+                    state.pop('jump_route', None)
+                    phase = 'route'
+            elif route.get('retreat'):
+                phase='recover'
+                fields.update(move=(-sign*.35,0.),brake=False)
+                if along < -runup_length:
+                    route.update(retreat=False,staged=False,since=now)
+            elif not route.get('staged'):
+                phase='approach'
+                fields=_trajectory_move(robot,staging,obs,state)
+                if math.dist(p,staging)<.2:fields.update(move=(0.,0.),brake=True)
+            elif not robot.get('grounded', True):
+                phase = 'airborne'
+                fields.update(move=(0., 0.), brake=False)
+            elif now-state.get('last_jump', -100.) < d.get('jump_duration_s', .16)+d.get('jump_tuck_s', .35)+.1:
+                phase = 'launch'
+                fields.update(move=(0., 0.), brake=False)
+            elif abs(p[1]-lane) > .15 or error > .12:
+                fields = _trajectory_move(robot, staging, obs, state)
+                if math.dist(p, staging)<.2:
+                    if abs(p[1]-lane)>.1:
+                        gap=max(.01,math.dist(p,staging))
+                        fields.update(move=((staging[0]-p[0])*.2/(gap*reference),
+                            (staging[1]-p[1])*.2/(gap*reference)),brake=False)
+                        fields.pop('heading',None)
+                    else:fields.update(move=(0., 0.), heading=heading, brake=True)
+            else:
+                forward = sign*robot.get('vx', 0.)
+                window = max(.65,radius+max(0., forward)*(d.get('jump_duration_s', .16)+period)+.08)
+                if route.get('stage')==1:
+                    window=radius+.15+max(0.,forward)*max(0.,period-.1)
+                if d.get('leg_type')=='serial':
+                    window=radius+.25+max(0.,forward)*max(.1,period)
+                want_jump = -along <= window and along < -.05 and forward > .5
+                fields['move'] = (sign, 0.)
+                fields['power'] = 180
+                if (along >= -radius-.08 and intent is not None and not want_jump
+                        and state.get('last_jump',-100.)<=route['since']):
+                    fields.update(move=(0., 0.), brake=True)
+            if now-route['since'] > 25.:
+                state.pop('jump_route', None)
+                state['retry_after'] = now+5.
+                phase = 'recover'
+                fields.update(move=(-sign*.3, 0.), jump=0.)
+            # Establish the jump stance while aligning, before accelerating.
+            # Delaying compression until run-up creates a vertical transient
+            # precisely when the launch window is crossed.
+            if route.get('staged') or d.get('arm_count',0)>0:
+                fields.setdefault('leg_height',d.get('leg_min_m',.12))
+    if phase in ('route', 'exit'):
+        fields = _trajectory_move(robot, goal, obs, state)
+        if math.dist(p, goal)<.2:
+            fields.update(move=(0., 0.), brake=True)
+        else:
+            fields = _stationary_teammate_detour(robot, goal, fields, obs, state)
+            # The shared predictive filter owns ordinary travel only.
+            fields = predictive_navigation(robot, fields, {**obs, 'navigation_mode':'predictive','navigation_terrain_strict':False}, state)
+    if intent is None:
+        fold = auto_fold
+        jump = want_jump
+        if ctx['legged'] and (d.get('arm_count',0)>0 or d.get('leg_type')=='serial' and d.get('capabilities',{}).get('step_climb_m',0)>0):
+            fields.setdefault('leg_height',d.get('leg_min_m',.12))
+    else:
+        fold = state.get('fold_intent', robot.get('transform_progress', 0.)>.5)
+        requested_fold=fold
+        if intent['transform'] > .3:
+            requested_fold = True
+        elif intent['transform'] < -.3:
+            requested_fold = False
+        if requested_fold!=fold and ctx['can_fold']:
+            if now-state.get('fold_since',-100.)>=d.get('transform_time_s',.8):
+                fold=requested_fold
+                state['fold_since']=now
+            else:
+                state['rejected'].append('transform_dwell')
+        state['fold_intent'] = fold
+        level = intent['jump'] > .5
+        jump = level and not state.get('jump_held', False)
+        state['jump_held'] = level
+        if ctx['legged'] and 'leg_height' in intent:
+            fields['leg_height'] = d['leg_min_m']+(intent['leg_height']+1)*.5*(d['leg_max_m']-d['leg_min_m'])
+    if ctx['can_fold']:
+        if not fold and not ctx['can_unfold']:
+            fold = True
+            state['rejected'].append('ceiling')
+        fields['transform'] = fold
+    if jump:
+        ready = (ctx['can_jump'] and ctx['stable'] and ctx['cooldown']<=0
+                 and robot.get('powered', True) and ctx['can_unfold']
+                 and ('last_jump' not in state or now-state.get('stable_since', now)>=.2-1e-8))
+        if ready and phase not in ('cross', 'fold', 'settle', 'recover'):
+            fields.update(jump=1., move=(0., 0.), brake=False)
+            state['last_jump'] = now
+            phase = 'launch'
+        else:
+            state['rejected'].append('jump_unavailable')
+    fields.setdefault('jump', 0.)
+    if not robot.get('powered', True) or robot.get('tipped', False):
+        fields.update(move=(0., 0.), jump=0., brake=False)
+    state['phase'] = phase
+    state['executed_skills'] = {k:fields.get(k) for k in ('transform', 'leg_height', 'jump')}
+    return fields
 
 
 def timed_assembly_action(robot, command, observation, state):

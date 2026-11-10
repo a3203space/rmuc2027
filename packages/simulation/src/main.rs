@@ -75,13 +75,26 @@ fn main() {
                         .map_err(|e| e.to_string())?,
                     request.get("battle_settings").cloned(),
                 )?);
+                engine.as_mut().unwrap().strict_sentry = request["observation_profile"] == "sentry_referee_2027_v1";
+                if let Some(profiles) = request.get("training_capabilities").filter(|v| !v.is_null()) {
+                    engine.as_mut().unwrap().configure_training_capabilities(profiles)?;
+                }
                 // Through `Value`, like the observation itself, so keys come out sorted.
                 arena_json = serde_json::to_vec(&json!(engine.as_ref().unwrap().arena))
                     .map_err(|e| e.to_string())?;
                 return Ok(engine.as_ref().unwrap().snapshot());
             }
             let e = engine.as_mut().ok_or("engine not initialized")?;
+            if op == "step" || op == "training_step" {
+                if let Some(profiles) = request.get("training_capabilities").filter(|v| !v.is_null()) {
+                    e.configure_training_capabilities(profiles)?;
+                }
+            }
             match op {
+                "sentry_sensors" => {
+                    let (team, _) = viewer(&request)?;
+                    Ok(json!({"targets":e.sentry_sensors(team)}))
+                }
                 "training_step" => { e.advance(&request["commands"]); Ok(e.training_snapshot()) }
                 // "static":false omits the match-constant fields; the client keeps them from init.
                 "step" if request["static"] == false => {

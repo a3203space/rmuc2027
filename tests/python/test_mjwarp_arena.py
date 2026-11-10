@@ -32,12 +32,36 @@ def scene(lineups=None):
 
 @unittest.skipUnless(AVAILABLE, 'Optional MJWarp dependencies unavailable')
 class SceneTests(unittest.TestCase):
-    def test_all_eighteen_models_compile_with_real_collision_geometry(self):
+    def test_loaded_body_constraint_weights_match_mujoco_recomputation(self):
+        import mujoco
+        import numpy as np
+        from types import SimpleNamespace
+        from rmuc2027_research.rl.mjwarp.arena import ArenaPhysics,MODEL_FIELDS
+        physics=ArenaPhysics('cpu')
+        model=mujoco.MjModel.from_xml_string('<mujoco><worldbody><body name="b1" simple="false"><freejoint/><geom type="box" size=".3 .2 .1" mass="10"/></body></worldbody></mujoco>')
+        physics.runtime=SimpleNamespace(cpu_model=model)
+        physics.host_models=[{n:np.array(getattr(model,n),copy=True) for n in MODEL_FIELDS}]
+        physics.host_data=[mujoco.MjData(model)];physics.prepared_geometry=[{}];physics.body_ids={'b1':1}
+        try:
+            inertia=model.body_inertia[1].copy()
+            for mass in (20.,12.,30.):
+                body=dict(id=1,dynamic=True,mass=mass,pose=dict(pos=[0.,0.,1.],quat=[1.,0.,0.,0.]),
+                          velocity=[0.,0.,0.],angular=[0.,0.,0.],force=[0.,0.,0.],torque=[0.,0.,0.],
+                          mass_properties=dict(local_com=[0.,0.,.1],principal_inertia_local_frame=[0.,0.,0.,1.],
+                                               inv_principal_inertia_sqrt=(1/np.sqrt(inertia*mass/10)).tolist()))
+                physics.prepare(dict(bodies=[body]),[])
+                actual=model.body_invweight0[1].copy()
+                mujoco.mj_setConst(model,physics.host_data[0])
+                np.testing.assert_allclose(actual,model.body_invweight0[1],rtol=1e-12)
+        finally:
+            physics.runtime=None;physics.close()
+
+    def test_all_models_compile_with_real_collision_geometry(self):
         import mujoco
         from rmuc2027_research.rl.mjwarp.arena import ArenaPhysics
         physics = ArenaPhysics('cpu')
         designs = json.loads((ROOT/'configs/rules.json').read_text())['robot_designs']
-        self.assertEqual(len(designs), 18)
+        self.assertGreaterEqual(len(designs), 18)
         for name, design in designs.items():
             with self.subTest(model=name):
                 slot = {'heavy': 1, 'infantry': 3, 'aerial': 6, 'sentry': 7}[design['role']]

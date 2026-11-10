@@ -13,7 +13,6 @@ import time
 from rmuc2027_core.engine import Match,DT
 from rmuc2027_core import sdk
 from ..session import load_config,provenance
-from .arena import ArenaMotion
 
 
 def write_json(path,value):
@@ -27,17 +26,26 @@ def inside(robot,rectangle):
             rectangle['y']<=robot['y']<=rectangle['y']+rectangle['h'])
 
 
-def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
+def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0',navigation_mode='legacy'):
     design=sdk.DESIGNS[str(model)];slot=7 if design['role']=='sentry' else 1 if design['role']=='heavy' else 3
-    ability='jump' if design.get('capabilities',{}).get('jump') else 'tunnel' if design.get('capabilities',{}).get('tunnel') else 'bumps'
+    ability='jump' if design.get('capabilities',{}).get('jump') and design.get('capabilities',{}).get('step_climb_m',0)>0 else 'tunnel' if design.get('capabilities',{}).get('tunnel') else 'bumps'
     lineups={t:[dict(slot=s,model=model if s==slot else m) for s,m in [(1,2711),(3,2731),(4,2732),(6,2761),(7,2771)]] for t in ('red','blue')}
     # Nine nearby endpoints vary final approach without changing map geometry.
     dy=((seed%3)-1)*.1;dx=(((seed//3)%3)-1)*.1
     goals={'red':(12.+dx,7.5+dy),'blue':(16.-dx,7.5-dy)}
     states={t:{} for t in lineups};metrics={t:dict(reached_at=None,settled_at=None,settled_since=None,stable_hold_at=None,hold_complete=False,ability_enter=None,ability_exit=None,
-            folded=False,jump_commands=0,tipped=False,success=False) for t in lineups}
+            folded=False,jump_commands=0,tipped=False,success=False,path_m=0.,fold_reversals=0,stalled_seconds=0.) for t in lineups}
+    previous={};last_transform={}
     commands={};interval=round(1/(control_hz*DT));started=time.perf_counter()
-    adapter=ArenaMotion(device) if backend=='warp_kinematic' else None
+    adapter=None
+    if backend=='warp_kinematic':
+        from .arena import ArenaMotion
+        adapter=ArenaMotion(device)
+    if backend=='mjwarp':
+        from ..mjwarp.arena import ArenaPhysics
+        adapter=ArenaPhysics(device)
+    elif backend not in ('rapier','warp_kinematic'):
+        raise ValueError('Unknown calibration backend')
     with Match(seed=seed,lineups=lineups,physics_adapter=adapter,battle_settings={'drones_enabled':False,'timed_assembly':True}) as match:
         arena=match.snapshot()['arena']
         roofs={t:next(w for w in arena['obstacles'] if w['id']==t+'_road_tunnel_roof') for t in lineups}
@@ -48,6 +56,12 @@ def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
                 controlled={t:next(r for r in frame['robots'] if r['team']==t and r['slot']==slot) for t in lineups}
                 for team,r in controlled.items():
                     m=metrics[team];m['tipped']|=bool(r.get('tipped'));m['folded']|=r.get('transform_progress',0)>=.99
+                    if team in previous:
+                        distance=math.dist(previous[team],(r['x'],r['y']))
+                        m['path_m']+=distance
+                        move=commands.get(team,{}).get(str(slot),{}).get('move',(0.,0.))
+                        if distance<.001 and math.hypot(*move)>.2:m['stalled_seconds']+=DT
+                    previous[team]=(r['x'],r['y'])
                     if ability=='jump':
                         if m['ability_enter'] is None and m['jump_commands'] and not r.get('grounded',True):m['ability_enter']=frame['time']
                         x=r['x'] if team=='red' else 28-r['x']
@@ -72,15 +86,19 @@ def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
                     if m['hold_complete'] and m['stable_hold_at'] is None:m['stable_hold_at']=frame['time']
                 if tick%2==0:
                     stream.write(json.dumps(dict(time=frame['time'],robots=[dict(
-                        {k:r.get(k) for k in ('id','x','y','z','vx','vy','vz','grounded','transform_progress','upright','tipped')},
+                        {k:r.get(k) for k in ('id','x','y','z','vx','vy','vz','heading','quaternion','angular_velocity','legs','grounded','transform_progress','upright','tipped')},
                         public_ground_z=sdk.terrain_height(arena,r['x'],r['y'])) for r in controlled.values()],state=states,held_commands=commands),allow_nan=False)+'\n')
                 if all(m['hold_complete'] for m in metrics.values()) or tick==round(horizon/DT):break
                 if tick%interval==0:
                     commands={}
                     for team in lineups:
-                        obs=match.observation(team,[slot]);obs['policy_dt']=1/control_hz
+                        obs=match.observation(team,[slot]);obs.update(policy_dt=1/control_hz,navigation_mode=navigation_mode)
                         robot=next(r for r in obs['robots'] if r['slot']==slot)
                         fields=sdk.navigate_action(robot,goals[team],obs,states[team])
+                        if 'transform' in fields:
+                            value=fields['transform']
+                            if team in last_transform and last_transform[team]!=value:metrics[team]['fold_reversals']+=1
+                            last_transform[team]=value
                         metrics[team]['jump_commands']+=int(fields.get('jump',0)>0)
                         commands[team]={str(slot):sdk.action(**fields)}
                 frame=match.step(commands)
@@ -92,22 +110,23 @@ def trial(model,seed,backend,control_hz,horizon,output,device='cuda:0'):
             m['final']['public_ground_z']=sdk.terrain_height(arena,r['x'],r['y'])
             m['state']=states[team]
             m['ability_seconds']=None if m['ability_enter'] is None or m['ability_exit'] is None else m['ability_exit']-m['ability_enter']
-    return dict(model=model,seed=seed,backend=backend,control_hz=control_hz,horizon_seconds=horizon,simulation_seconds=frame['time'],
+    return dict(model=model,seed=seed,backend=backend,navigation_mode=navigation_mode,control_hz=control_hz,horizon_seconds=horizon,simulation_seconds=frame['time'],
                 ability=ability,goals=goals,metrics=metrics,wall_seconds=time.perf_counter()-started,trace=str(output))
 
 
 def compare(results):
     by_key=defaultdict(dict);pairs=[]
-    for row in results:by_key[(row['model'],row['seed'])][row['backend']]=row
-    for (model,seed),backends in by_key.items():
-        if set(backends)!={'rapier','warp_kinematic'}:continue
-        for team in ('red','blue'):
-            ref=backends['rapier']['metrics'][team];fast=backends['warp_kinematic']['metrics'][team]
+    for row in results:by_key[(row['model'],row['seed'],row.get('control_hz',2),row.get('navigation_mode','legacy'))][row['backend']]=row
+    for (model,seed,hz,mode),backends in by_key.items():
+        if 'rapier' not in backends:continue
+        for backend in sorted(set(backends)-{'rapier'}):
+          for team in ('red','blue'):
+            ref=backends['rapier']['metrics'][team];fast=backends[backend]['metrics'][team]
             errors={}
             for key in ('reached_at','settled_at','stable_hold_at','ability_seconds'):
                 a,b=ref[key],fast[key]
                 errors[key]=None if a is None or b is None or a<=0 else abs(b-a)/a
-            pairs.append(dict(model=model,seed=seed,team=team,reference_success=ref['success'],simplified_success=fast['success'],relative_time_errors=errors,
+            pairs.append(dict(model=model,seed=seed,team=team,backend=backend,control_hz=hz,navigation_mode=mode,reference_success=ref['success'],simplified_success=fast['success'],relative_time_errors=errors,
                               final_origin_offset_difference_m=abs((fast['final']['z']-fast['final']['public_ground_z'])-(ref['final']['z']-ref['final']['public_ground_z'])),
                               pass_gate=ref['success'] and fast['success'] and all(e is not None and e<=.2+1e-12 for e in errors.values())))
     return pairs
@@ -115,7 +134,9 @@ def compare(results):
 
 def ability_summary(comparisons):
     groups=defaultdict(list)
-    for pair in comparisons:groups[pair['model']].append(pair)
+    for pair in comparisons:
+        key=str(pair['model']) if pair.get('backend','warp_kinematic')=='warp_kinematic' else f"{pair['model']}:{pair['backend']}"
+        groups[key].append(pair)
     summary={}
     for model,pairs in groups.items():
         reference=sum(p['reference_success'] for p in pairs)/len(pairs)
@@ -130,7 +151,9 @@ def ability_summary(comparisons):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--models',type=int,nargs='+',default=[2731,2732,2773,2714,303])
+    parser.add_argument('--models',type=int,nargs='+',default=sorted(int(k) for k,d in sdk.DESIGNS.items() if d.get('seasons',{}).get('2027',{}).get('legal') and d.get('role') in ('heavy','infantry','sentry')))
+    parser.add_argument('--backends',nargs='+',choices=['rapier','warp_kinematic','mjwarp'],default=['rapier','warp_kinematic','mjwarp'])
+    parser.add_argument('--navigation-mode',choices=['legacy','predictive','adaptive'],default='adaptive')
     parser.add_argument('--seeds',type=int,nargs='+',default=list(range(10)))
     parser.add_argument('--control-hz',type=int,choices=[2,5,10],default=2)
     parser.add_argument('--horizon',type=float,default=40.)
@@ -141,17 +164,17 @@ def main():
     if any(str(m) not in sdk.DESIGNS or sdk.DESIGNS[str(m)].get('role') not in ('heavy','infantry','sentry') for m in args.models):
         parser.error('models must be existing ground heavy, infantry or sentry designs')
     args.output.mkdir(parents=True,exist_ok=False)
-    sources={b:provenance(load_config(dict(sim_backend=b,navigation_precompute=False,rl_seconds=1/args.control_hz,learning_control_hz=args.control_hz))) for b in ('rapier','warp_kinematic')}
+    sources={b:provenance(load_config(dict(sim_backend=b,navigation_mode=args.navigation_mode,navigation_precompute=False,rl_seconds=1/args.control_hz,learning_control_hz=args.control_hz))) for b in args.backends}
     write_json(args.output/'experiment.json',dict(kind='ability-calibration',ppo_included=False,control_hz=args.control_hz,sources=sources,
         driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),scope='Paired public-SDK navigation; seed and nearby goal variation; not trained-policy win-rate transfer'))
     results=[]
     for model in args.models:
         for seed in args.seeds:
-            for backend in ('rapier','warp_kinematic'):
-                result=trial(model,seed,backend,args.control_hz,args.horizon,args.output/f'{model}-{seed}-{backend}.jsonl',args.device)
+            for backend in args.backends:
+                result=trial(model,seed,backend,args.control_hz,args.horizon,args.output/f'{model}-{seed}-{backend}.jsonl',args.device,args.navigation_mode)
                 results.append(result)
                 comparisons=compare(results)
-                report=dict(completed=len(results),total=len(args.models)*len(args.seeds)*2,results=results,comparisons=comparisons,
+                report=dict(completed=len(results),total=len(args.models)*len(args.seeds)*len(args.backends),results=results,comparisons=comparisons,
                             ability_summary=ability_summary(comparisons),ppo_included=False)
                 write_json(args.output/'progress.json',report)
                 print(json.dumps(result,ensure_ascii=False),flush=True)

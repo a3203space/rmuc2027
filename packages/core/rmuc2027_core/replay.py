@@ -19,6 +19,13 @@ def verify_replay(path):
     options = {"lineups": meta["lineups"]} if meta.get("lineups") else {}
     if meta.get("battle_settings"):
         options["battle_settings"] = meta["battle_settings"]
+    if meta.get('observation_profile'):
+        options['observation_profile']=meta['observation_profile']
+    if meta.get('training_capabilities'):
+        options['training_capabilities']=meta['training_capabilities']
+    elif meta.get('training_capabilities_initial'):
+        options['training_capabilities']=meta['training_capabilities_initial']
+    if meta.get('radar_classifier') is not None:options['radar_classifier']=meta['radar_classifier']
 
     def canonical(frame):
         return {**frame, "events": [event for event in frame["events"] if event["type"] != "policy_error"]}
