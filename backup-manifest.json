@@ -4,28 +4,28 @@
   "source_files": 1469,
   "source_base": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
   "checkpoint": {
-    "sha256": "de343ced9510dca4bcdcd2cb78b65e27eaaba4ac8d1607b9297245696c161f8c",
+    "sha256": "4d78cfc03597c91a8a906a357ad6a25a45b4b7c65838f5e5ca4ceef925df7099",
     "files": {
-      "actor.json": "65a670a04de7861bd0424cfb13cc8bf7b0fbc978f6eb3c688d06e8380d4e349c",
-      "coordinator-state.json": "39c8f43baaa4d41724e1e96dc04e5668361519bd1684d3c656b0884688460a9e",
+      "actor.json": "00501abab82d3c838e0806c10f49c47d486dc2cd5916e79793bfe3805f29e33d",
+      "coordinator-state.json": "2588ea3b0a3482e27a7b7f3d473694eba694e5846b2dfbbddbd1929dd89ee64d",
       "experiment.json": "42dee4fc60b53a6d909e0ae22c7969347705d8e91d85e7f5674ad5f4ed782b97",
-      "model.zip": "113f186896a8286e74628ff4231aea02e96019ac247b49b0d7752702a15c18b0",
-      "resume-state.pt": "97f1c66a75a5bd4b0b845ce9de82ae4e78d02361e7b4a8600c17b8635d7c6933",
-      "samplers.json": "7c5d64bf3f0254777eda9bfcac53afe8535643a0573076f7c0b3ca8d502670fc"
+      "model.zip": "7d5d35f8937f6448062e785cfb6c31a357224884fc4642c9fb1843eec6d03c52",
+      "resume-state.pt": "3ac2609714b9da51e288de63c98617ce90c7338e361231210613b45d2e1b2e6d",
+      "samplers.json": "2a20ab69efbf37ac53e99cdf3f91948c8f3ea25f79a2f095b2a1e0b978effc53"
     },
-    "samples": 18758,
-    "update_id": 212,
-    "directory": "main/checkpoints/update-000212",
-    "path": "checkpoints/de343ced9510dca4bcdcd2cb78b65e27eaaba4ac8d1607b9297245696c161f8c",
+    "samples": 20742,
+    "update_id": 243,
+    "directory": "main/checkpoints/update-000243",
+    "path": "checkpoints/4d78cfc03597c91a8a906a357ad6a25a45b4b7c65838f5e5ca4ceef925df7099",
     "parts": {
       "archive": "bundle.zip",
-      "bytes": 5666989,
-      "sha256": "de343ced9510dca4bcdcd2cb78b65e27eaaba4ac8d1607b9297245696c161f8c",
+      "bytes": 5674728,
+      "sha256": "4d78cfc03597c91a8a906a357ad6a25a45b4b7c65838f5e5ca4ceef925df7099",
       "parts": [
         {
           "name": "bundle.part-0000",
-          "bytes": 5666989,
-          "sha256": "de343ced9510dca4bcdcd2cb78b65e27eaaba4ac8d1607b9297245696c161f8c"
+          "bytes": 5674728,
+          "sha256": "4d78cfc03597c91a8a906a357ad6a25a45b4b7c65838f5e5ca4ceef925df7099"
         }
       ]
     }
@@ -41,7 +41,7 @@
     }
   },
   "final": null,
-  "campaign_status": "training",
+  "campaign_status": "evaluating",
   "raw_database_included": false,
   "shared_head_unchanged": true,
   "shared_index_unchanged": true

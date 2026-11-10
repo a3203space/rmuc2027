@@ -1,0 +1,12 @@
+{
+  "archive": "bundle.zip",
+  "bytes": 5674728,
+  "sha256": "4d78cfc03597c91a8a906a357ad6a25a45b4b7c65838f5e5ca4ceef925df7099",
+  "parts": [
+    {
+      "name": "bundle.part-0000",
+      "bytes": 5674728,
+      "sha256": "4d78cfc03597c91a8a906a357ad6a25a45b4b7c65838f5e5ca4ceef925df7099"
+    }
+  ]
+}
