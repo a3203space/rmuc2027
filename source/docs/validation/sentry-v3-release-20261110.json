@@ -1,0 +1,910 @@
+{
+  "schema": {
+    "version": 3,
+    "obs_size": 393,
+    "action_size": 6,
+    "profile": "sentry_referee_2027_v1",
+    "schema_hash": "e43bda1e2c35e3ceb873535f288c53b8e26a75100ecc23fbfb0717c1e7bba032"
+  },
+  "actions": [
+    "goal_x",
+    "goal_y",
+    "fold",
+    "jump",
+    "spin",
+    "fire"
+  ],
+  "clocks": {
+    "actor_hz": 10,
+    "navigation_hz": 20,
+    "physics_hz": 120,
+    "delivery_quantum_seconds": 0.05
+  },
+  "confirmed": {
+    "armor_undefined": "reject; default armor",
+    "0203": "north zero; clockwise positive; same direction as muzzle"
+  },
+  "pending": {
+    "0303_client_id": "requires explicit configured source; no commander orders injected in training"
+  },
+  "budget": {
+    "started_unix": 1794304703.575372,
+    "deadline_unix": 1794311903.575372,
+    "gradient_deadline_unix": 1794310403.575372,
+    "wall_budget_seconds": 7200.0,
+    "reserve_seconds": 1500.0
+  },
+  "campaign_finished_unix": 1794311098.615252,
+  "campaign_wall_seconds": 6395.039880990982,
+  "generated_unix": 1794311350.1241913,
+  "elapsed_seconds": 6646.54882144928,
+  "deadline_respected": true,
+  "sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+  "tests": {
+    "tests": 106,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": [
+      "test_sentry_protocol",
+      "test_sentry_v3",
+      "test_sentry_campaign",
+      "test_navigation_trajectory",
+      "test_mjwarp_viewer",
+      "test_mjwarp_viewer_strategies",
+      "test_observation_reuse",
+      "test_locomotion_policy",
+      "test_rl_learning_rate_control",
+      "test_rl_trace_serialization",
+      "test_rl_checkpoint_safety",
+      "test_kinematic_rl_provenance",
+      "test_rl_wall_time",
+      "test_rl_compose",
+      "test_navigation_teammates",
+      "test_goal_reachability",
+      "test_navigation_cache_concurrency",
+      "test_sentry_selection",
+      "test_jump_navigation"
+    ],
+    "finished_unix": 1794309606.7003486,
+    "followup_runs": [
+      {
+        "module": "test_sentry_v3",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "reason": "public staging progress teacher and mirrored regression",
+        "finished_unix": 1794309970.4099927
+      },
+      {
+        "module": "test_sentry_selection",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "reason": "reject cached trials with stale SDK or weight bytes",
+        "finished_unix": 1794310392.1105258
+      }
+    ]
+  },
+  "rust_tests": 72,
+  "frequency_audit": [
+    {
+      "command": "0x0001",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x0003",
+      "expected_hz": 3,
+      "received_in_10_seconds": 30,
+      "passed": true
+    },
+    {
+      "command": "0x0101",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x0104",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x0201",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0202",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0203",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x0204",
+      "expected_hz": 3,
+      "received_in_10_seconds": 30,
+      "passed": true
+    },
+    {
+      "command": "0x0208",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0209",
+      "expected_hz": 3,
+      "received_in_10_seconds": 30,
+      "passed": true
+    },
+    {
+      "command": "0x020B",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x020D",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x020C",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0x020E",
+      "expected_hz": 1,
+      "received_in_10_seconds": 10,
+      "passed": true
+    },
+    {
+      "command": "0xF001",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0A01",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0A02",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0A03",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0A04",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    },
+    {
+      "command": "0x0A05",
+      "expected_hz": 10,
+      "received_in_10_seconds": 100,
+      "passed": true
+    }
+  ],
+  "interventions": [
+    {
+      "model": 2771,
+      "restart": true,
+      "reason": "Frozen 30 s probe drifted from [7.05,9.99] to [5.22,10.50] with fewer fire samples; public objective progress reward, staged public demonstrations, actor retention, LR 5e-5 and KL 0.012. Discard old rollout; unchanged phase and global deadlines.",
+      "source_snapshot": "intervention-1-source.zip",
+      "time_unix": 1794305285.8648493,
+      "applied_unix": 1794305391.548315,
+      "supervisor_recovered": true
+    },
+    {
+      "model": 2771,
+      "restart": true,
+      "reason": "Public card reference point projected outside blue_outpost polygon. Select legal in-polygon demonstration goal and measure progress to actual polygon instead of radius proxy; preserve capture reward and actor decisions. Discard rollout; unchanged deadline.",
+      "source_snapshot": "intervention-2-source.zip",
+      "time_unix": 1794305631.2774618,
+      "applied_unix": 1794305632.2411547
+    },
+    {
+      "model": 2772,
+      "restart": true,
+      "reason": "Both labeled jump pulses stayed below the 0.5 trigger in initialized/latest frozen actors. Balanced rare positive weights and ensured pulse inclusion in retention batches; 300-epoch check recovered both pulses. Added both 20 Hz control samples to diagnostics so first-frame jump pulses count. Discard old rollout; unchanged deadlines.",
+      "source_snapshot": "intervention-3-source.zip",
+      "time_unix": 1794307126.573448,
+      "applied_unix": 1794307126.9974864
+    },
+    {
+      "model": 2772,
+      "restart": true,
+      "reason": "Validated SDK fixes: retain staged run-up for nearby targets beyond the same step, stop braking after a successful launch, advance serial-leg launch window by 0.1 s. Old rollout discarded; original metadata and SDK hashes retained; no v1/v2 weights loaded.",
+      "source_snapshot": "intervention-4-source.zip",
+      "time_unix": 1794307675.8027666,
+      "applied_unix": 1794307677.2177496
+    },
+    {
+      "model": 2772,
+      "restart": true,
+      "reason": "Frozen actor exposed staging deadlock at 17 cm lateral error within 20 cm arrival deadzone. Allow fine lateral correction; reduce goal exploration std from about .223 to .05 so goals do not repeatedly jump back before the obstacle. Reuse only safe public demonstration data with unchanged teacher/schema; discard PPO rollout. Original deadline unchanged.",
+      "source_snapshot": "intervention-5-source.zip",
+      "time_unix": 1794308176.426139,
+      "applied_unix": 1794308178.2389078
+    },
+    {
+      "model": 2773,
+      "restart": true,
+      "reason": "Frozen trajectory showed goal jitter deleting completed-passage memory and reversing through the tunnel. Preserve passage progress for destinations beyond the same central approach; explicit return goals still cancel. New SDK requires fresh demonstrations and rollout; original deadlines unchanged.",
+      "source_snapshot": "intervention-6-source.zip",
+      "time_unix": 1794309488.0141106,
+      "applied_unix": 1794309489.718005
+    }
+  ],
+  "runtime_smoke": {
+    "rapier_replay": {
+      "verified_ticks": 40,
+      "digest": "17a1db3eda50012d3c7b8001c62b0e6f38ab841fdb6b8ac6484acb0cff646dc7",
+      "winner": null
+    },
+    "native_viewer": {
+      "command": [
+        "/home/lx/rmuc2027/research/.venv/bin/python",
+        "-m",
+        "rmuc2027_research.rl.mjwarp.viewer",
+        "--rl-model",
+        "/home/lx/rmuc2027/data/research/sentry-referee-v3-20261110/selected-final/2773/model.zip",
+        "--rl-team",
+        "red",
+        "--device",
+        "cuda:0",
+        "--seed",
+        "1001",
+        "--duration",
+        "2"
+      ],
+      "exit_code": 0,
+      "duration_simulation_seconds": 2,
+      "wall_seconds": 13.942457914352417,
+      "full_match_verified": false
+    },
+    "web_ui": {
+      "tested": false,
+      "reason": "web assets/dependencies not built in this environment"
+    },
+    "finished_unix": 1794310832.7054603
+  },
+  "additional_transfer_checks": [
+    {
+      "backend": "mjwarp",
+      "side": "red",
+      "seed": 1001,
+      "simulation_seconds": 60.0,
+      "horizon_completed": true,
+      "full_match_completed": false,
+      "policy_errors": 0,
+      "tipped_seconds": 0.0,
+      "path_m": 11.333432043803702,
+      "tunnel_spin_violations": 0,
+      "capture_seconds": 0.0,
+      "deaths": 0,
+      "revives": 0,
+      "jump_commands": 0,
+      "fold_reversals": 0,
+      "rejected_skills": 0,
+      "objective_gap_m": 5.771141633100151,
+      "checkpoint_sha256": "5bdbe641151672505e6599d8df87cfa2afd15a1ae9e608de33b9cc4d02571df1",
+      "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+      "evidence": "data/research/sentry-referee-v3-20261110/2773-initialized-transfer/mjwarp-red/result.json"
+    },
+    {
+      "backend": "rapier",
+      "side": "red",
+      "seed": 1001,
+      "simulation_seconds": 60.0,
+      "horizon_completed": true,
+      "full_match_completed": false,
+      "policy_errors": 0,
+      "tipped_seconds": 0.0,
+      "path_m": 10.890976775590852,
+      "tunnel_spin_violations": 0,
+      "capture_seconds": 0.0,
+      "deaths": 0,
+      "revives": 0,
+      "jump_commands": 0,
+      "fold_reversals": 0,
+      "rejected_skills": 0,
+      "objective_gap_m": 5.939860116583422,
+      "checkpoint_sha256": "5bdbe641151672505e6599d8df87cfa2afd15a1ae9e608de33b9cc4d02571df1",
+      "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+      "evidence": "data/research/sentry-referee-v3-20261110/2773-initialized-transfer/rapier-red/result.json"
+    }
+  ],
+  "models": [
+    {
+      "model": 2771,
+      "checkpoint": "data/research/sentry-referee-v3-20261110/selected/2771/model.zip",
+      "sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+      "selected": "initialized",
+      "selection": "data/research/sentry-referee-v3-20261110/selected/2771/selection.json",
+      "export": "data/research/sentry-referee-v3-20261110/selected/2771/export-r4",
+      "actor_parity_max_error": 2.7221460791038155e-07,
+      "raw_training_checkpoint": "data/research/sentry-referee-v3-20261110/2771-revision-2/model.zip",
+      "cumulative_ppo_samples": 19084,
+      "cumulative_gradient_epochs": 580,
+      "training": {
+        "model": 2771,
+        "wall_seconds": 954.7206572080031,
+        "deadline_unix": 1794306603.575372,
+        "actual_steps": 11636,
+        "gradient_epochs": 352,
+        "actor_parameter_l2_change": 2.711366987043916,
+        "actor_updated": true,
+        "reload_prediction_equal": true,
+        "optimizer_reloaded": true,
+        "initialization": {
+          "samples": 900,
+          "epochs": 150,
+          "loss_before": 0.2976854145526886,
+          "loss_after": 0.004384925123304129,
+          "source": "public_observation_teacher",
+          "action_size": 6
+        },
+        "checkpoint": "/home/lx/rmuc2027/data/research/sentry-referee-v3-20261110/2771-revision-2/model.zip"
+      },
+      "trials": [
+        {
+          "backend": "mjwarp",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 37.10084949904274,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 1,
+          "revives": 1,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 2.4507622422145907,
+          "checkpoint_sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected/2771/current-sdk/mjwarp-blue/result.json"
+        },
+        {
+          "backend": "mjwarp",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 40.337090164428645,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 5.400000000000002,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.9102573936694673,
+          "checkpoint_sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected/2771/current-sdk/mjwarp-red/result.json"
+        },
+        {
+          "backend": "rapier",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 41.4235145027845,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 17.85,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.226027799254561,
+          "checkpoint_sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected/2771/current-sdk/rapier-blue/result.json"
+        },
+        {
+          "backend": "rapier",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 38.10150567271226,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 5.899999999999999,
+          "deaths": 1,
+          "revives": 1,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 1.1372665701990226,
+          "checkpoint_sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected/2771/current-sdk/rapier-red/result.json"
+        },
+        {
+          "backend": "warp_kinematic",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 32.89837701718108,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 8.25,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.45901364296732433,
+          "checkpoint_sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected/2771/current-sdk/warp_kinematic-blue/result.json"
+        },
+        {
+          "backend": "warp_kinematic",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 47.38159627758834,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 14.499999999999993,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.06291479953503148,
+          "checkpoint_sha256": "77aa6ed48b2c486a20f2f4dabeb4996c6d4565662c23fbd5d9560c8737c023e1",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected/2771/current-sdk/warp_kinematic-red/result.json"
+        }
+      ]
+    },
+    {
+      "model": 2772,
+      "checkpoint": "data/research/sentry-referee-v3-20261110/selected-final/2772/model.zip",
+      "sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+      "selected": "context-jump",
+      "selection": "data/research/sentry-referee-v3-20261110/selected-final/2772/selection.json",
+      "export": "data/research/sentry-referee-v3-20261110/selected-final/2772/export",
+      "actor_parity_max_error": 4.2032642921796537e-07,
+      "raw_training_checkpoint": "data/research/sentry-referee-v3-20261110/2772-revision-3/model.zip",
+      "cumulative_ppo_samples": 23024,
+      "cumulative_gradient_epochs": 679,
+      "training": {
+        "model": 2772,
+        "wall_seconds": 302.212961403995,
+        "deadline_unix": 1794308497.5645137,
+        "actual_steps": 4246,
+        "gradient_epochs": 107,
+        "actor_parameter_l2_change": 1.786538845895388,
+        "actor_updated": true,
+        "reload_prediction_equal": true,
+        "optimizer_reloaded": true,
+        "initialization": {
+          "samples": 900,
+          "epochs": 300,
+          "loss_before": 0.011295019648969173,
+          "loss_after": 0.0001853393332567066,
+          "positive_actions": {
+            "2": {
+              "count": 0,
+              "recall": null
+            },
+            "3": {
+              "count": 2,
+              "recall": 1.0
+            },
+            "4": {
+              "count": 0,
+              "recall": null
+            },
+            "5": {
+              "count": 765,
+              "recall": 1.0
+            }
+          },
+          "source": "public_observation_teacher",
+          "action_size": 6,
+          "demonstrations_reused_from": "/home/lx/rmuc2027/data/research/sentry-referee-v3-20261110/2772-revision-2/guidance",
+          "demonstrations_sha256": "fb1afc4d57f2035da9179df3ea85e7bff12c4c3ec7d864b0c742e087b0ab384d",
+          "exploration_std": [
+            0.04999999701976776,
+            0.04999999701976776,
+            0.223189115524292,
+            0.22295376658439636,
+            0.22220146656036377,
+            0.22285714745521545
+          ]
+        },
+        "checkpoint": "/home/lx/rmuc2027/data/research/sentry-referee-v3-20261110/2772-revision-3/model.zip"
+      },
+      "trials": [
+        {
+          "backend": "warp_kinematic",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 26.98638606064083,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 30.799999999999997,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 1,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.0,
+          "checkpoint_sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2772/trials/context-jump/blue/result.json"
+        },
+        {
+          "backend": "warp_kinematic",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 30.408672817777457,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 30.200000000000003,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 1,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.0,
+          "checkpoint_sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2772/trials/context-jump/red/result.json"
+        },
+        {
+          "backend": "mjwarp",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 18.512811049127084,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 2,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 8.440626994322992,
+          "checkpoint_sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2772/transfer/mjwarp-blue/result.json"
+        },
+        {
+          "backend": "mjwarp",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 20.041762683368066,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 5,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 7.531502075195313,
+          "checkpoint_sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2772/transfer/mjwarp-red/result.json"
+        },
+        {
+          "backend": "rapier",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 11.463420005018731,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 1,
+          "revives": 1,
+          "jump_commands": 1,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 6.9014245438051125,
+          "checkpoint_sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2772/transfer/rapier-blue/result.json"
+        },
+        {
+          "backend": "rapier",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 28.813044578269754,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 4.699999999999996,
+          "deaths": 1,
+          "revives": 1,
+          "jump_commands": 1,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 2.192980290996285,
+          "checkpoint_sha256": "c0de22570c2d81e977be2001a69791830a799eaa57e1ed723fcbe7c673f5c03d",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2772/transfer/rapier-red/result.json"
+        }
+      ]
+    },
+    {
+      "model": 2773,
+      "checkpoint": "data/research/sentry-referee-v3-20261110/selected-final/2773/model.zip",
+      "sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+      "selected": "progress-2",
+      "selection": "data/research/sentry-referee-v3-20261110/selected-final/2773/selection.json",
+      "export": "data/research/sentry-referee-v3-20261110/selected-final/2773/export",
+      "actor_parity_max_error": 3.215932952160827e-07,
+      "raw_training_checkpoint": "data/research/sentry-referee-v3-20261110/2773-revision-1/model.zip",
+      "cumulative_ppo_samples": 23180,
+      "cumulative_gradient_epochs": 662,
+      "training": {
+        "model": 2773,
+        "wall_seconds": 897.123167759004,
+        "deadline_unix": 1794310403.5753708,
+        "actual_steps": 10022,
+        "gradient_epochs": 284,
+        "actor_parameter_l2_change": 4.883329834658284,
+        "actor_updated": true,
+        "reload_prediction_equal": true,
+        "optimizer_reloaded": true,
+        "initialization": {
+          "samples": 900,
+          "epochs": 300,
+          "loss_before": 0.015833768993616104,
+          "loss_after": 0.0014980444684624672,
+          "positive_actions": {
+            "2": {
+              "count": 52,
+              "recall": 1.0
+            },
+            "3": {
+              "count": 0,
+              "recall": null
+            },
+            "4": {
+              "count": 0,
+              "recall": null
+            },
+            "5": {
+              "count": 695,
+              "recall": 1.0
+            }
+          },
+          "source": "public_observation_teacher",
+          "action_size": 6,
+          "demonstrations_reused_from": null,
+          "demonstrations_sha256": "099d399ac4c6932fd246fea30541a702835d65d56d4771dc70291bf8d350a208",
+          "exploration_std": [
+            0.04999999701976776,
+            0.04999999701976776,
+            0.224043071269989,
+            0.2228851020336151,
+            0.22259074449539185,
+            0.22279714047908783
+          ]
+        },
+        "checkpoint": "/home/lx/rmuc2027/data/research/sentry-referee-v3-20261110/2773-revision-1/model.zip"
+      },
+      "trials": [
+        {
+          "backend": "warp_kinematic",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 33.280955351460044,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 34.45,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.21970874786376982,
+          "checkpoint_sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2773/trials/progress-2/blue/result.json"
+        },
+        {
+          "backend": "warp_kinematic",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 33.62308969408085,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 34.35,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0,
+          "objective_gap_m": 0.0,
+          "checkpoint_sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2773/trials/progress-2/red/result.json"
+        },
+        {
+          "backend": "mjwarp",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 11.243129349404747,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 5.77806887728642,
+          "checkpoint_sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2773/transfer/mjwarp-blue/result.json"
+        },
+        {
+          "backend": "mjwarp",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 11.11589532396772,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 5.814238265319187,
+          "checkpoint_sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2773/transfer/mjwarp-red/result.json"
+        },
+        {
+          "backend": "rapier",
+          "side": "blue",
+          "seed": 1002,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 11.12435646286441,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 5.736485995851469,
+          "checkpoint_sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2773/transfer/rapier-blue/result.json"
+        },
+        {
+          "backend": "rapier",
+          "side": "red",
+          "seed": 1001,
+          "simulation_seconds": 60.0,
+          "horizon_completed": true,
+          "full_match_completed": false,
+          "policy_errors": 0,
+          "tipped_seconds": 0.0,
+          "path_m": 13.408613379826786,
+          "tunnel_spin_violations": 0,
+          "capture_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "jump_commands": 0,
+          "fold_reversals": 0,
+          "rejected_skills": 0,
+          "objective_gap_m": 5.911933218521369,
+          "checkpoint_sha256": "5dceb6a7310e076be3d7425c5884ec55d24f8d4b41d3f117a8959edaa9f30b51",
+          "evaluation_sdk_hash": "ed41068aace79f7d6e01fe18259492c436ff7417ce35579b7036c49f7d15eb30",
+          "evidence": "data/research/sentry-referee-v3-20261110/selected-final/2773/transfer/rapier-red/result.json"
+        }
+      ]
+    }
+  ],
+  "full_match_strength_qualified": false,
+  "limitations": [
+    "Ideal localization and autoaim modules; no camera training",
+    "Ideal radar tracker and decoded wireless feed with injectable failure",
+    "Public physical proxies; not measured robot CAD or hardware validation",
+    "Short frozen trials do not establish full-match win rates",
+    "Selection uses two fixed 60-second seeds per candidate, not an independent win-rate benchmark.",
+    "Earlier SDK evaluations are preserved separately and excluded from the final 18-trial matrix.",
+    "BC correction data and PPO samples are counted separately; a selected checkpoint can precede the final PPO update.",
+    "2772 still repeats jumps in MJWarp; 2773 fold timing did not transfer to Rapier/MJWarp in the selected-policy short trials.",
+    "Native MJWarp viewer smoke-tested; web UI build dependencies were unavailable and the web UI was not validated."
+  ]
+}

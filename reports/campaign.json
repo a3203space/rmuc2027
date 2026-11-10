@@ -1,0 +1,17 @@
+{
+  "status": "preflight",
+  "budget": {
+    "started_unix": 1794344233.0,
+    "deadline_unix": 1794373033.0,
+    "wall_budget_seconds": 28800.0,
+    "training_deadline_unix": 1794365833.0,
+    "evaluation_deadline_unix": 1794371833.0,
+    "web_deadline_unix": 1794372313.0,
+    "other_workloads_may_continue": true,
+    "scope": "prior run completion, preparation, PPO rounds, frozen checks, web, packaging and backups"
+  },
+  "control": {
+    "tactical_lr": 1e-05,
+    "reason": "Conservative segmented continuation; 0 rejected prior branches"
+  }
+}
