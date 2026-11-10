@@ -1,26 +1,26 @@
 {
-  "sha256": "6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87",
+  "sha256": "894496387eec080451d1f91616b8b47c81cc40ae89926a611ba8b57b7adc8d79",
   "files": {
-    "actor.json": "d4b87dc2756b74fed176d43f4c5bd554ff2e05bc033fcdc17a22a6344171bf4a",
-    "coordinator-state.json": "cec404251e9b2b1461111a131870b5b744ac40eef2543b83b9c94171f7428d94",
+    "actor.json": "d830ea83340b216961f0b0543dd16533cfb5e8946a8a4ad434d2e8ea1b087dfa",
+    "coordinator-state.json": "a180884d25fd5686f7465dc8419b99b6b71e61e6cbcdc37acf1f6557201155d5",
     "experiment.json": "6be80422365bb8413b46841485321ad2e523417faba49eac64257e8846c88075",
-    "model.zip": "3858cb9f8c613e5988459e96d0ee14a8790abefb4c6d532cdda8c3683cc68796",
-    "resume-state.pt": "634c6ee4c9361cbe977202bfa79898410076bf6ad4369b6404383834dfefa3e2",
-    "samplers.json": "743f6b7cc29b3b8b48016369650d755bad44929d89a68927d449f07c2cdb020c"
+    "model.zip": "6e322ef7079a7a1758aeb0b76e4504fa30318d5dad47fb6d418ce57fcbef3a32",
+    "resume-state.pt": "c85b5acd5fa46645b84e65caeb451462fc5e6c22ed19eb355e6d22d5884042ba",
+    "samplers.json": "2c6c87be5d71e4eb48604c708ab36b4b2b4cb452253985d0f368346ebe8d754d"
   },
-  "samples": 15238,
-  "update_id": 157,
-  "directory": "main/checkpoints/update-000157",
-  "path": "checkpoints/6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87",
+  "samples": 18502,
+  "update_id": 208,
+  "directory": "main/checkpoints/update-000208",
+  "path": "checkpoints/894496387eec080451d1f91616b8b47c81cc40ae89926a611ba8b57b7adc8d79",
   "parts": {
     "archive": "bundle.zip",
-    "bytes": 5650879,
-    "sha256": "6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87",
+    "bytes": 5663463,
+    "sha256": "894496387eec080451d1f91616b8b47c81cc40ae89926a611ba8b57b7adc8d79",
     "parts": [
       {
         "name": "bundle.part-0000",
-        "bytes": 5650879,
-        "sha256": "6ed044af98a9a12f0c30d0427ae3a74456dbbbe933d7af36e2d33fe34c39ad87"
+        "bytes": 5663463,
+        "sha256": "894496387eec080451d1f91616b8b47c81cc40ae89926a611ba8b57b7adc8d79"
       }
     ]
   }
