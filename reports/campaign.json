@@ -1,15 +1,536 @@
 {
-  "status": "training",
-  "budget": {
-    "started_unix": 1794344233.0,
-    "deadline_unix": 1794373033.0,
-    "wall_budget_seconds": 28800.0,
-    "training_deadline_unix": 1794365833.0,
-    "evaluation_deadline_unix": 1794371833.0,
-    "web_deadline_unix": 1794372313.0,
-    "other_workloads_may_continue": true,
-    "scope": "prior run completion, preparation, PPO rounds, frozen checks, web, packaging and backups"
+  "status": "results_frozen",
+  "round": 1,
+  "path": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r01",
+  "source_run": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333",
+  "source_generation": "main/checkpoints/baseline",
+  "train": {
+    "exit_code": 0,
+    "timed_out": false,
+    "log": "train.log"
   },
+  "training": {
+    "actual_samples": 11439,
+    "total_samples": 21749,
+    "completed_updates": 178,
+    "accepted_actor_steps": 496,
+    "published_accepted_actor_steps": 496,
+    "unpublished_accepted_actor_steps": 0,
+    "unpublished_completed_updates": 0,
+    "unpublished_observed_samples": 47,
+    "published_skill_unchanged": true,
+    "published_checkpoint_sha256": "3fa1e3ec781b0fd1d5844a53511fddb755f647068f0083ebea52988f9fbe6ada",
+    "rejected_actor_steps": 115,
+    "optimized_samples": 52032,
+    "skill_unchanged": true,
+    "wall_seconds": 3580.2475553670083,
+    "demonstration_updates_during_ppo": 0,
+    "partial_rollout_discarded": 47,
+    "status": "finished",
+    "error": null,
+    "checkpoint_samples": 21702,
+    "checkpoint": "main/checkpoint-ready.json",
+    "deadline_unix": 1794350981.445237,
+    "published_completed_updates": 178,
+    "published_samples": 11392,
+    "publication_verified": true
+  },
+  "checkpoint": {
+    "directory": "main/checkpoints/update-000258",
+    "samples": 21702,
+    "update_id": 258,
+    "optimizer_steps": 813,
+    "skill_sha256": "1b37ddcfa8dfe6fdfb1bc491640f4181d6d0b9e57adc7eea7bdf656f4c305355",
+    "sha256": {
+      "model.zip": "3fa1e3ec781b0fd1d5844a53511fddb755f647068f0083ebea52988f9fbe6ada",
+      "resume-state.pt": "c81eb3664003172fedeea27a081f728e68b29fc9a35986ad43fabdf50c26671b",
+      "samplers.json": "fc7f04ae8edfb0bce060ce19139581cd5be63dadb5d838dadf0839980df82209",
+      "actor.json": "539dea1a8aeb61878d8631cbcf8b2b8d56168c45651f48d023a47c09b49053e0",
+      "experiment.json": "6be80422365bb8413b46841485321ad2e523417faba49eac64257e8846c88075",
+      "coordinator-state.json": "dc00c721c5c21a43319637282353390b311b60bff9d65e3e1d501be8b1163e95"
+    }
+  },
+  "canary": {
+    "passed": false,
+    "failures": [
+      {
+        "reasons": [
+          "capture_regression"
+        ]
+      },
+      {
+        "reasons": [
+          "control_regression"
+        ]
+      }
+    ],
+    "case_id": "main-rapier-blue",
+    "baseline_capture": 44.25,
+    "candidate_capture": 2.1999999999999993,
+    "reference": {
+      "case_id": "main-rapier-blue",
+      "identity": {
+        "config_hash": "c564f2306da2613a954775b2a2a25b7f55721aab10187694d0c88dbf5d18c473",
+        "execution_config": {
+          "seed": 20261111,
+          "team": "blue",
+          "slot": 7,
+          "map": "rmuc2027",
+          "duration": 420,
+          "episode_seconds": 60.0,
+          "rl_seconds": 0.1,
+          "grid_m": 0.25,
+          "recover_enter": 0.25,
+          "recover_exit": 0.8,
+          "friendly": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "opponent": {
+            "version": "dba14ab0764239ed",
+            "manifest": {
+              "api_version": 3,
+              "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+              "mode": "squad",
+              "robot": null,
+              "entries": {
+                "1": "robot_1.py",
+                "3": "robot_3.py",
+                "4": "robot_4.py",
+                "6": "robot_6.py",
+                "7": "robot_7.py"
+              },
+              "hashes": {
+                "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              },
+              "version": "dba14ab0764239ed"
+            },
+            "hashes": {
+              "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+              "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+            }
+          },
+          "controllers": {
+            "blue:7": {
+              "kind": "learning"
+            }
+          },
+          "rewards": {
+            "control": 0.01,
+            "outcome": 10.0,
+            "capture_seconds": 0.02,
+            "death": -1.0,
+            "paid_coins": -0.001,
+            "recovery": 0.2
+          },
+          "policy_version": 6,
+          "navigation_mode": "adaptive",
+          "sim_backend": "rapier",
+          "sim_device": "cuda:0",
+          "navigation_precompute": false,
+          "drones_enabled": true,
+          "timed_assembly": false,
+          "alternate_sides": false,
+          "policy_timeout_s": 10.0,
+          "lineups": {
+            "blue": {
+              "1": 2711,
+              "3": 2731,
+              "4": 2732,
+              "6": 2761,
+              "7": 2773
+            },
+            "red": {
+              "1": 2711,
+              "3": 2731,
+              "4": 2732,
+              "6": 2761,
+              "7": 2773
+            }
+          },
+          "action_trace": true,
+          "checkpoint_seconds": 90,
+          "observation_profile": "sentry_referee_2027_v1",
+          "learning_control_hz": 20,
+          "training_summary": false,
+          "fixed_policy_hz": 10,
+          "scenario_sampling": false,
+          "capability_sampling": false,
+          "v4_capture_reward": 0.02,
+          "auxiliary_pool": {
+            "infantry": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2",
+            "heavy": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+          },
+          "radar_classifier_path": "812a7a62f185fa4402afa6f11698dca9d34b57e74ed104ad0b8fcb5b5fcbbfd8",
+          "decision_window_seconds": 60.0,
+          "v6_recovery_curriculum": {
+            "enabled": true,
+            "generation": "v6-longrun-dace1bc0fcd5d26b-18be490da15d08fc",
+            "recovery_probability": 0.4,
+            "failure_limit": 2,
+            "cooldown_seconds": 1800
+          },
+          "evaluation": true,
+          "scenario": {
+            "friendly_infantry": [
+              2731,
+              2732
+            ],
+            "enemy_infantry": [
+              2731,
+              2732
+            ],
+            "enemy_sentry": 2773,
+            "learner_side": "blue",
+            "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+            "ordered_id": "f2731-2732_e2731-2732_s2773",
+            "quantity_id": "f110_e110_sT"
+          },
+          "recovery_kind": null,
+          "training_capabilities": {
+            "red:1": {
+              "mobility_profile": "nominal",
+              "mobility": {
+                "speed_reference_mps": 1.0,
+                "motor_force_max_n": 1.0,
+                "drive_efficiency": 1.0
+              },
+              "aim_profile": "weak",
+              "aim": {
+                "delay_s": 0.3,
+                "sigma_deg": 2.5,
+                "tau_s": 0.15
+              },
+              "aim_seed": 1483504453,
+              "protected_learner": false,
+              "observation_scope": "helper",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2711,
+              "nominal_drive_efficiency": 0.85
+            },
+            "red:3": {
+              "mobility_profile": "low",
+              "mobility": {
+                "speed_reference_mps": 0.75,
+                "motor_force_max_n": 0.8,
+                "drive_efficiency": 0.9
+              },
+              "aim_profile": "medium",
+              "aim": {
+                "delay_s": 0.15,
+                "sigma_deg": 1.0,
+                "tau_s": 0.15
+              },
+              "aim_seed": 474753180,
+              "protected_learner": false,
+              "observation_scope": "helper",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2731,
+              "nominal_drive_efficiency": 0.8
+            },
+            "red:4": {
+              "mobility_profile": "low",
+              "mobility": {
+                "speed_reference_mps": 0.75,
+                "motor_force_max_n": 0.8,
+                "drive_efficiency": 0.9
+              },
+              "aim_profile": "strong",
+              "aim": {
+                "delay_s": 0.05,
+                "sigma_deg": 0.25,
+                "tau_s": 0.15
+              },
+              "aim_seed": 2037198181,
+              "protected_learner": false,
+              "observation_scope": "helper",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2732,
+              "nominal_drive_efficiency": 0.85
+            },
+            "red:7": {
+              "mobility_profile": "nominal",
+              "mobility": {
+                "speed_reference_mps": 1.0,
+                "motor_force_max_n": 1.0,
+                "drive_efficiency": 1.0
+              },
+              "aim_profile": "strong",
+              "aim": {
+                "delay_s": 0.05,
+                "sigma_deg": 0.25,
+                "tau_s": 0.15
+              },
+              "aim_seed": 1235008246,
+              "protected_learner": false,
+              "observation_scope": "strict_sentry",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2773,
+              "nominal_drive_efficiency": 0.85
+            },
+            "blue:1": {
+              "mobility_profile": "nominal",
+              "mobility": {
+                "speed_reference_mps": 1.0,
+                "motor_force_max_n": 1.0,
+                "drive_efficiency": 1.0
+              },
+              "aim_profile": "medium",
+              "aim": {
+                "delay_s": 0.15,
+                "sigma_deg": 1.0,
+                "tau_s": 0.15
+              },
+              "aim_seed": 1169011962,
+              "protected_learner": false,
+              "observation_scope": "helper",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2711,
+              "nominal_drive_efficiency": 0.85
+            },
+            "blue:3": {
+              "mobility_profile": "nominal",
+              "mobility": {
+                "speed_reference_mps": 1.0,
+                "motor_force_max_n": 1.0,
+                "drive_efficiency": 1.0
+              },
+              "aim_profile": "strong",
+              "aim": {
+                "delay_s": 0.05,
+                "sigma_deg": 0.25,
+                "tau_s": 0.15
+              },
+              "aim_seed": 855486392,
+              "protected_learner": false,
+              "observation_scope": "helper",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2731,
+              "nominal_drive_efficiency": 0.8
+            },
+            "blue:4": {
+              "mobility_profile": "nominal",
+              "mobility": {
+                "speed_reference_mps": 1.0,
+                "motor_force_max_n": 1.0,
+                "drive_efficiency": 1.0
+              },
+              "aim_profile": "strong",
+              "aim": {
+                "delay_s": 0.05,
+                "sigma_deg": 0.25,
+                "tau_s": 0.15
+              },
+              "aim_seed": 1355065051,
+              "protected_learner": false,
+              "observation_scope": "helper",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2732,
+              "nominal_drive_efficiency": 0.85
+            },
+            "blue:7": {
+              "mobility_profile": "nominal",
+              "mobility": {
+                "speed_reference_mps": 1.0,
+                "motor_force_max_n": 1.0,
+                "drive_efficiency": 1.0
+              },
+              "aim_profile": "learner",
+              "aim": {
+                "delay_s": 0.0,
+                "sigma_deg": 0.0,
+                "tau_s": 0.15
+              },
+              "aim_seed": 373884079,
+              "protected_learner": true,
+              "observation_scope": "strict_sentry",
+              "calibration_scale": 1.0,
+              "calibration_source": "fixed_unfitted; 2026 envelopes are validation only",
+              "model": 2773,
+              "nominal_drive_efficiency": 0.85
+            }
+          }
+        },
+        "execution_hash": "8f4529d25a4cc96ab180f05f86f20d07fc81d3b5ebf02d82d20803b697f443ac",
+        "helper_hashes": {
+          "infantry": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2",
+          "heavy": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+        },
+        "radar_hash": "812a7a62f185fa4402afa6f11698dca9d34b57e74ed104ad0b8fcb5b5fcbbfd8",
+        "sources": {
+          "sdk_hash": "7a9fc4218f1b80c41ce0db94f679090f1d17d421de58cbee5d795118c281f296",
+          "runtime_hash": "275e0545b1a9e98893e33e4695e17a863f2db315590583bf9b7a8966cf96bc38",
+          "engine_binary_sha256": "d73efd758fa4e488dc592de32e9fd2d45819f6def95d85596cc514e8aa34361d",
+          "rules_sha256": "d9e6396d874448427e81719f337d336826ed25a6b6ae2b3dfdc698cc22df78fe",
+          "simulation": {
+            "backend": "rapier",
+            "dt": 0.008333333333333333
+          },
+          "sources": {
+            "friendly": {
+              "version": "dba14ab0764239ed",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "squad",
+                "robot": null,
+                "entries": {
+                  "1": "robot_1.py",
+                  "3": "robot_3.py",
+                  "4": "robot_4.py",
+                  "6": "robot_6.py",
+                  "7": "robot_7.py"
+                },
+                "hashes": {
+                  "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+                },
+                "version": "dba14ab0764239ed"
+              },
+              "hashes": {
+                "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              }
+            },
+            "opponent": {
+              "version": "dba14ab0764239ed",
+              "manifest": {
+                "api_version": 3,
+                "rules_profile": "rmuc-2027-v1.0.0-arena-v1",
+                "mode": "squad",
+                "robot": null,
+                "entries": {
+                  "1": "robot_1.py",
+                  "3": "robot_3.py",
+                  "4": "robot_4.py",
+                  "6": "robot_6.py",
+                  "7": "robot_7.py"
+                },
+                "hashes": {
+                  "robot_1.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_3.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_4.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_6.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                  "robot_7.py": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+                },
+                "version": "dba14ab0764239ed"
+              },
+              "hashes": {
+                "1": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "3": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "4": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "6": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27",
+                "7": "0080e51da752c542d2f2ded25acd5ee596ffa2c6cfcf9222bf61ad29dce1ad27"
+              }
+            }
+          },
+          "sentry_sources": {
+            "research/rmuc2027_research/rl/sentry_v3.py": "7331bbb3e79a4406117ef348eb3674fbe1e657f5719f5898dd2d138ffe2ece7a",
+            "packages/core/rmuc2027_core/sentry_protocol.py": "fa6523c76c90c5e8f3b8f88256078bb9b2fa8f51e0c04a74641f1cb2ac5d82fb",
+            "packages/core/rmuc2027_core/radar2027.py": "c8c2b255fda68c38b77d2577b02ea02acfcf75c400127436fe9d300173353d91",
+            "research/rmuc2027_research/rl/sentry_v4.py": "540887a7ed2b7d0261becea5395f669e18172f79898de3a8bc88b7d99ce6e564",
+            "research/rmuc2027_research/rl/sentry_v4_policy.py": "f4d28ff4f91b98e2affaf00818b538aab61477530f4e5ee0951e057664289374",
+            "research/rmuc2027_research/rl/critic_state.py": "2a65a81bd58e6e2baa1ec19a86b4ac601799dd2714ce096a308ef0826af48869",
+            "packages/core/rmuc2027_core/radar_inference.py": "1fc73eaa6248302f523ebd6024a5a13a772fb76b1b9d9bcd3d78957d0c18e835",
+            "research/rmuc2027_research/rl/sentry_v6.py": "3532891820ab73b1f95b38e97bff534ce9988904cf58bfd51baf317333d0570f",
+            "research/rmuc2027_research/rl/recovery_belief.py": "a1da13fed12230397ef260913cd8f247301cc59fe5326c3bc9dae0e4b594dc2d",
+            "research/rmuc2027_research/rl/sentry_v6_policy.py": "1258882036795c5205a741795b95987c11026b45903982138a9f762cd997c27e",
+            "research/rmuc2027_research/rl/v6_ppo.py": "c9654eb1965aef8baf5c2dde24c63b2704dc49ec296dddc23d42a05fa7b6742a",
+            "research/rmuc2027_research/rl/v6_recovery.py": "dace1bc0fcd5d26b5e06018eead64d9e678fd71968402309c4d6b6bd69f8d16f"
+          },
+          "control_pipeline": {
+            "research/rmuc2027_research/rl/session.py": "fe2a05a9e7c807cb4f4b122d22cdd2fad4d21884e842c50b6101c9708f9a5a43",
+            "research/rmuc2027_research/rl/env.py": "9a2e7bc4683470d7f517604e6755f3b41432e2ba5be7d7dd95601bfa3252cad8",
+            "research/rmuc2027_research/strategies/battle.py": "a2e502ccb02c8ea03147c1ce148fd27fd7450d441aa1d31ece99d0d857d1acfa",
+            "packages/core/rmuc2027_core/engine.py": "186a4b76887fc41631964b5c0c65fea8a0378e643fc653befa0a71c165090306",
+            "packages/core/rmuc2027_core/policy.py": "ccff1099edfe9729da358756a7085c0a8879811e840a83b2ca5bbee156cb1881"
+          }
+        }
+      },
+      "prefix_identity": {
+        "commands_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "handoff_hash": "5e66fc310a5562ed9f4f75d6fa79e31d531686875610b4c1a5c011ece00ab33e",
+        "legal_history_hash": null,
+        "origin": 0.0,
+        "prefix_kind": null,
+        "prepared": true
+      },
+      "scenario_hash": "89669d4164319855ef6645aae8bbbcdbda65e9c9ca737acc4a7eb72b0076388a",
+      "capabilities_sha256": "f6bddac35ecf727075283d82d630baf816b7df215eb76d9c6f6c68c41f6365d8",
+      "checkpoint_sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+      "capture_seconds": 44.25,
+      "control_advantage": 38.29999999999996,
+      "source_record": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r01/evaluation/main-rapier-blue-baseline.json"
+    },
+    "tolerance_seconds": 1.0,
+    "purpose": "training continuation guard only; not deployment promotion",
+    "source_sha256": {
+      "baseline": "918edc7ac402cf277397e402f175b751c7991bc45327f07cee9e1be5401be631",
+      "candidate": "29221dedf2a8d9eef23d5e3fd34d154e69747421753e3f43d9df35a57afafe41"
+    }
+  },
+  "evaluations": [
+    {
+      "member": "baseline",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "main-rapier-blue-baseline.log"
+    },
+    {
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "main-rapier-blue-candidate.log"
+    }
+  ],
+  "accepted_for_continuation": false,
   "control": {
     "tactical_lr": 1e-05,
     "reason": "Conservative segmented continuation; 0 rejected prior branches"

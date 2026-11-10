@@ -1,26 +1,26 @@
 {
-  "sha256": "a1d7af3ce2fdea9c232c5bec46ce22701317a5428889674de0c47945bfb22df3",
+  "sha256": "097ba0799508fbeb0e070c5cb85fa80d71728394a49fb42243665741154eb779",
   "files": {
-    "actor.json": "e37b0b3578d6b8a393bbfa3358a93a779b3e549cd619df3100776a838daa44e4",
-    "coordinator-state.json": "4a9d8f63a2688b76615819ef70cd1ef157daa40e352f9796801e51d911e6ffaf",
+    "actor.json": "539dea1a8aeb61878d8631cbcf8b2b8d56168c45651f48d023a47c09b49053e0",
+    "coordinator-state.json": "dc00c721c5c21a43319637282353390b311b60bff9d65e3e1d501be8b1163e95",
     "experiment.json": "6be80422365bb8413b46841485321ad2e523417faba49eac64257e8846c88075",
-    "model.zip": "62669d592b5ab1bbf0c2a259696861dc7023f460a3e6c455d3d983cd1006f152",
-    "resume-state.pt": "c0831c7a67736fad124fb736a743030be4e7ba699f04878dcd17b17210d491d8",
-    "samplers.json": "4a6461b70a6574aea04d1fc6ae26ba078311f42725d282c02bed14994dac8881"
+    "model.zip": "3fa1e3ec781b0fd1d5844a53511fddb755f647068f0083ebea52988f9fbe6ada",
+    "resume-state.pt": "c81eb3664003172fedeea27a081f728e68b29fc9a35986ad43fabdf50c26671b",
+    "samplers.json": "fc7f04ae8edfb0bce060ce19139581cd5be63dadb5d838dadf0839980df82209"
   },
-  "samples": 21382,
-  "update_id": 253,
-  "directory": "main/checkpoints/update-000253",
-  "path": "checkpoints/a1d7af3ce2fdea9c232c5bec46ce22701317a5428889674de0c47945bfb22df3",
+  "samples": 21702,
+  "update_id": 258,
+  "directory": "main/checkpoints/update-000258",
+  "path": "checkpoints/097ba0799508fbeb0e070c5cb85fa80d71728394a49fb42243665741154eb779",
   "parts": {
     "archive": "bundle.zip",
-    "bytes": 5679579,
-    "sha256": "a1d7af3ce2fdea9c232c5bec46ce22701317a5428889674de0c47945bfb22df3",
+    "bytes": 5680872,
+    "sha256": "097ba0799508fbeb0e070c5cb85fa80d71728394a49fb42243665741154eb779",
     "parts": [
       {
         "name": "bundle.part-0000",
-        "bytes": 5679579,
-        "sha256": "a1d7af3ce2fdea9c232c5bec46ce22701317a5428889674de0c47945bfb22df3"
+        "bytes": 5680872,
+        "sha256": "097ba0799508fbeb0e070c5cb85fa80d71728394a49fb42243665741154eb779"
       }
     ]
   }
