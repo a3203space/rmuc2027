@@ -27,10 +27,10 @@ class RecoveryPrefixSpec:
 
 
 SPECS = {
-    'free_ready': RecoveryPrefixSpec('free_ready', 60., (5.2, 6.0)),
+    'free_ready': RecoveryPrefixSpec('free_ready', 60., (11.7, 8.5)),
     'paid_beneficial': RecoveryPrefixSpec('paid_beneficial', 45., (11.7, 8.5)),
-    'unavailable': RecoveryPrefixSpec('unavailable', 45., (5.2, 6.0), spend_before_departure=True),
-    'alive_weak': RecoveryPrefixSpec('alive_weak', 60., (5.2, 6.0), confirmation_during_prefix=True),
+    'unavailable': RecoveryPrefixSpec('unavailable', 45., (11.7, 8.5), spend_before_departure=True),
+    'alive_weak': RecoveryPrefixSpec('alive_weak', 60., (11.7, 8.5), confirmation_during_prefix=True),
 }
 ALIASES = {'free': 'free_ready', 'paid': 'paid_beneficial', 'paid_early': 'paid_beneficial', 'neither_ready': 'unavailable',
            'no_paid': 'unavailable', 'recover': 'alive_weak'}
@@ -184,32 +184,79 @@ class _PrefixController:
         self.observation_profile = profile
         self.navigation, self.logs = {}, []
         self.fire_commands = 0
+        self.guard_counts = {}
+        self.navigation_phase_counts = {}
+        self.last_diagnostic = {}
+        self.diagnostic_samples = []
+        self.last_diagnostic_second = None
+
+    def _count(self, key):
+        self.guard_counts[key] = self.guard_counts.get(key, 0)+1
+
+    def _diagnose(self, obs, robot, action, target=None, goal=None):
+        phase = self.navigation.get('phase', 'idle')
+        self.navigation_phase_counts[phase] = self.navigation_phase_counts.get(phase, 0)+1
+        fields = ('id', 'team', 'slot', 'model_slot', 'x', 'y', 'z', 'vx', 'vy',
+                  'hp', 'alive', 'tipped', 'grounded', 'transform_progress')
+        self.last_diagnostic = dict(time=obs['time'], driver_phase=self.driver.phase,
+            driver_engage=self.driver.engage, robot={k: robot.get(k) for k in fields},
+            target=None if target is None else {k: target.get(k) for k in fields},
+            goal=None if goal is None else list(goal),
+            range=None if target is None else sdk.distance(robot, target),
+            navigation_phase=phase, navigation_rejected=list(self.navigation.get('rejected', [])),
+            trajectory=list(self.navigation.get('trajectory', [])),
+            waiting_peer=self.navigation.get('wait_for_peer'),
+            move=list(action.get('move', (0., 0.))), fire=bool(action.get('fire', False)))
+        second = int(obs['time'])
+        if second != self.last_diagnostic_second:
+            self.diagnostic_samples.append(dict(self.last_diagnostic))
+            self.last_diagnostic_second = second
 
     def decide(self, observation):
         obs = json.loads(observation.payload) if isinstance(observation, EncodedObservation) else observation
         robot = _robot(obs, self.team, self.slot)
         action = _noop()
         driver = self.driver
+        target, goal = None, None
         if self.team == driver.team and self.slot == 7:
             if robot.get('alive') and driver.phase not in ('spend', 'dead', 'revived'):
-                action = sdk.navigate_action(robot, driver.goal, obs, self.navigation)
+                goal = driver.goal
+                action = sdk.navigate_action(robot, goal, obs, self.navigation)
                 action['fire'] = False
             action['sentry_cmd'] = driver.word(obs, math.hypot(*action.get('move', (0., 0.))[:2]) > .05)
         elif self.team == driver.other and self.slot in (3, 4):
             # Auxiliary actors are permitted full vision. The learner gets none
             # of the shooter's observations or navigation/controller state.
             target = next((r for r in obs.get('enemies', []) if r['slot'] == 7 and r['team'] == driver.team), None)
-            offset = (3., -.8 if self.slot == 3 else .8)
-            goal_red = (driver.spec.goal_red[0]+offset[0], driver.spec.goal_red[1]+offset[1])
+            # Both staging goals are on the public central deck. In the
+            # shooter's team-local frame they trigger SDK's existing legal
+            # fold/jump approach, avoiding the v1 40+ metre outer-map detour.
+            goal_red = (16.3, 6.5 if self.slot == 3 else 8.5)
             if driver.phase in ('dead', 'revived'):
-                goal_red = (driver.spec.goal_red[0]+7., driver.spec.goal_red[1]+offset[1])
+                goal_red = (16.8, 6.5 if self.slot == 3 else 8.5)
+            goal = _mirror(goal_red, driver.team)
+            self._count('decisions')
+            if target is not None: self._count('target_seen')
             if robot.get('alive'):
-                action = sdk.navigate_action(robot, _mirror(goal_red, driver.team), obs, self.navigation)
+                self._count('shooter_alive')
+                action = sdk.navigate_action(robot, goal, obs, self.navigation)
                 action['fire'] = False
-                if target is not None and target.get('alive') and driver.engage and sdk.distance(robot, target) <= 7.:
-                    action.update(aim=sdk.aim_at(robot, target), pitch=sdk.aim_pitch(robot, target),
-                                  fire=bool(sdk.can_fire(robot) and sdk.ballistic_reachable(robot, target)))
-                    self.fire_commands += int(action['fire'])
+                if target is not None and target.get('alive'):
+                    self._count('target_alive')
+                    # Preparation creates a real firefight; it does not wait
+                    # for the learner to park at an exact waypoint. Actual
+                    # death/readiness is still verified before handoff.
+                    if sdk.distance(robot, target) <= 7.:
+                        self._count('in_range')
+                        can_fire = bool(sdk.can_fire(robot))
+                        reachable = bool(sdk.ballistic_reachable(robot, target))
+                        self._count('can_fire' if can_fire else 'cannot_fire')
+                        self._count('ballistic_reachable' if reachable else 'ballistic_blocked')
+                        action.update(aim=sdk.aim_at(robot, target), pitch=sdk.aim_pitch(robot, target),
+                                      fire=bool(can_fire and reachable))
+                        self.fire_commands += int(action['fire'])
+                    else: self._count('out_of_range')
+        self._diagnose(obs, robot, action, target, goal)
         return {str(self.slot): action}, None
 
     def close(self):
@@ -241,10 +288,10 @@ def prepare_recovery_prefix(session, kind, deadline=None):
                    else getattr(policy, 'observation_profile', None))
         replacements.append((team, slots, _PrefixController(driver, team, slot, profile)))
     error_count = len(battle.diagnostics)
-    report = dict(version=1, kind=kind, prepared=False, reason='simulation_limit',
+    report = dict(version=2, kind=kind, prepared=False, reason='simulation_limit',
         max_simulation_seconds=spec.max_simulation_seconds, learning_samples=0,
         bootstrap_excluded_from_policy_score=True, start_time=start,
-        preparation_controller='legal_script_prefix_v1')
+        preparation_controller='legal_script_prefix_v2')
     try:
         battle.policies = replacements
         battle._seat_policies = {(team, slots[0]): p for team, slots, p in replacements}
@@ -288,6 +335,12 @@ def prepare_recovery_prefix(session, kind, deadline=None):
             legal_history_count=driver.history_count, legal_history_sha256=driver.history_hash.hexdigest(),
             events=driver.events, event_counts=driver.event_counts, purchase_cost=driver.purchase_cost,
             purchase_requested=driver.purchase_requested, purchase_acknowledged=driver.spent,
-            fire_commands=sum(p.fire_commands for _, _, p in replacements))
+            fire_commands=sum(p.fire_commands for _, _, p in replacements),
+            diagnostics=dict(driver_phase=driver.phase, driver_engage=driver.engage,
+                learner_goal=list(driver.goal), dead_seen=driver.dead_seen,
+                seats={team+':'+str(slots[0]): dict(guard_counts=p.guard_counts,
+                    navigation_phase_counts=p.navigation_phase_counts,
+                    last=p.last_diagnostic, samples=p.diagnostic_samples)
+                    for team, slots, p in replacements}))
         battle.metadata['recovery_prefix'] = report
     return report

@@ -1,5 +1,5 @@
 {
-  "status": "training",
+  "status": "evaluating",
   "budget": {
     "started_unix": 1794339204.825493,
     "deadline_unix": 1794346404.825493,
@@ -24,13 +24,56 @@
       "exit_code": 0,
       "timed_out": false,
       "log": "preflight.log"
+    },
+    {
+      "stage": "train",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "train.log"
     }
   ],
-  "evaluations": [],
+  "evaluations": [
+    {
+      "case_id": "main-warp_kinematic-red",
+      "member": "baseline",
+      "exit_code": -2,
+      "timed_out": true,
+      "log": "main-warp_kinematic-red-baseline.log"
+    },
+    {
+      "case_id": "main-warp_kinematic-red",
+      "member": "candidate",
+      "exit_code": 0,
+      "timed_out": true,
+      "log": "main-warp_kinematic-red-candidate.log"
+    },
+    {
+      "case_id": "main-warp_kinematic-blue",
+      "member": "baseline",
+      "exit_code": -2,
+      "timed_out": true,
+      "log": "main-warp_kinematic-blue-baseline.log"
+    }
+  ],
   "allocation": {
     "estimated_evaluation_seconds": 4393.086286070855,
     "training_seconds": 1403.0651781530069,
     "evaluation_reserve_seconds": 4393.086286070855,
     "num_envs": 1
+  },
+  "published_checkpoint": {
+    "directory": "main/checkpoints/update-000108",
+    "samples": 12102,
+    "update_id": 108,
+    "optimizer_steps": 407,
+    "skill_sha256": "1b37ddcfa8dfe6fdfb1bc491640f4181d6d0b9e57adc7eea7bdf656f4c305355",
+    "sha256": {
+      "model.zip": "0cae339943f6a7453ef6a6824b75c3ceb40e01c541fd673599ea37d4719a20cf",
+      "resume-state.pt": "ba6e840aa2b6f036e84f84ce22f4992d5086807f4be169cc0cf86a89a9d3747c",
+      "samplers.json": "5fff8523d2f036668c2f7973183023638ecd67b5392bc87def60529761e536f8",
+      "actor.json": "7a345dea0418bede0c45d4be44afc8418ad5fd0e746ae9f55258f0fd1e6172ac",
+      "experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
+      "coordinator-state.json": "479c7d131f9c70e12c9dfea4030ba9ec519f0ba84eaded616bb1f9c34b7b0ab9"
+    }
   }
 }

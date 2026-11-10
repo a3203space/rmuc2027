@@ -1,26 +1,26 @@
 {
-  "sha256": "b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8",
+  "sha256": "2e01e30c1215a5770516326a12064632e1db559b3d1e924d3f3f5dce7a189a4b",
   "files": {
-    "actor.json": "61c9b90414300bcd723ad8fa52284b3dcb43d68a1dbb9187fa296e6da278d520",
-    "coordinator-state.json": "d83caf7418bade38564fa3d9cad27fa9fab596bf9a52a7f14089038c90f76d6d",
+    "actor.json": "7a345dea0418bede0c45d4be44afc8418ad5fd0e746ae9f55258f0fd1e6172ac",
+    "coordinator-state.json": "479c7d131f9c70e12c9dfea4030ba9ec519f0ba84eaded616bb1f9c34b7b0ab9",
     "experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
-    "model.zip": "98b1b110fb27f327fc083c725223e1d43b6eb97070d20da6f42cd5d2891ac9fd",
-    "resume-state.pt": "ec670f2cbbbde535607b8a2cb4edb583da60644f29b93371403143c344ee59b9",
-    "samplers.json": "7daefc26cb991ed63aeb73ce9bd5fe39100613b516c2243b3d40eca536aa1c95"
+    "model.zip": "0cae339943f6a7453ef6a6824b75c3ceb40e01c541fd673599ea37d4719a20cf",
+    "resume-state.pt": "ba6e840aa2b6f036e84f84ce22f4992d5086807f4be169cc0cf86a89a9d3747c",
+    "samplers.json": "5fff8523d2f036668c2f7973183023638ecd67b5392bc87def60529761e536f8"
   },
-  "samples": 11270,
-  "update_id": 95,
-  "directory": "main/checkpoints/update-000095",
-  "path": "checkpoints/b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8",
+  "samples": 12102,
+  "update_id": 108,
+  "directory": "main/checkpoints/update-000108",
+  "path": "checkpoints/2e01e30c1215a5770516326a12064632e1db559b3d1e924d3f3f5dce7a189a4b",
   "parts": {
     "archive": "bundle.zip",
-    "bytes": 5642275,
-    "sha256": "b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8",
+    "bytes": 5646559,
+    "sha256": "2e01e30c1215a5770516326a12064632e1db559b3d1e924d3f3f5dce7a189a4b",
     "parts": [
       {
         "name": "bundle.part-0000",
-        "bytes": 5642275,
-        "sha256": "b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8"
+        "bytes": 5646559,
+        "sha256": "2e01e30c1215a5770516326a12064632e1db559b3d1e924d3f3f5dce7a189a4b"
       }
     ]
   }

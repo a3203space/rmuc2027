@@ -77,7 +77,10 @@ class BackupWorker:
         # Child commands stay in the caller's process group, so the campaign can
         # terminate this worker, Git and SSH together at its absolute cutoff.
         timeout=min(float(limit),self.remaining())
-        environment={**os.environ,'GIT_TERMINAL_PROMPT':'0','GIT_SSH_COMMAND':'ssh -o BatchMode=yes -o ConnectTimeout=10',**(env or {})}
+        # This host resolves GitHub's IPv4 endpoint reliably; the default
+        # dual-stack SSH lookup repeatedly failed while IPv4-only verification
+        # succeeded. Keep normal DNS and host-key validation, without pinning IPs.
+        environment={**os.environ,'GIT_TERMINAL_PROMPT':'0','GIT_SSH_COMMAND':'ssh -4 -o BatchMode=yes -o ConnectTimeout=10',**(env or {})}
         result=subprocess.run(['git',*args],input=data,capture_output=True,cwd=self.repo,
                               env=environment,timeout=timeout,check=False)
         if result.returncode:
@@ -308,12 +311,20 @@ class BackupWorker:
             raise
 
     def loop(self):
+        def final_stage():
+            path=self.run/'campaign.json'
+            try:stage=json.loads(path.read_text()).get('status')
+            except (OSError,ValueError):return False
+            return stage in ('web_acceptance','results_frozen','completed','completed_partial','failed_initialization')
         while self.clock()<self.deadline:
+            if final_stage():return
             started=self.clock()
             try:self.snapshot()
             except Exception as error:print(json.dumps(dict(kind='backup-failed',error=str(error)),ensure_ascii=False),flush=True)
             next_time=started+self.interval
-            while self.clock()<min(next_time,self.deadline):time.sleep(min(5.,min(next_time,self.deadline)-self.clock()))
+            while self.clock()<min(next_time,self.deadline):
+                if final_stage():return
+                time.sleep(min(5.,min(next_time,self.deadline)-self.clock()))
 
 
 def main():

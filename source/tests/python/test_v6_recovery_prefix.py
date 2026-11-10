@@ -138,4 +138,72 @@ class RecoveryPrefixTests(unittest.TestCase):
         self.assertEqual(battle.match._frame['robots'][0]['hp'], before[0]['hp'])
 
 
+class RecoveryPrefixV2Tests(unittest.TestCase):
+    def controller_obs(self, *, team='blue', slot=3, target=True, alive=True, distance=5.):
+        shooter=dict(team=team,slot=slot,id=team+'-'+str(slot),alive=True,
+                     x=16.3,y=6.5,z=0.,hp=300)
+        opponent='red' if team=='blue' else 'blue'
+        enemy=dict(team=opponent,slot=7,id=opponent+'-7',alive=alive,
+                   x=16.3-distance,y=6.5,z=0.,hp=400 if alive else 0)
+        return dict(team=team,time=0.,robots=[shooter],enemies=[enemy] if target else [])
+
+    def driver(self,team='red',phase='travel'):
+        return SimpleNamespace(team=team,other='blue' if team=='red' else 'red',
+            phase=phase,engage=False,spec=recovery.SPECS['free_ready'])
+
+    def test_firing_no_longer_waits_for_exact_learner_waypoint(self):
+        c=recovery._PrefixController(self.driver(),'blue',3,'privileged_aux_2027_v1')
+        with patch.object(recovery.sdk,'navigate_action',return_value=dict(move=[0.,0.])), \
+             patch.object(recovery.sdk,'can_fire',return_value=True), \
+             patch.object(recovery.sdk,'ballistic_reachable',return_value=True), \
+             patch.object(recovery.sdk,'aim_at',return_value=0.), \
+             patch.object(recovery.sdk,'aim_pitch',return_value=0.):
+            result,_=c.decide(self.controller_obs())
+        self.assertTrue(result['3']['fire']);self.assertFalse(c.driver.engage)
+        self.assertEqual(c.guard_counts['in_range'],1)
+        self.assertEqual(c.last_diagnostic['goal'],[16.3,6.5])
+        json.dumps(c.last_diagnostic,allow_nan=False)
+
+    def test_actual_legality_guards_remain_required(self):
+        for target,alive,distance,can,reach in [(False,True,5.,True,True),(True,False,5.,True,True),
+                (True,True,7.01,True,True),(True,True,5.,False,True),(True,True,5.,True,False)]:
+            c=recovery._PrefixController(self.driver(),'blue',3,'privileged_aux_2027_v1')
+            with patch.object(recovery.sdk,'navigate_action',return_value=dict(move=[0.,0.])), \
+                 patch.object(recovery.sdk,'can_fire',return_value=can), \
+                 patch.object(recovery.sdk,'ballistic_reachable',return_value=reach), \
+                 patch.object(recovery.sdk,'aim_at',return_value=0.), \
+                 patch.object(recovery.sdk,'aim_pitch',return_value=0.):
+                result,_=c.decide(self.controller_obs(target=target,alive=alive,distance=distance))
+            self.assertFalse(result['3']['fire'])
+
+    def test_caps_and_team_local_central_targets(self):
+        expected={'free_ready':60.,'paid_beneficial':45.,'unavailable':45.,'alive_weak':60.}
+        for kind,spec in recovery.SPECS.items():
+            self.assertEqual(spec.max_simulation_seconds,expected[kind])
+            self.assertTrue(10.5<spec.goal_red[0]<17.5 and 3<spec.goal_red[1]<12)
+        for learner in ('red','blue'):
+            shooter='blue' if learner=='red' else 'red'
+            for slot in (3,4):
+                c=recovery._PrefixController(self.driver(learner),shooter,slot,'privileged_aux_2027_v1')
+                with patch.object(recovery.sdk,'navigate_action',return_value=dict(move=[0.,0.])):
+                    c.decide(self.controller_obs(team=shooter,slot=slot,target=False))
+                world=c.last_diagnostic['goal']
+                local=recovery._mirror(world,shooter)
+                self.assertTrue(10.5<local[0]<17.5 and 3<local[1]<12)
+
+    def test_failed_report_has_bounded_per_seat_diagnostics(self):
+        b=FakeBattle(lambda t: observation(t))
+        with patch.dict(recovery.SPECS,free_ready=recovery.RecoveryPrefixSpec('free_ready',.15,(11.7,8.5))), \
+             patch.object(recovery.sdk,'navigate_action',return_value={'move':[0.,0.]}):
+            report=recovery.prepare_recovery_prefix(session(b),'free_ready')
+        self.assertFalse(report['prepared']);self.assertEqual(report['version'],2)
+        d=report['diagnostics']['seats']['red:7']
+        self.assertEqual(d['last']['driver_phase'],'travel')
+        self.assertEqual(d['last']['robot']['hp'],300)
+        self.assertEqual(len(d['samples']),1)
+        self.assertEqual(sum(d['navigation_phase_counts'].values()),3)
+        self.assertEqual(report['learning_samples'],0)
+        json.dumps(report,allow_nan=False)
+
+
 if __name__ == '__main__': unittest.main()

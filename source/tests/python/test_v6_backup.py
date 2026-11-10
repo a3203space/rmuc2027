@@ -42,6 +42,15 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(self.git('rev-parse','HEAD'),self.head)
         self.assertEqual(sha(self.repo/'.git/index'),self.index)
 
+    def test_periodic_worker_yields_to_web_and_final_packaging(self):
+        for stage in ('web_acceptance','results_frozen'):
+            write_json(self.run/'campaign.json',dict(status=stage))
+            self.worker.deadline=time.time()+.1
+            with patch.object(self.worker,'snapshot') as snapshot:
+                self.worker.loop()
+                snapshot.assert_not_called()
+        self.assert_shared_unchanged()
+
     def test_snapshot_keeps_worktree_without_db_and_complete_generation(self):
         self.generation()
         (self.repo/'source.py').write_text('value = 2\n')
