@@ -133,6 +133,90 @@ def save_state(model,vec,folder,name='model.zip'):
     pending=folder/'resume-state.tmp';torch.save(state,pending);os.replace(pending,folder/'resume-state.pt')
 
 
+def plan_sampler_restore(samplers, num_envs, *, num_timesteps=0, source_sha256=None):
+    """Pure future-resume migration, preserving recorded history exactly once.
+
+    A changed topology or cloned legacy streams needs independent new streams.
+    Started coverage is not completed coverage. Raw ancestors are retained for
+    audit: historical duplication cannot be inferred away from these records.
+    """
+    from .scenarios import ScenarioSampler,canonical_hash
+    from .capabilities import CapabilitySampler
+    if type(num_envs) is not int or num_envs < 1:raise ValueError('Positive sampler worker count required')
+    source_sha256=source_sha256 or canonical_hash(samplers)
+    def duplicates(kind):
+        groups={}
+        for index,item in enumerate(samplers):
+            state=item.get('session',{}).get(kind)
+            if state is None:continue
+            identity={'rng_state':state['rng_state']}
+            if kind=='scenario':identity['queue']=state['queue']
+            groups.setdefault(canonical_hash(identity),[]).append(index)
+        return [ids for ids in groups.values() if len(ids)>1]
+    cloned_scenario=duplicates('scenario');cloned_capabilities=duplicates('capabilities')
+    reasons=[]
+    if samplers and len(samplers)!=num_envs:reasons.append('worker_topology_changed')
+    if cloned_scenario:reasons.append('legacy_cloned_scenario_streams')
+    if cloned_capabilities:reasons.append('legacy_cloned_capability_streams')
+    report=dict(version=1,source_sampler_sha256=source_sha256,source_workers=len(samplers),target_workers=num_envs,
+        checkpoint_num_timesteps=int(num_timesteps),reasons=reasons,
+        duplicate_scenario_workers=cloned_scenario,duplicate_capability_workers=cloned_capabilities,
+        bitwise_sampler_restore=bool(samplers) and not reasons,bitwise_hardware_resume=False,
+        mode='migrated' if reasons else ('exact_sampler_state' if samplers else 'fresh_no_saved_sampler'))
+    if not reasons:return copy.deepcopy(samplers),report
+    scenarios=[ScenarioSampler.from_state_dict(item['session']['scenario']) for item in samplers]
+    capabilities=[CapabilitySampler.from_state_dict(item['session']['capabilities']) for item in samplers]
+    if any(type(item['session']['episode_index']) is not int or item['session']['episode_index']<0 for item in samplers):
+        raise ValueError('Invalid recorded session episode count')
+    started=set().union(*(set(item.queue[:item.cursor]) for item in scenarios))
+    counts={};failures={}
+    for sampler in scenarios:
+        for case,row in sampler.counts.items():
+            merged=counts.setdefault(case,{})
+            for field,value in row.items():
+                if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<0:
+                    raise ValueError('Invalid recorded scenario counter')
+                merged[field]=merged.get(field,0)+value
+        for case,weight in sampler.failures.items():failures[case]=max(failures.get(case,0.),weight)
+    def seed(domain,index):
+        value=f'sampler-restore-v1/{source_sha256}/{num_timesteps}/{num_envs}/{domain}/{index}'
+        return int.from_bytes(hashlib.sha256(value.encode()).digest()[:8],'big')
+    def share(total,index):return total//num_envs+int(index<total%num_envs)
+    assigned=[{} for _ in range(num_envs)]
+    for case,row in counts.items():
+        owner=int(hashlib.sha256(('coverage-owner/'+case).encode()).hexdigest(),16)%num_envs
+        assigned[owner][case]=copy.deepcopy(row)
+    total_episodes=sum(int(item['session']['episode_index']) for item in samplers)
+    total_capability_episodes=sum(item.episodes for item in capabilities)
+    result=[];streams=[]
+    for index in range(num_envs):
+        seeds={name:seed(name,index) for name in ('scenario','capabilities','session','gym')}
+        scenario=ScenarioSampler(seeds['scenario'],scenarios[index%len(scenarios)].failure_fraction)
+        # Retain globally started cases as a prefix, then independently order
+        # the remaining cases. Normal post-coverage/failure sampling can revisit
+        # any case; migration does not claim a completed episode or extra data.
+        scenario.queue=[key for key in scenario.queue if key in started]+[key for key in scenario.queue if key not in started]
+        scenario.cursor=len(started);scenario.counts=assigned[index];scenario.failures=copy.deepcopy(failures)
+        capability=CapabilitySampler(seeds['capabilities']);capability.episodes=share(total_capability_episodes,index)
+        migrated=copy.deepcopy(samplers[index%len(samplers)])
+        migrated['session'].update(episode_index=share(total_episodes,index),scenario=scenario.state_dict(),
+            capabilities=capability.state_dict(),rng_state=random.Random(seeds['session']).getstate())
+        migrated['gym_rng']=np.random.default_rng(seeds['gym']).bit_generator.state
+        result.append(migrated);streams.append(dict(worker=index,seeds=seeds,started_cursor=scenario.cursor,
+            assigned_counter_cases=sorted(assigned[index]),failure_fraction=scenario.failure_fraction))
+    report.update(ancestor_states=copy.deepcopy(samplers),streams=streams,
+        original_cursors=[item.cursor for item in scenarios],started_prefix_union=sorted(started),
+        coverage_semantics='union of started prefixes, including incomplete episodes; not completed coverage; later sampling may revisit',
+        recorded_counts_before=counts,recorded_counts_after={case:row for group in assigned for case,row in group.items()},
+        failure_weights_before=[copy.deepcopy(item.failures) for item in scenarios],failure_weights_after=failures,
+        failure_merge='per-case maximum priority replicated for independent replay; not summed failure events',
+        historical_clone_records_preserved_without_deduplication=True,migration_adds_observed_coverage=False,
+        session_episode_total_before=total_episodes,session_episode_total_after=sum(x['session']['episode_index'] for x in result),
+        capability_episode_total_before=total_capability_episodes,
+        capability_episode_total_after=sum(x['session']['capabilities']['episodes'] for x in result))
+    return result,report
+
+
 def restore_state(folder,vec):
     folder=Path(folder)
     if (folder/'resume-state.pt').exists():
@@ -141,18 +225,21 @@ def restore_state(folder,vec):
         cuda=state.get('torch_cuda',[])
         if cuda and torch.cuda.is_available() and len(cuda)==torch.cuda.device_count():torch.cuda.set_rng_state_all(cuda)
     else:state={}
-    samplers=json.loads((folder/'samplers.json').read_text()) if (folder/'samplers.json').exists() else []
-    if len(samplers)==vec.num_envs:
-        for index,item in enumerate(samplers):vec.env_method('restore_sampler_state',item,indices=index)
-        vec._seeds=[None]*vec.num_envs
-    elif samplers:
-        # Explicit reseeding when the sampler topology changes. Preserve aggregate
-        # coverage as ancestry and avoid replaying the old initial episode seeds.
-        offset=int(state.get('num_timesteps',0))+sum(x['session']['episode_index'] for x in samplers)+10000019
-        for index in range(vec.num_envs):
-            current=vec.env_method('sampler_state',indices=index)[0]
-            source=copy.deepcopy(samplers[index%len(samplers)])
-            source['gym_rng']=np.random.default_rng(offset+index*1000003).bit_generator.state
-            vec.env_method('restore_sampler_state',source,indices=index)
-        vec._seeds=[None]*vec.num_envs
+    raw=(folder/'samplers.json').read_bytes() if (folder/'samplers.json').exists() else b'[]'
+    samplers,report=plan_sampler_restore(json.loads(raw),vec.num_envs,num_timesteps=state.get('num_timesteps',0),
+        source_sha256=hashlib.sha256(raw).hexdigest())
+    for index,item in enumerate(samplers):vec.env_method('restore_sampler_state',item,indices=index)
+    if samplers:vec._seeds=[None]*vec.num_envs
+    # Never rewrite the source sampler/RNG checkpoint during migration. A later
+    # completed-update save persists the new live states; this report retains
+    # every original ancestor and explicitly marks the non-bitwise transition.
+    report_path=folder/'sampler-restore.json'
+    if report_path.exists():
+        previous=report_path.read_bytes();previous_hash=hashlib.sha256(previous).hexdigest()
+        relative=f'sampler-restore-history/{previous_hash}.json';history=folder/relative
+        history.parent.mkdir(exist_ok=True)
+        if not history.exists():history.write_bytes(previous)
+        report['previous_restore_report']=dict(path=relative,sha256=previous_hash)
+    write_json(report_path,report)
+    state['sampler_restore']=report
     return state
