@@ -1,17 +1,17 @@
 {
-  "captured_utc": "2026-11-10T17:26:08.352048+00:00",
+  "captured_utc": "2026-11-10T17:36:29.072599+00:00",
   "source_commit": "ab58869a43acc30d8cd038ca0d7f18add6eda28f",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T17:25:59.609302+00:00",
-      "model_sha256": "785df1dc11cdd574607a21587163195c723cc8a766f750f1470a35ced8e3b5e2",
-      "resume_sha256": "aa21986e6950e958477e1b19ad4c125a091bd691e0159cb3f743ee8439f0b6df",
-      "num_timesteps": 12870,
-      "sb3_n_updates": 272,
-      "optimizer_steps": 430,
-      "completed_updates": 100,
-      "optimized_samples": 27520,
+      "captured_utc": "2026-11-10T17:36:20.531597+00:00",
+      "model_sha256": "9e8acf58f3ac23d0eff51c8fc56d7290583e78c8f881ed1ea38b130bfee5d82c",
+      "resume_sha256": "f5df30fc9551d7048495fd5d41a43ed2857acf2c334b13e141d206a47f285e95",
+      "num_timesteps": 13894,
+      "sb3_n_updates": 297,
+      "optimizer_steps": 475,
+      "completed_updates": 108,
+      "optimized_samples": 30400,
       "partial_rollout_discarded": 0,
       "checkpoint_resume_counts_match": true,
       "source_files_stable": true,
@@ -19,14 +19,14 @@
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "dfdf3145dc1696ebbfd5e65b68cfe0b2876f3d9bf168f6526b29e8e4612f94cb",
-      "bytes": 3487828
+      "archive_sha256": "154a063cd1693e07872fb58e751f1656a9dc317d13d050af910b5fc785ec31ad",
+      "bytes": 3491874
     }
   },
   "gradient_deadline_unix": 1794332406.0,
   "campaign_deadline_unix": 1794333606.0,
   "database_included": false,
-  "validation": "训练中开发备份，未宣称收敛或全243/486矩阵420秒通过",
+  "validation": "PPO已结束；冻结对照进行中，尚未宣称对照通过或全矩阵420秒验收",
   "frozen_helpers": {
     "infantry": {
       "commit": "1047ef3cae27b3b153d71a236b93f4bee945be64",
@@ -40,5 +40,14 @@
       "archive_sha256": "ce1e83b585f59d5bc213952961a5b2efce9ffb28b7b5ee3050b280010845c076",
       "url": "https://github.com/a3203space/rmuc2027/blob/1047ef3cae27b3b153d71a236b93f4bee945be64/heavy.zip"
     }
+  },
+  "milestone": {
+    "kind": "authorized_main_only_extension_in_progress",
+    "recorded_utc": "2026-11-10T17:31:06.127483+00:00",
+    "artifact_title": "备份：主哨兵独立追加一小时的可恢复PPO检查点",
+    "description": "独立追加运行，从原主哨兵10310 samples/317 optimizer steps恢复；infantry与heavy助手冻结。检查点记录累计计数，PPO期间不启用隐藏BC；便携actor导出可能滞后，恢复以与resume-state计数一致的model.zip为准。每次迁移丢弃partial rollout并从新episode开始，不保证跨硬件逐位一致。",
+    "validation": "追加训练与冻结对照尚进行中，不宣称整体改进或486阵容全矩阵通过。当前两个worker继承相同场景队列，物理seed不同；覆盖按唯一scenario去重。原两小时完整包与结论保留。",
+    "deadline_unix": 1794333606,
+    "gradient_deadline_unix": 1794332406
   }
 }
