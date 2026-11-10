@@ -1,5 +1,5 @@
 {
-  "status": "preflight",
+  "status": "training",
   "budget": {
     "started_unix": 1794344233.0,
     "deadline_unix": 1794373033.0,
