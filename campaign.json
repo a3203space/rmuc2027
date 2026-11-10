@@ -1,0 +1,60 @@
+{
+  "status": "packaging",
+  "started_unix": 1794330006.0,
+  "deadline_unix": 1794333606.0,
+  "gradient_deadline_unix": 1794332406.0,
+  "wall_budget_seconds": 3600.0,
+  "parent_run": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312",
+  "parent_bundle_sha256": "175134aac3c4bd5d0de97c81f2ffc357ec408bdb8402086c20ea56f2bf272abe",
+  "num_envs": 2,
+  "stages": [
+    {
+      "stage": "main",
+      "exit_code": 0
+    }
+  ],
+  "evaluations": [
+    {
+      "backend": "warp_kinematic",
+      "side": "red",
+      "exit_code": 0
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "blue",
+      "exit_code": 0
+    },
+    {
+      "backend": "mjwarp",
+      "side": "red",
+      "exit_code": 0,
+      "priority": "complete migration trial under shared-host contention"
+    }
+  ],
+  "evaluation_reallocation": "review-notes/evaluation-reallocation.json",
+  "skipped_evaluations": [
+    {
+      "backend": "rapier",
+      "side": "red",
+      "status": "interrupted_trace_retained"
+    },
+    {
+      "backend": "rapier",
+      "side": "blue",
+      "status": "not_run_budget"
+    },
+    {
+      "backend": "mjwarp",
+      "side": "blue",
+      "status": "not_run_budget"
+    }
+  ],
+  "radar_candidate_fit": "completed; active classifier unchanged",
+  "selection": {
+    "selected": "initialized.zip",
+    "ppo_improvement_verified": false,
+    "complete_pairs": 1,
+    "resume_default": "model.zip",
+    "reason": "keep_demonstration_anchor_pending_evidence"
+  }
+}

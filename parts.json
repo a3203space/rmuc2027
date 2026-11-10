@@ -1,0 +1,27 @@
+{
+  "archive": "bundle.zip",
+  "sha256": "ab479934c9a902708decaff1dab8379a61f9b117db6808c7a1e2be58494df7cd",
+  "bytes": 177903398,
+  "parts": [
+    {
+      "name": "bundle.part-0000",
+      "bytes": 50331648,
+      "sha256": "157c7284cd46d88060b017c915700ff25b7f8bcbe2f720d29f2b07f15db79f72"
+    },
+    {
+      "name": "bundle.part-0001",
+      "bytes": 50331648,
+      "sha256": "a16c93105234b995d06764269c4f76bba9a16387fc73a25d0b060bd2c94aad02"
+    },
+    {
+      "name": "bundle.part-0002",
+      "bytes": 50331648,
+      "sha256": "e178f5732980f2f6bc38fb5a8d7ce2543d06a1fb0adaf9c0525fb540dde30dea"
+    },
+    {
+      "name": "bundle.part-0003",
+      "bytes": 26908454,
+      "sha256": "ebe04cd79bb86a71ce70e703f83c0667e20217d00c7dae5b27626e4886d4f249"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "selected": "initialized.zip",
+  "ppo_improvement_verified": false,
+  "complete_pairs": 1,
+  "resume_default": "model.zip",
+  "reason": "keep_demonstration_anchor_pending_evidence"
+}
