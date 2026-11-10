@@ -13,9 +13,9 @@
       "label": "baseline",
       "policy_version": 6
     },
-    "candidate-1c7ec9df4552": {
-      "path": "main/catalog/1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00.zip",
-      "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+    "candidate-7d5d35f8937f": {
+      "path": "main/catalog/7d5d35f8937f6448062e785cfb6c31a357224884fc4642c9fb1843eec6d03c52.zip",
+      "sha256": "7d5d35f8937f6448062e785cfb6c31a357224884fc4642c9fb1843eec6d03c52",
       "label": "candidate",
       "policy_version": 6
     }
@@ -76,7 +76,54 @@
       "learner_side": "blue"
     }
   },
-  "replays": {},
+  "replays": {
+    "training-worker-0-episode-00005": {
+      "path": "replays/training/worker-0-episode-00005.json",
+      "sha256": "a547c55c23e8db0becb5a99a7785b850d44a5ffaf681b5421c3299f288f7181b",
+      "kind": "training",
+      "label": "worker-0-episode-00005",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 120.0,
+      "recording_end_reason": "episode_window"
+    },
+    "training-worker-0-episode-00009": {
+      "path": "replays/training/worker-0-episode-00009.json",
+      "sha256": "59557e92b96cf84bd655506339bd3270defc279a83945a063d8b4e1a42bc8c2c",
+      "kind": "training",
+      "label": "worker-0-episode-00009",
+      "backend": "warp_kinematic",
+      "truncated": true,
+      "seconds": 165.3,
+      "recording_end_reason": "episode_window"
+    },
+    "evaluation-main-rapier-blue-baseline": {
+      "path": "replays/evaluation/main-rapier-blue-baseline.json",
+      "sha256": "27d5d66077049857b09603c7f50263394d82aa26374634215a0fd4602f6d232c",
+      "kind": "evaluation",
+      "label": "main-rapier-blue-baseline",
+      "backend": "rapier",
+      "truncated": false,
+      "seconds": 60.0,
+      "recording_end_reason": "evaluation_complete",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "checkpoint_id": "baseline-1c7ec9df4552",
+      "case_id": "main-rapier-blue"
+    },
+    "evaluation-main-rapier-blue-candidate": {
+      "path": "replays/evaluation/main-rapier-blue-candidate.json",
+      "sha256": "dd34eaa2dca2498cb450f15a85a29f04f557d9e01d3f8098ca74fcdca2469f80",
+      "kind": "evaluation",
+      "label": "main-rapier-blue-candidate",
+      "backend": "rapier",
+      "truncated": false,
+      "seconds": 60.0,
+      "recording_end_reason": "evaluation_complete",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "checkpoint_id": "candidate-7d5d35f8937f",
+      "case_id": "main-rapier-blue"
+    }
+  },
   "radar_classifier": {
     "path": "radar-calibration/classifier.json",
     "sha256": "812a7a62f185fa4402afa6f11698dca9d34b57e74ed104ad0b8fcb5b5fcbbfd8"

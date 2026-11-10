@@ -41,7 +41,7 @@
     }
   },
   "final": null,
-  "campaign_status": "evaluating",
+  "campaign_status": "results_frozen",
   "raw_database_included": false,
   "shared_head_unchanged": true,
   "shared_index_unchanged": true
