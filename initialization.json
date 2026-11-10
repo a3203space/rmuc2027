@@ -1,0 +1,435 @@
+[
+  {
+    "role": "infantry",
+    "source": {
+      "source": "native_2027_script",
+      "schema_hash": "34407fcfe76a58eaa25e4f6e1bb19c18db78f70bef37fec002d2e7f403c25bc2",
+      "episodes": 2,
+      "rows": 900,
+      "seconds": 133.538277312
+    },
+    "rows": 900,
+    "sampled_rows": 45000,
+    "supervised_heads": [
+      898.0,
+      898.0,
+      0.0,
+      0.0,
+      757.0,
+      757.0,
+      58.0,
+      0.0,
+      90.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      898.0,
+      898.0,
+      898.0,
+      898.0,
+      898.0,
+      0.0,
+      0.0,
+      898.0,
+      874.0,
+      898.0,
+      0.0,
+      898.0,
+      2.0,
+      2.0,
+      2.0,
+      838.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "loss": 0.24272498488426208,
+    "updates": 750,
+    "seconds": 10.514335451996885,
+    "offline_representation": {
+      "source": "human_2026_train_telemetry",
+      "family": "infantry",
+      "available_rows": 599757,
+      "human_rows": 16179,
+      "updates": 128,
+      "loss": 0.34194350242614746,
+      "head_names": [
+        "displacement_speed_1s",
+        "displacement_speed_3s",
+        "displacement_speed_5s",
+        "future_moving_1s",
+        "future_moving_3s",
+        "future_moving_5s",
+        "coarse_shot_rate_5s"
+      ],
+      "supervised_heads": [
+        16384,
+        16157,
+        15906,
+        16384,
+        16157,
+        15906,
+        15906
+      ],
+      "seconds": 2.938520597999741,
+      "source_sha256": "53ac64efeaf570c0e21d8c3724dcefcb0123196b3c7ef963183a911863f724a7",
+      "offline_schema_hash": "3df342c196c7170bb2869723875588d0d37fdbf45d93f569a7a8c42dd79d6dec",
+      "split_sha256": "6dd1b291e5d1306e8ab5bd34ed5bfac59fc0124702769345a8cc18f2680e9f2d",
+      "auxiliary_schema_hash": "34407fcfe76a58eaa25e4f6e1bb19c18db78f70bef37fec002d2e7f403c25bc2",
+      "absolute_goal_supervised": false,
+      "gun_angle_supervised": false,
+      "original_actions_supervised": false,
+      "prediction_head_exported": false
+    },
+    "architecture": "layernorm_tanh_v1",
+    "objective": "bounded_mean_mse_and_masked_categorical_ce",
+    "optimizer_scope": "actor_only_separate_adam",
+    "epochs": 50,
+    "loss_scope": "full_demonstration_dataset_after_fit",
+    "intervention": {
+      "original_artifacts": "pre-intervention",
+      "report": "../aux-intervention/layernorm/infantry.report.json",
+      "source_demonstration_sha256": "0995f7b75fa60f41ca9d9781c49b43901a6cd42ec4bce9418c296be7766e3c0c",
+      "ppo_optimizer": "fresh_empty",
+      "source_quality": "legal native teacher; sparse/weak combat and assembly labels",
+      "evaluation_scope": "training demonstrations only; not proof of learned complete skills"
+    },
+    "corrected_metrics": {
+      "bounded_loss": 0.24272498488426208,
+      "continuous_mse": 0.06122840195894241,
+      "categorical_ce": 0.18149657547473907,
+      "moving_vector_mae": 0.283134400844574,
+      "moving_cosine": 0.8688377737998962,
+      "wrong_halfplane_fraction": 0.03470031545741325,
+      "stopped_predicted_speed": 0.22596226632595062,
+      "predicted_speed_min": 0.0,
+      "predicted_speed_max": 0.6540764570236206,
+      "movement_head_std": [
+        0.30854281783103943,
+        0.24013322591781616
+      ],
+      "hidden_abs_gt99": 3.472222222222222e-05,
+      "hidden_feature_std_mean": 0.33350688219070435,
+      "categorical": {
+        "motion": {
+          "accuracy": 1.0,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "turn": {
+          "accuracy": 0.9354120267260579,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "brake": {
+          "accuracy": 1.0,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "power_mode": {
+          "accuracy": 0.8997772828507795,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "transform": {
+          "accuracy": 0.7694877505567929,
+          "supervised": 898,
+          "prediction_classes": 2
+        },
+        "target": {
+          "accuracy": 0.8429844097995546,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "fire": {
+          "accuracy": 0.9290617848970252,
+          "supervised": 874,
+          "prediction_classes": 1
+        },
+        "ammo": {
+          "accuracy": 0.9977728285077951,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "remote_heal": {
+          "accuracy": 1.0,
+          "supervised": 898,
+          "prediction_classes": 1
+        },
+        "revive": {
+          "accuracy": 1.0,
+          "supervised": 2,
+          "prediction_classes": 1
+        },
+        "chassis_profile": {
+          "accuracy": 1.0,
+          "supervised": 2,
+          "prediction_classes": 1
+        },
+        "weapon_profile": {
+          "accuracy": 1.0,
+          "supervised": 2,
+          "prediction_classes": 1
+        },
+        "rune_start": {
+          "accuracy": 1.0,
+          "supervised": 838,
+          "prediction_classes": 1
+        }
+      }
+    }
+  },
+  {
+    "role": "heavy",
+    "source": {
+      "source": "native_2027_script",
+      "schema_hash": "34407fcfe76a58eaa25e4f6e1bb19c18db78f70bef37fec002d2e7f403c25bc2",
+      "episodes": 2,
+      "rows": 900,
+      "seconds": 171.79933182900277
+    },
+    "rows": 900,
+    "sampled_rows": 45000,
+    "supervised_heads": [
+      900.0,
+      900.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      300.0,
+      0.0,
+      120.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      900.0,
+      900.0,
+      900.0,
+      900.0,
+      0.0,
+      0.0,
+      0.0,
+      900.0,
+      0.0,
+      900.0,
+      0.0,
+      900.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      900.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      900.0,
+      0.0
+    ],
+    "loss": 0.15906472504138947,
+    "updates": 750,
+    "seconds": 10.676002564003284,
+    "offline_representation": {
+      "source": "human_2026_train_telemetry",
+      "family": "heavy",
+      "available_rows": 394858,
+      "human_rows": 16049,
+      "updates": 128,
+      "loss": 0.24786439538002014,
+      "head_names": [
+        "displacement_speed_1s",
+        "displacement_speed_3s",
+        "displacement_speed_5s",
+        "future_moving_1s",
+        "future_moving_3s",
+        "future_moving_5s",
+        "coarse_shot_rate_5s"
+      ],
+      "supervised_heads": [
+        16384,
+        16181,
+        15957,
+        16384,
+        16181,
+        15957,
+        12813
+      ],
+      "seconds": 2.7502613899996504,
+      "source_sha256": "53ac64efeaf570c0e21d8c3724dcefcb0123196b3c7ef963183a911863f724a7",
+      "offline_schema_hash": "3df342c196c7170bb2869723875588d0d37fdbf45d93f569a7a8c42dd79d6dec",
+      "split_sha256": "6dd1b291e5d1306e8ab5bd34ed5bfac59fc0124702769345a8cc18f2680e9f2d",
+      "auxiliary_schema_hash": "34407fcfe76a58eaa25e4f6e1bb19c18db78f70bef37fec002d2e7f403c25bc2",
+      "absolute_goal_supervised": false,
+      "gun_angle_supervised": false,
+      "original_actions_supervised": false,
+      "prediction_head_exported": false
+    },
+    "architecture": "layernorm_tanh_v1",
+    "objective": "bounded_mean_mse_and_masked_categorical_ce",
+    "optimizer_scope": "actor_only_separate_adam",
+    "epochs": 50,
+    "loss_scope": "full_demonstration_dataset_after_fit",
+    "intervention": {
+      "original_artifacts": "pre-intervention",
+      "report": "../aux-intervention/layernorm/heavy.report.json",
+      "source_demonstration_sha256": "bee046d44fdd04336e432010b53f945b1e81a0afa3226217b9a86fdc0807508c",
+      "ppo_optimizer": "fresh_empty",
+      "source_quality": "legal native teacher; sparse/weak combat and assembly labels",
+      "evaluation_scope": "training demonstrations only; not proof of learned complete skills"
+    },
+    "corrected_metrics": {
+      "bounded_loss": 0.15906472504138947,
+      "continuous_mse": 0.06588945537805557,
+      "categorical_ce": 0.09317526966333389,
+      "moving_vector_mae": 0.27927887439727783,
+      "moving_cosine": 0.8976507186889648,
+      "wrong_halfplane_fraction": 0.03676470588235294,
+      "stopped_predicted_speed": 0.07031688094139099,
+      "predicted_speed_min": 0.0007002375787124038,
+      "predicted_speed_max": 0.48921462893486023,
+      "movement_head_std": [
+        0.07628310471773148,
+        0.15963026881217957
+      ],
+      "hidden_abs_gt99": 0.0,
+      "hidden_feature_std_mean": 0.281482994556427,
+      "categorical": {
+        "motion": {
+          "accuracy": 1.0,
+          "supervised": 900,
+          "prediction_classes": 1
+        },
+        "turn": {
+          "accuracy": 0.9911111111111112,
+          "supervised": 900,
+          "prediction_classes": 2
+        },
+        "brake": {
+          "accuracy": 1.0,
+          "supervised": 900,
+          "prediction_classes": 1
+        },
+        "power_mode": {
+          "accuracy": 0.9677777777777777,
+          "supervised": 900,
+          "prediction_classes": 2
+        },
+        "target": {
+          "accuracy": 1.0,
+          "supervised": 900,
+          "prediction_classes": 1
+        },
+        "ammo": {
+          "accuracy": 1.0,
+          "supervised": 900,
+          "prediction_classes": 1
+        },
+        "remote_heal": {
+          "accuracy": 1.0,
+          "supervised": 900,
+          "prediction_classes": 1
+        },
+        "pickup": {
+          "accuracy": 0.9977777777777778,
+          "supervised": 900,
+          "prediction_classes": 2
+        },
+        "arm_mode": {
+          "accuracy": 1.0,
+          "supervised": 900,
+          "prediction_classes": 1
+        }
+      }
+    }
+  },
+  {
+    "role": "main",
+    "kind": "explicit_initialization",
+    "samples": 2950,
+    "epochs": 1000,
+    "loss_before": 0.7172176241874695,
+    "loss_after": 0.013238884508609772,
+    "dataset_sha256": "a33ac8325ce70fd4a2f8afd968be83cb33ea198efa4e6ba3f403d7dc1eaf9777",
+    "ppo_samples": 0,
+    "fold_onset_samples": 7,
+    "fold_onset_recall": 1.0,
+    "unfold_transition_samples": 6,
+    "unfold_transition_recall": 1.0,
+    "fold_false_positive_rate": 0.005023322533816099,
+    "transition_weighting": "independently_balance_real_fold_onset_and_release",
+    "intervention": "bounded_missing_inference_ages_and_real_transition_weighting"
+  }
+]

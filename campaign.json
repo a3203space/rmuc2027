@@ -1,0 +1,27 @@
+{
+  "status": "running",
+  "started_unix": 1794323546.4470646,
+  "deadline_unix": 1794330746.4470646,
+  "wall_budget_seconds": 7200.0,
+  "stages": [
+    {
+      "stage": "preflight",
+      "exit_code": 0
+    },
+    {
+      "stage": "initialize",
+      "exit_code": 0
+    },
+    {
+      "stage": "infantry",
+      "exit_code": 0
+    },
+    {
+      "stage": "heavy",
+      "exit_code": 0
+    }
+  ],
+  "evaluations": [],
+  "gradient_deadline_unix": 1794328346.4470646,
+  "num_envs": 2
+}

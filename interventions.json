@@ -1,0 +1,12 @@
+{
+  "budget_reset": false,
+  "deadline_unix": 1794330746.4470646,
+  "updated_unix": 1794325696.0148025,
+  "auxiliary": "aux-intervention/promotion.json",
+  "main_feature_encoding": "main/guidance/encoding-migration.json",
+  "main_onset_initialization": "main/initialization.json",
+  "original_weights": "each stage/pre-intervention",
+  "spin_guard": "planned passage alone no longer activates braking; actual stopping-distance guard preserved",
+  "main_initialization_demonstrations": "collected before corrections with original helper pool; normalized features preserve targets and skill37",
+  "ppo_demonstration_gradients": false
+}
