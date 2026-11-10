@@ -1,26 +1,26 @@
 {
-  "captured_utc": "2026-11-10T17:36:29.072599+00:00",
-  "source_commit": "ab58869a43acc30d8cd038ca0d7f18add6eda28f",
+  "captured_utc": "2026-11-10T17:46:47.198112+00:00",
+  "source_commit": "ab7e8a4e49291e8853d5e6d5f58a906173da7e0d",
   "stages": {
     "main": {
       "role": "main",
-      "captured_utc": "2026-11-10T17:36:20.531597+00:00",
-      "model_sha256": "9e8acf58f3ac23d0eff51c8fc56d7290583e78c8f881ed1ea38b130bfee5d82c",
-      "resume_sha256": "f5df30fc9551d7048495fd5d41a43ed2857acf2c334b13e141d206a47f285e95",
-      "num_timesteps": 13894,
-      "sb3_n_updates": 297,
-      "optimizer_steps": 475,
-      "completed_updates": 108,
-      "optimized_samples": 30400,
-      "partial_rollout_discarded": 0,
+      "captured_utc": "2026-11-10T17:46:40.077850+00:00",
+      "model_sha256": "b6d082158d45a883b9ba1eabf57a705e3803e800f9240f2dd28fe194774d40cd",
+      "resume_sha256": "58b0094da28b66e6c6ca8edc74e2f67119307de11e1196e688aa593fc489de3b",
+      "num_timesteps": 14322,
+      "sb3_n_updates": 308,
+      "optimizer_steps": 494,
+      "completed_updates": 111,
+      "optimized_samples": 31616,
+      "partial_rollout_discarded": 44,
       "checkpoint_resume_counts_match": true,
       "source_files_stable": true,
-      "actor_export_may_lag_model": true,
+      "actor_export_may_lag_model": false,
       "exact_bitwise_resume": false,
       "reset_episode": true,
       "discard_partial_rollout": true,
-      "archive_sha256": "154a063cd1693e07872fb58e751f1656a9dc317d13d050af910b5fc785ec31ad",
-      "bytes": 3491874
+      "archive_sha256": "76de29166a081b0138c9c3a152d0111fc666348a83d9bb27cc2ac68b8ea18d47",
+      "bytes": 3486884
     }
   },
   "gradient_deadline_unix": 1794332406.0,
@@ -42,12 +42,26 @@
     }
   },
   "milestone": {
-    "kind": "authorized_main_only_extension_in_progress",
-    "recorded_utc": "2026-11-10T17:31:06.127483+00:00",
-    "artifact_title": "备份：主哨兵独立追加一小时的可恢复PPO检查点",
-    "description": "独立追加运行，从原主哨兵10310 samples/317 optimizer steps恢复；infantry与heavy助手冻结。检查点记录累计计数，PPO期间不启用隐藏BC；便携actor导出可能滞后，恢复以与resume-state计数一致的model.zip为准。每次迁移丢弃partial rollout并从新episode开始，不保证跨硬件逐位一致。",
-    "validation": "追加训练与冻结对照尚进行中，不宣称整体改进或486阵容全矩阵通过。当前两个worker继承相同场景队列，物理seed不同；覆盖按唯一scenario去重。原两小时完整包与结论保留。",
+    "kind": "authorized_main_only_extension_training_complete_evaluation_running",
+    "recorded_utc": "2026-11-10T17:40:48.877462+00:00",
+    "artifact_title": "阶段备份：主哨兵追加训练结束，冻结评估进行中",
+    "description": "独立追加运行主哨兵训练已正常结束：新增4012 samples、累计14322，新增102 gradient epochs、177 optimizer steps（累计494），累计31616 sample visits，actor参数L2变化0.044858984；PPO期间BC更新0。actor.json已刷新。步兵与重装助手冻结；六组reuse-anchor冻结评估刚开始，尚未形成追加改进结论。跨机器恢复仍以model.zip与resume-state匹配计数为准，丢弃partial rollout并开启新episode。",
+    "validation": "追加训练结束；六组冻结对照进行中，尚不宣称整体改进或486阵容全矩阵验收。场景覆盖按唯一scenario去重。原两小时包与结论保留。",
     "deadline_unix": 1794333606,
-    "gradient_deadline_unix": 1794332406
+    "gradient_deadline_unix": 1794332406,
+    "main_training": {
+      "role": "main",
+      "actual_samples": 4012,
+      "total_samples": 14322,
+      "gradient_epochs": 102,
+      "optimized_samples": 31616,
+      "parameter_l2_change": 0.06041998830620915,
+      "actor_parameter_l2_change": 0.044858984004246844,
+      "optimizer_steps": 494,
+      "wall_seconds": 1868.4900311759993,
+      "deadline_unix": 1794332406.0,
+      "demonstration_updates_during_ppo": 0,
+      "checkpoint": "model.zip"
+    }
   }
 }
