@@ -177,6 +177,86 @@
       "training_counters_unchanged": true,
       "worker_exit_code": 0,
       "watchdog_timeout": false
+    },
+    {
+      "backend": "warp_kinematic",
+      "num_envs": 2,
+      "windows": [
+        {
+          "index": 0,
+          "rl_steps": 30,
+          "decisions": 60,
+          "sum_simulation_seconds": 6.0,
+          "wall_seconds": 29.758794460998615,
+          "completed": true,
+          "r": 0.20162107063387602,
+          "single_world_rate": 0.10081053531693801
+        },
+        {
+          "index": 1,
+          "rl_steps": 30,
+          "decisions": 60,
+          "sum_simulation_seconds": 5.999999999999999,
+          "wall_seconds": 64.30354930000613,
+          "completed": true,
+          "r": 0.09330744671662203,
+          "single_world_rate": 0.046653723358311014
+        }
+      ],
+      "completed": true,
+      "gradient_updates": 0,
+      "sources": {
+        "main": {
+          "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/main/initialized.zip",
+          "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00"
+        },
+        "helpers": {
+          "infantry": {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/infantry/actor.json",
+            "sha256": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2"
+          },
+          "heavy": {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/heavy/actor.json",
+            "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+          }
+        },
+        "capability_profiles": [
+          {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/capability-profiles/evaluation-red.json",
+            "sha256": "c5f404d47dc6c0912f49e4caaf4827d414ac8d0dba1ef44ad9d18227e906c949"
+          },
+          {
+            "path": "/home/lx/rmuc2027/data/research/sentry-v6-20261111-0333/capability-profiles/evaluation-blue.json",
+            "sha256": "f6bddac35ecf727075283d82d630baf816b7df215eb76d9c6f6c68c41f6365d8"
+          }
+        ]
+      },
+      "devices": {
+        "policy_device": "cpu",
+        "torch_cuda_available": false,
+        "warp_cuda_available": true,
+        "warp_cuda_devices": [
+          {
+            "device": "cuda:0",
+            "name": "NVIDIA GeForce RTX 5070 Laptop GPU",
+            "architecture": 120,
+            "memory_bytes": 8055947264,
+            "free_bytes": 6773604352
+          }
+        ],
+        "physics_device": "cuda:0"
+      },
+      "warmup_steps": 1,
+      "full_frame_recording": true,
+      "measured_rl_steps": 60,
+      "initialization_seconds": 2.800162718995125,
+      "censored": false,
+      "conservative_r": 0.09330744671662203,
+      "single_world_rate": 0.046653723358311014,
+      "gpu_free_bytes_after": 6308102144,
+      "training_counters_unchanged": true,
+      "worker_exit_code": 0,
+      "watchdog_timeout": false
     }
   ]
 }

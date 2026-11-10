@@ -265,6 +265,13 @@ exec "$python_bin" -m rmuc2027_research.rl.''' + bundle_module + ''' preflight "
             'Resume materialization preserves all three optimizer states and RNG/sampler history, releases only\n'
             'interrupted leases, and makes the restored current model the new paired baseline. It never resumes\n'
             'an unfinished rollout, replaces weights with an older selected model, or silently retrains helpers.\n').encode()
+        generated['RESUME.txt'] += (
+            '\nOptional explicit target 1/2/4/8 load probe (real physics, no optimizer updates):\n'
+            '  .venv/bin/python -m rmuc2027_research.rl.v6_campaign initialize-resume --resume-bundle "$PWD" --output /absolute/path/to/target-probe-run\n'
+            '  target_deadline=$(.venv/bin/python -c "import time; print(time.time()+1200)")\n'
+            '  .venv/bin/python -m rmuc2027_research.rl.v6_preflight target --root /absolute/path/to/target-probe-run --counts 1 2 4 8 --deadline-unix "$target_deadline"\n'
+            'Reports go to target-probe-run/target-preflight. Repeats need a new --output. Incomplete/failed counts\n'
+            'are not validated; this command never changes the current campaign default of Warp 1/2 plus Rapier 1.\n').encode()
     # Generated runtime bindings take precedence over an older copied runtime config.
     for name in generated:
         entries.pop(name, None)

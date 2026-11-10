@@ -327,8 +327,9 @@ def package(root,deadline_unix):
     selection=json.loads((root/'selection.json').read_text())
     shutil.copy2(root/'main'/selection['selected'],root/'main/selected.zip')
     export_model(root/'main/selected.zip',root/'selected-export')
+    database=ROOT/'rmuc2026shuj/rmuc_2026_region_dataset.sqlite'
     report=create_bundle(root,root.with_suffix('.zip'),preparation=root/'preparation',
-        external_database=ROOT/'rmuc2026shuj/rmuc_2026_region_dataset.sqlite')
+        external_database=database if database.is_file() else None)
     public={key:value for key,value in report.items() if key!='manifest'}
     write_json(root/'package.json',public)
     with tempfile.TemporaryDirectory(prefix='rmuc-v6-relocation-') as temporary:

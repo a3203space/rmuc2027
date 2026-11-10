@@ -1,31 +1,31 @@
 {
   "run_id": "sentry-v6-20261111-0333",
-  "source_tree": "d7994af15f10d32b229a1f0fe751f9be4656a3ef",
-  "source_files": 1447,
+  "source_tree": "60e8681992ababed2ad876ddfbcfe83be6706a1c",
+  "source_files": 1449,
   "source_base": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
   "checkpoint": {
-    "sha256": "407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05",
+    "sha256": "b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8",
     "files": {
-      "actor.json": "cb48ab8d10ca55e3a52bd5b52c29865bbdb4c65e3e85be8574c563788fe9056f",
-      "coordinator-state.json": "a69c9484ade918aefaaa59b08143acc31aa0bf8dccc461ba8f54b765a3235078",
+      "actor.json": "61c9b90414300bcd723ad8fa52284b3dcb43d68a1dbb9187fa296e6da278d520",
+      "coordinator-state.json": "d83caf7418bade38564fa3d9cad27fa9fab596bf9a52a7f14089038c90f76d6d",
       "experiment.json": "a6b59489c800a10c494c5f9cf6383a4a2eecf13855b62de2575ae79e4c1fa132",
-      "model.zip": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
-      "resume-state.pt": "50fb1485799e4a29722b860914f9ae8403feeedb6709116af10daefb35f73470",
-      "samplers.json": "5672a640709a23b760a7c57865ddf084eea5fc1fb45a0a18059f0f36a1545b4f"
+      "model.zip": "98b1b110fb27f327fc083c725223e1d43b6eb97070d20da6f42cd5d2891ac9fd",
+      "resume-state.pt": "ec670f2cbbbde535607b8a2cb4edb583da60644f29b93371403143c344ee59b9",
+      "samplers.json": "7daefc26cb991ed63aeb73ce9bd5fe39100613b516c2243b3d40eca536aa1c95"
     },
-    "samples": 10310,
-    "update_id": 80,
-    "directory": "main/checkpoints/baseline",
-    "path": "checkpoints/407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05",
+    "samples": 11270,
+    "update_id": 95,
+    "directory": "main/checkpoints/update-000095",
+    "path": "checkpoints/b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8",
     "parts": {
       "archive": "bundle.zip",
-      "bytes": 5492759,
-      "sha256": "407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05",
+      "bytes": 5642275,
+      "sha256": "b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8",
       "parts": [
         {
           "name": "bundle.part-0000",
-          "bytes": 5492759,
-          "sha256": "407c88e9ccf2c81f65b1c78b04fd599ac9e5e8ee44b241deac9542db287d0a05"
+          "bytes": 5642275,
+          "sha256": "b693cf3119e85c998426467fb8e77c40a5e078a5cc46bd6d57a94204b530c5d8"
         }
       ]
     }
@@ -41,7 +41,7 @@
     }
   },
   "final": null,
-  "campaign_status": "preflight",
+  "campaign_status": "training",
   "raw_database_included": false,
   "shared_head_unchanged": true,
   "shared_index_unchanged": true

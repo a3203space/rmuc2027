@@ -1,5 +1,5 @@
 {
-  "status": "preflight",
+  "status": "training",
   "budget": {
     "started_unix": 1794339204.825493,
     "deadline_unix": 1794346404.825493,
@@ -18,7 +18,19 @@
       "exit_code": 0,
       "timed_out": false,
       "log": "initialize.log"
+    },
+    {
+      "stage": "preflight",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "preflight.log"
     }
   ],
-  "evaluations": []
+  "evaluations": [],
+  "allocation": {
+    "estimated_evaluation_seconds": 4393.086286070855,
+    "training_seconds": 1403.0651781530069,
+    "evaluation_reserve_seconds": 4393.086286070855,
+    "num_envs": 1
+  }
 }

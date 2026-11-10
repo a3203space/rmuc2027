@@ -29,7 +29,7 @@ def _hash(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def freeze_environment(root):
+def freeze_environment(root, parallelism=(1, 2)):
     installed, editable = [], []
     for distribution in distributions():
         name = distribution.metadata.get('Name')
@@ -48,7 +48,7 @@ def freeze_environment(root):
         platform=platform.platform(), editable_source_packages=sorted(editable), policy_device='cpu',
         physics_device='Warp CUDA required for warp_kinematic; native CPU for Rapier',
         freeze_file='requirements-runtime.txt', wheelhouse_embedded=False,
-        benchmark_parallelism=[1, 2], target_5600x_5070ti_validation_claimed=False))
+        benchmark_parallelism=list(parallelism), target_5600x_5070ti_validation_claimed=False))
 
 
 def benchmark_configurations(root, backend, count, deadline):
@@ -58,8 +58,8 @@ def benchmark_configurations(root, backend, count, deadline):
     base = json.loads((root / 'main/experiment.json').read_text())['config']
     if base.get('policy_version') != 6 or set(base.get('auxiliary_pool', {})) != {'infantry', 'heavy'}:
         raise ValueError('Preflight needs v6 main and both frozen auxiliary actors')
-    if backend not in ('warp_kinematic', 'rapier') or count not in (1, 2) or (backend == 'rapier' and count != 1):
-        raise ValueError('This campaign only measures Warp1/2 and Rapier1')
+    if backend not in ('warp_kinematic', 'rapier') or count not in (1, 2, 4, 8) or (backend == 'rapier' and count != 1):
+        raise ValueError('Supported probes are Warp1/2/4/8 and Rapier1')
     result = []
     for index in range(count):
         cfg = copy.deepcopy(base)
@@ -219,38 +219,45 @@ def benchmark_worker(root, backend, count, deadline_unix, output):
     return row
 
 
-def summarize(rows):
+def summarize(rows, counts=(1, 2)):
     def complete(backend, count):
         return next((row for row in rows if row.get('backend') == backend and row.get('num_envs') == count
             and row.get('completed') and len(row.get('windows', [])) == WINDOW_COUNT
             and all(window.get('completed') and window.get('rl_steps') == WINDOW_STEPS
                     and math.isfinite(window.get('r', 0)) and window.get('r', 0) > 0
                     for window in row['windows'])), None)
-    warp, rapier, two = complete('warp_kinematic', 1), complete('rapier', 1), complete('warp_kinematic', 2)
+    warp, rapier = complete('warp_kinematic', 1), complete('rapier', 1)
     ready = bool(warp and rapier and warp.get('devices', {}).get('warp_cuda_available'))
-    selected = 2 if ready and two and two['conservative_r'] > warp['conservative_r'] * 1.05 else 1
+    choices = [row for count in counts if count != 1
+               if (row := complete('warp_kinematic', count)) is not None]
+    faster = [row for row in choices if ready and row['conservative_r'] > warp['conservative_r'] * 1.05]
+    selected = max(faster, key=lambda row: (row['conservative_r'], -row['num_envs']))['num_envs'] if faster else 1
     return dict(training_ready=ready, selected_num_envs=selected if ready else None,
         recommended_num_envs=selected if ready else None,
         evaluation_rates={name: row['single_world_rate'] for name, row in (('warp_kinematic', warp), ('rapier', rapier)) if row},
-        parallelism_rule='prefer 1 unless both complete 2-env windows have >5% conservative aggregate gain',
+        parallelism_rule='prefer 1 unless a complete tested count has >5% conservative aggregate gain; then choose highest conservative rate',
+        requested_warp_counts=list(counts),
+        requested_matrix_complete=bool(rapier and all(complete('warp_kinematic', count) for count in counts)),
         required_completed_windows_per_single_env_backend=WINDOW_COUNT,
         benchmark_includes_ppo_updates=False, gradient_updates=0)
 
 
-def preflight(root, deadline_unix):
+def _run_preflight(root, deadline_unix, counts, artifact_directory):
     root = Path(root).resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    freeze_environment(root)
-    work = root / 'preflight-workers'
+    artifact_directory = Path(artifact_directory).resolve()
+    artifact_directory.mkdir(parents=True, exist_ok=True)
+    freeze_environment(artifact_directory, counts)
+    work = artifact_directory / 'preflight-workers'
     work.mkdir(exist_ok=True)
     rows = []
     report = dict(kind='v6-frozen-policy-load', policy_device='cpu', full_frame_recording=True,
         warmup_rl_steps=WARMUP_STEPS, measured_windows=WINDOW_COUNT, rl_steps_per_window=WINDOW_STEPS,
         protocol_actor_hz=10, executor_hz=20, benchmark_includes_initialization=False,
         benchmark_scope='two short opening windows, not full-match/optimizer throughput',
-        deadline_unix=deadline_unix, target_hardware_claimed=False)
+        deadline_unix=deadline_unix, target_hardware_claimed=False,
+        materialized_run=str(root), artifacts=str(artifact_directory))
     # Complete both required single-world backends before optional vectorization.
-    jobs = [('warp_kinematic', 1), ('rapier', 1), ('warp_kinematic', 2)]
+    jobs = [('warp_kinematic', 1), ('rapier', 1)] + [('warp_kinematic', count) for count in counts if count != 1]
     for index, (backend, count) in enumerate(jobs):
         remaining = deadline_unix - time.time()
         if remaining <= 2:
@@ -258,6 +265,8 @@ def preflight(root, deadline_unix):
         # The first mandatory measurement may not consume the entire budget
         # before Rapier gets any opportunity. Every child also has a hard kill.
         allowance = (remaining - 1) / 2 if index == 0 else remaining - 1
+        if len(jobs) > 3 and index >= 2:
+            allowance = (remaining - 1) / (len(jobs) - index)
         child_deadline = min(deadline_unix - 1, time.time() + allowance)
         output = work / f'{backend}-{count}.json'
         log = work / f'{backend}-{count}.log'
@@ -296,29 +305,56 @@ def preflight(root, deadline_unix):
                        interrupted_window_partial_counts_unknown=True)
         rows.append(row)
         devices = next((item['devices'] for item in rows if item.get('devices', {}).get('warp_cuda_available')), {})
-        write_json(root / 'preflight.json', {**report, **devices, **summarize(rows), 'results': rows})
+        write_json(artifact_directory / 'preflight.json', {**report, **devices, **summarize(rows, counts), 'results': rows})
     devices = next((item['devices'] for item in rows if item.get('devices', {}).get('warp_cuda_available')), {})
-    result = {**report, **devices, **summarize(rows), 'results': rows}
+    result = {**report, **devices, **summarize(rows, counts), 'results': rows}
     if not result['training_ready']:
         result['error'] = 'Both complete single-env Warp CUDA and Rapier windows are required before training'
-    write_json(root / 'preflight.json', result)
+    write_json(artifact_directory / 'preflight.json', result)
     return result
+
+
+def preflight(root, deadline_unix):
+    """The authorized default campaign stays at Warp1/2 and Rapier1."""
+    return _run_preflight(root, deadline_unix, (1, 2), root)
+
+
+def target_preflight(root, deadline_unix, *, counts=(1, 2, 4, 8), output=None):
+    """Explicit optional target-machine measurement, not an automatic campaign.
+
+    root is an independently materialized resume run. This records a separate
+    target-preflight report and does not change its checkpoint, training sampler,
+    policy weights, normal campaign preflight or selected training parallelism.
+    """
+    counts = tuple(counts)
+    if not counts or counts[0] != 1 or len(set(counts)) != len(counts) or any(
+            type(count) is not int or count not in (1, 2, 4, 8) for count in counts):
+        raise ValueError('Target counts must be unique members of 1/2/4/8, starting with 1')
+    destination = Path(output) if output is not None else Path(root) / 'target-preflight'
+    if destination.exists():
+        raise FileExistsError('Use a new target-probe output to preserve previous evidence')
+    return _run_preflight(root, deadline_unix, counts, destination)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     run = commands.add_parser('run')
+    target = commands.add_parser('target')
     worker = commands.add_parser('worker')
-    for child in (run, worker):
+    for child in (run, worker, target):
         child.add_argument('--root', type=Path, required=True)
         child.add_argument('--deadline-unix', type=float, required=True)
     worker.add_argument('--backend', choices=('warp_kinematic', 'rapier'), required=True)
-    worker.add_argument('--num-envs', type=int, choices=(1, 2), required=True)
+    worker.add_argument('--num-envs', type=int, choices=(1, 2, 4, 8), required=True)
     worker.add_argument('--output', type=Path, required=True)
+    target.add_argument('--counts', type=int, nargs='+', default=[1, 2, 4, 8])
+    target.add_argument('--output', type=Path)
     args = parser.parse_args()
     if args.command == 'worker':
         result = benchmark_worker(args.root, args.backend, args.num_envs, args.deadline_unix, args.output)
+    elif args.command == 'target':
+        result = target_preflight(args.root, args.deadline_unix, counts=args.counts, output=args.output)
     else:
         result = preflight(args.root, args.deadline_unix)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False), flush=True)

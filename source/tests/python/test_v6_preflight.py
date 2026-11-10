@@ -45,6 +45,19 @@ class FakeModel:
 
 
 class PreflightTests(unittest.TestCase):
+    def test_target_probe_is_explicit_and_does_not_expand_campaign_default(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(probe, '_run_preflight', return_value={'toy': True}) as run:
+            root = Path(directory)
+            probe.preflight(root, 123.)
+            self.assertEqual(run.call_args.args, (root, 123., (1, 2), root))
+            probe.target_preflight(root, 456.)
+            self.assertEqual(run.call_args.args, (root, 456., (1, 2, 4, 8), root / 'target-preflight'))
+            with self.assertRaises(ValueError):
+                probe.target_preflight(root, 456., counts=(1, 3))
+            (root / 'target-preflight').mkdir()
+            with self.assertRaises(FileExistsError):
+                probe.target_preflight(root, 456.)
+
     def test_outer_interrupt_stops_only_owned_worker_group(self):
         with tempfile.TemporaryDirectory() as directory:
             process = SimpleNamespace(pid=7654321, returncode=None)
@@ -129,6 +142,35 @@ class PreflightTests(unittest.TestCase):
                 self.assertTrue(cfg['evaluation'])
                 self.assertEqual(cfg['_training_deadline'], 50.)
             self.assertEqual(json.loads((root / 'main/experiment.json').read_text())['config'], original)
+            eight = probe.benchmark_configurations(root, 'warp_kinematic', 8, 50.)
+            self.assertEqual(len(eight), 8)
+            self.assertEqual([cfg['team'] for cfg in eight], ['red', 'blue'] * 4)
+            self.assertTrue(all('_v6_sampler_path' not in cfg for cfg in eight))
+            with self.assertRaises(ValueError):
+                probe.benchmark_configurations(root, 'rapier', 4, 50.)
+
+    def test_package_does_not_require_external_database_for_resume_only(self):
+        from rmuc2027_research.rl.v6_campaign import package
+        class StopAfterBundleArguments(Exception):
+            pass
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'run'
+            (root / 'main').mkdir(parents=True)
+            (root / 'selection.json').write_text('{"selected":"model.zip"}')
+            (root / 'main/model.zip').write_bytes(b'fixture model, never loaded')
+            resource_root = Path(directory) / 'source'
+            resource_root.mkdir()
+            for exists in (False, True):
+                database = resource_root / 'rmuc2026shuj/rmuc_2026_region_dataset.sqlite'
+                if exists:
+                    database.parent.mkdir()
+                    database.write_bytes(b'fixture external data')
+                with patch('rmuc2027_core.paths.ROOT', resource_root), \
+                     patch('rmuc2027_research.rl.exporting.export_model'), \
+                     patch('rmuc2027_research.rl.v6_bundle.create_bundle', side_effect=StopAfterBundleArguments) as create:
+                    with self.assertRaises(StopAfterBundleArguments):
+                        package(root, 9999999999.)
+                    self.assertEqual(create.call_args.kwargs['external_database'], database if exists else None)
 
 
 if __name__ == '__main__':
