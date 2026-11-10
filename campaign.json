@@ -1,0 +1,79 @@
+{
+  "status": "completed",
+  "started_unix": 1794323546.4470646,
+  "deadline_unix": 1794330746.4470646,
+  "wall_budget_seconds": 7200.0,
+  "stages": [
+    {
+      "stage": "preflight",
+      "exit_code": 0
+    },
+    {
+      "stage": "initialize",
+      "exit_code": 0
+    },
+    {
+      "stage": "infantry",
+      "exit_code": 0
+    },
+    {
+      "stage": "heavy",
+      "exit_code": 0
+    },
+    {
+      "stage": "main",
+      "exit_code": 0
+    }
+  ],
+  "evaluations": [
+    {
+      "backend": "warp_kinematic",
+      "side": "red",
+      "exit_code": 0
+    },
+    {
+      "backend": "warp_kinematic",
+      "side": "blue",
+      "exit_code": 0
+    },
+    {
+      "backend": "rapier",
+      "side": "red",
+      "exit_code": 0
+    },
+    {
+      "backend": "rapier",
+      "side": "blue",
+      "exit_code": 0
+    },
+    {
+      "backend": "mjwarp",
+      "side": "red",
+      "exit_code": 0
+    },
+    {
+      "backend": "mjwarp",
+      "side": "blue",
+      "exit_code": 0
+    }
+  ],
+  "gradient_deadline_unix": 1794328346.4470646,
+  "num_envs": 2,
+  "selection": {
+    "selected": "initialized.zip",
+    "ppo_improvement_verified": false,
+    "complete_pairs": 6,
+    "resume_default": "model.zip",
+    "reason": "keep_demonstration_anchor_pending_evidence"
+  },
+  "bundle": {
+    "path": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312.zip",
+    "verified_after_relocation": true,
+    "training_ready": true,
+    "sha256": "175134aac3c4bd5d0de97c81f2ffc357ec408bdb8402086c20ea56f2bf272abe"
+  },
+  "finished_unix": 1794330211.6142995,
+  "elapsed_seconds": 6665.167236328125,
+  "within_wall_budget": true,
+  "all_stages_succeeded": true
+}
