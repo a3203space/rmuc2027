@@ -1,0 +1,48 @@
+{
+  "run_id": "sim-debug-20261111-1401-backup",
+  "source_tree": "b2794beb73635e1c5f9d2684e1b45096229e3ead",
+  "source_files": 1477,
+  "source_base": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
+  "checkpoint": {
+    "sha256": "68d7eac97d0e41695e2b6fe28c39fe2fe80cffe6e21fbfedb6f735b95542305f",
+    "files": {
+      "actor.json": "a1115101edc0ffa324efcfff1a9a7323988aecfb7577df1aca52195f7464a2fa",
+      "coordinator-state.json": "3996e837139fd892301acd263b62943770f05feb2efca86311d7f7f233554e67",
+      "experiment.json": "959ca8295f258491e0fe5a2393926bd73d68dd425044d57265afb57167e8d146",
+      "model.zip": "6d9205bf36ea7256ce02ccb9d4538f8a24f7d183df988deb26ad5a01de5632dd",
+      "resume-state.pt": "571803f62c6ca5e1c48d4837e6b6d7a7b0745412684b0cb59610effb4898aff2",
+      "samplers.json": "06045d2130f606ec1c5d8b9a96aa74eefd32fb69a5c6e12a376631f65cb9cff2"
+    },
+    "samples": 20550,
+    "update_id": 240,
+    "directory": "main/checkpoints/update-000240",
+    "path": "checkpoints/68d7eac97d0e41695e2b6fe28c39fe2fe80cffe6e21fbfedb6f735b95542305f",
+    "parts": {
+      "archive": "bundle.zip",
+      "bytes": 5674004,
+      "sha256": "68d7eac97d0e41695e2b6fe28c39fe2fe80cffe6e21fbfedb6f735b95542305f",
+      "parts": [
+        {
+          "name": "bundle.part-0000",
+          "bytes": 5674004,
+          "sha256": "68d7eac97d0e41695e2b6fe28c39fe2fe80cffe6e21fbfedb6f735b95542305f"
+        }
+      ]
+    }
+  },
+  "helpers": {
+    "infantry": {
+      "path": "helpers/infantry-a6c6a740ce1a.json",
+      "sha256": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2"
+    },
+    "heavy": {
+      "path": "helpers/heavy-792909ec1e45.json",
+      "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+    }
+  },
+  "final": null,
+  "campaign_status": "仿真修复已验证：合法坐标缺失、管道背压、连续跳跃强度、批服务关停、碰撞净空和回放时序；零新增训练，保留未验收r04检查点",
+  "raw_database_included": false,
+  "shared_head_unchanged": true,
+  "shared_index_unchanged": true
+}

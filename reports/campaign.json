@@ -1,0 +1,6 @@
+{
+  "status": "仿真修复已验证：合法坐标缺失、管道背压、连续跳跃强度、批服务关停、碰撞净空和回放时序；零新增训练，保留未验收r04检查点",
+  "training_restarted": false,
+  "original_training_budget_modified": false,
+  "backup_only": true
+}

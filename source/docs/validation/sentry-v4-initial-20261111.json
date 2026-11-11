@@ -1,0 +1,1447 @@
+{
+  "run": "data/research/sentry-v4-20261110-2312",
+  "campaign": {
+    "status": "completed",
+    "started_unix": 1794323546.4470646,
+    "deadline_unix": 1794330746.4470646,
+    "wall_budget_seconds": 7200.0,
+    "stages": [
+      {
+        "stage": "preflight",
+        "exit_code": 0
+      },
+      {
+        "stage": "initialize",
+        "exit_code": 0
+      },
+      {
+        "stage": "infantry",
+        "exit_code": 0
+      },
+      {
+        "stage": "heavy",
+        "exit_code": 0
+      },
+      {
+        "stage": "main",
+        "exit_code": 0
+      }
+    ],
+    "evaluations": [
+      {
+        "backend": "warp_kinematic",
+        "side": "red",
+        "exit_code": 0
+      },
+      {
+        "backend": "warp_kinematic",
+        "side": "blue",
+        "exit_code": 0
+      },
+      {
+        "backend": "rapier",
+        "side": "red",
+        "exit_code": 0
+      },
+      {
+        "backend": "rapier",
+        "side": "blue",
+        "exit_code": 0
+      },
+      {
+        "backend": "mjwarp",
+        "side": "red",
+        "exit_code": 0
+      },
+      {
+        "backend": "mjwarp",
+        "side": "blue",
+        "exit_code": 0
+      }
+    ],
+    "gradient_deadline_unix": 1794328346.4470646,
+    "num_envs": 2,
+    "selection": {
+      "selected": "initialized.zip",
+      "ppo_improvement_verified": false,
+      "complete_pairs": 6,
+      "resume_default": "model.zip",
+      "reason": "keep_demonstration_anchor_pending_evidence"
+    },
+    "bundle": {
+      "path": "/home/lx/rmuc2027/data/research/sentry-v4-20261110-2312.zip",
+      "verified_after_relocation": true,
+      "training_ready": true,
+      "sha256": "175134aac3c4bd5d0de97c81f2ffc357ec408bdb8402086c20ea56f2bf272abe"
+    },
+    "finished_unix": 1794330211.6142995,
+    "elapsed_seconds": 6665.167236328125,
+    "within_wall_budget": true,
+    "all_stages_succeeded": true
+  },
+  "training": {
+    "main": {
+      "role": "main",
+      "actual_samples": 10310,
+      "total_samples": 10310,
+      "gradient_epochs": 206,
+      "optimized_samples": 20288,
+      "parameter_l2_change": 0.2638886187693432,
+      "actor_parameter_l2_change": 0.15235938295474596,
+      "optimizer_steps": 317,
+      "wall_seconds": 2395.1735575249986,
+      "deadline_unix": 1794328346.4470646,
+      "demonstration_updates_during_ppo": 0,
+      "checkpoint": "model.zip"
+    },
+    "infantry": {
+      "role": "infantry",
+      "actual_samples": 672,
+      "total_samples": 672,
+      "gradient_epochs": 7,
+      "optimized_samples": null,
+      "parameter_l2_change": 0.14407327009898915,
+      "actor_parameter_l2_change": null,
+      "optimizer_steps": null,
+      "wall_seconds": 300.7569551150009,
+      "deadline_unix": 1794325496.4470646,
+      "demonstration_updates_during_ppo": 0,
+      "checkpoint": "model.zip"
+    },
+    "heavy": {
+      "role": "heavy",
+      "actual_samples": 1428,
+      "total_samples": 1428,
+      "gradient_epochs": 34,
+      "optimized_samples": null,
+      "parameter_l2_change": 0.2880834884709081,
+      "actor_parameter_l2_change": null,
+      "optimizer_steps": null,
+      "wall_seconds": 442.6879723999955,
+      "deadline_unix": 1794325946.4470646,
+      "demonstration_updates_during_ppo": 0,
+      "checkpoint": "model.zip"
+    }
+  },
+  "evaluation": {
+    "mjwarp-blue": [
+      {
+        "backend": "mjwarp",
+        "side": "blue",
+        "checkpoint": "initialized.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 0.0,
+          "policy_errors": 0,
+          "path_m": 34.83691978957433,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 8,
+          "rejected_skills": 22
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 0.0
+        },
+        "fold_requests": 110,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 10.5,
+                "position": [
+                  18.672988891601562,
+                  2.528130531311035
+                ],
+                "fold": 1.0,
+                "along": 0.2631305313110355,
+                "across": 0.007011108398437199
+              },
+              "exit": {
+                "time": 11.4,
+                "position": [
+                  18.680774688720703,
+                  1.976603388786316
+                ],
+                "fold": 1.0,
+                "along": -0.28839661121368376,
+                "across": -0.0007746887207033915
+              },
+              "roof_enter_time": 10.644299702784778,
+              "roof_exit_time": 11.2437571750055,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.006745607736321896
+            },
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": 1,
+              "entry": {
+                "time": 14.2,
+                "position": [
+                  18.67995262145996,
+                  2.039785623550415
+                ],
+                "fold": 1.0,
+                "along": -0.22521437644958464,
+                "across": 4.737854003879207e-05
+              },
+              "exit": {
+                "time": 14.6,
+                "position": [
+                  18.679960250854492,
+                  2.5505754947662354
+                ],
+                "fold": 1.0,
+                "along": 0.28557549476623567,
+                "across": 3.974914550751079e-05
+              },
+              "roof_enter_time": 14.245860602853789,
+              "roof_exit_time": 14.524757745071318,
+              "observed_roof_samples": 3,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 3.974914550751979e-05
+            },
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 21.6,
+                "position": [
+                  18.671703338623047,
+                  2.518287181854248
+                ],
+                "fold": 1.0,
+                "along": 0.25328718185424837,
+                "across": 0.008296661376952825
+              },
+              "exit": {
+                "time": 22.5,
+                "position": [
+                  18.681020736694336,
+                  1.9836243391036987
+                ],
+                "fold": 1.0,
+                "along": -0.28137566089630095,
+                "across": -0.0010207366943362046
+              },
+              "roof_enter_time": 21.737986480218517,
+              "roof_exit_time": 22.352598295737977,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.007299285657080635
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          12.15571403503418,
+          8.112948417663574,
+          0.46235233545303345
+        ],
+        "wall_seconds": 195.03624587300146
+      },
+      {
+        "backend": "mjwarp",
+        "side": "blue",
+        "checkpoint": "model.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 0.0,
+          "policy_errors": 0,
+          "path_m": 26.279580374346487,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 0.0
+        },
+        "fold_requests": 42,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 10.5,
+                "position": [
+                  18.673974990844727,
+                  2.551370620727539
+                ],
+                "fold": 1.0,
+                "along": 0.2863706207275394,
+                "across": 0.006025009155273136
+              },
+              "exit": {
+                "time": 11.4,
+                "position": [
+                  18.68057632446289,
+                  2.0059523582458496
+                ],
+                "fold": 1.0,
+                "along": -0.25904764175415007,
+                "across": -0.0005763244628908934
+              },
+              "roof_enter_time": 10.681294876285705,
+              "roof_exit_time": 11.283184092117288,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.006301533854190017
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          11.77730941772461,
+          6.828473091125488,
+          0.46081575751304626
+        ],
+        "wall_seconds": 230.4691437319998
+      }
+    ],
+    "mjwarp-red": [
+      {
+        "backend": "mjwarp",
+        "side": "red",
+        "checkpoint": "initialized.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 0.0,
+          "policy_errors": 0,
+          "path_m": 10.365461238748154,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 5,
+          "rejected_skills": 16
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 0.0
+        },
+        "fold_requests": 533,
+        "max_fold": 1.0,
+        "passed_tunnel": false,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": false,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          8.774481773376465,
+          12.020671844482422,
+          0.05986941605806351
+        ],
+        "wall_seconds": 184.47495523100224
+      },
+      {
+        "backend": "mjwarp",
+        "side": "red",
+        "checkpoint": "model.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 0.0,
+          "policy_errors": 0,
+          "path_m": 25.41552290789488,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 0.0
+        },
+        "fold_requests": 46,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "red_road_tunnel_roof",
+              "geometry": {
+                "id": "red_road_tunnel_roof",
+                "center": [
+                  9.32,
+                  12.735
+                ],
+                "axis": [
+                  6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17499999999999982,
+                "width": 1.0
+              },
+              "direction": 1,
+              "entry": {
+                "time": 8.1,
+                "position": [
+                  9.328898429870605,
+                  12.509720802307129
+                ],
+                "fold": 1.0,
+                "along": -0.22527919769287053,
+                "across": -0.008898429870605198
+              },
+              "exit": {
+                "time": 8.9,
+                "position": [
+                  9.31946849822998,
+                  12.987983703613281
+                ],
+                "fold": 1.0,
+                "along": 0.2529837036132818,
+                "across": 0.000531501770019831
+              },
+              "roof_enter_time": 8.185224467362838,
+              "roof_exit_time": 8.791458242312215,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.008943252563476289
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          15.979682922363281,
+          7.58969259262085,
+          0.4736712872982025
+        ],
+        "wall_seconds": 197.9598465529998
+      }
+    ],
+    "rapier-blue": [
+      {
+        "backend": "rapier",
+        "side": "blue",
+        "checkpoint": "initialized.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 2.8999999999999986,
+          "policy_errors": 0,
+          "path_m": 29.60313031010757,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 4,
+          "rejected_skills": 15
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 0.0
+        },
+        "fold_requests": 42,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 10.9,
+                "position": [
+                  18.66667349792667,
+                  2.527137776321239
+                ],
+                "fold": 1.0,
+                "along": 0.26213777632123936,
+                "across": 0.013326502073329733
+              },
+              "exit": {
+                "time": 11.8,
+                "position": [
+                  18.681010874610326,
+                  1.996624659265666
+                ],
+                "fold": 1.0,
+                "along": -0.26837534073433367,
+                "across": -0.0010108746103263235
+              },
+              "roof_enter_time": 11.04708454398737,
+              "roof_exit_time": 11.663028783424569,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.01519660349695103
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          11.398731308937037,
+          7.466231143842619,
+          0.47368510342273085
+        ],
+        "wall_seconds": 124.71916186299495
+      },
+      {
+        "backend": "rapier",
+        "side": "blue",
+        "checkpoint": "model.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 0.0,
+          "policy_errors": 0,
+          "path_m": 29.91200208482939,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 0.0
+        },
+        "fold_requests": 41,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 10.6,
+                "position": [
+                  18.66965399879338,
+                  2.5399457380672197
+                ],
+                "fold": 1.0,
+                "along": 0.27494573806722,
+                "across": 0.010346001206620752
+              },
+              "exit": {
+                "time": 11.5,
+                "position": [
+                  18.68052438655476,
+                  1.9912475072325282
+                ],
+                "fold": 1.0,
+                "along": -0.2737524927674715,
+                "across": -0.0005243865547619296
+              },
+              "roof_enter_time": 10.755401731051766,
+              "roof_exit_time": 11.355545373901053,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.013654267954294133
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          12.422486193287643,
+          12.293715784655433,
+          0.35287232908531513
+        ],
+        "wall_seconds": 124.61732805299835
+      }
+    ],
+    "rapier-red": [
+      {
+        "backend": "rapier",
+        "side": "red",
+        "checkpoint": "initialized.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 42.6,
+          "policy_errors": 0,
+          "path_m": 33.893866947205005,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 4,
+          "rejected_skills": 15
+        },
+        "control": {
+          "red": 35.10000000000014,
+          "blue": 0.0
+        },
+        "fold_requests": 42,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "red_road_tunnel_roof",
+              "geometry": {
+                "id": "red_road_tunnel_roof",
+                "center": [
+                  9.32,
+                  12.735
+                ],
+                "axis": [
+                  6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17499999999999982,
+                "width": 1.0
+              },
+              "direction": 1,
+              "entry": {
+                "time": 7.9,
+                "position": [
+                  9.330596227411693,
+                  12.465776272044241
+                ],
+                "fold": 1.0,
+                "along": -0.2692237279557581,
+                "across": -0.010596227411692655
+              },
+              "exit": {
+                "time": 8.8,
+                "position": [
+                  9.319113963936042,
+                  12.981718191179175
+                ],
+                "fold": 1.0,
+                "along": 0.24671819117917515,
+                "across": 0.0008860360639584437
+              },
+              "roof_enter_time": 8.066384982069977,
+              "roof_exit_time": 8.69406461744746,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.01143302532958374
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          17.44098408496012,
+          7.4676711699048175,
+          0.4735825641803122
+        ],
+        "wall_seconds": 127.99024494599871
+      },
+      {
+        "backend": "rapier",
+        "side": "red",
+        "checkpoint": "model.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 45.449999999999996,
+          "policy_errors": 0,
+          "path_m": 27.576819047548092,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0
+        },
+        "control": {
+          "red": 37.99999999999998,
+          "blue": 0.0
+        },
+        "fold_requests": 40,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "red_road_tunnel_roof",
+              "geometry": {
+                "id": "red_road_tunnel_roof",
+                "center": [
+                  9.32,
+                  12.735
+                ],
+                "axis": [
+                  6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17499999999999982,
+                "width": 1.0
+              },
+              "direction": 1,
+              "entry": {
+                "time": 7.5,
+                "position": [
+                  9.331305556412245,
+                  12.46737406046677
+                ],
+                "fold": 1.0,
+                "along": -0.2676259395332288,
+                "across": -0.011305556412244415
+              },
+              "exit": {
+                "time": 8.4,
+                "position": [
+                  9.319428101003258,
+                  13.017099517235069
+                ],
+                "fold": 1.0,
+                "along": 0.28209951723506954,
+                "across": 0.0005718989967427207
+              },
+              "roof_enter_time": 7.644941411342238,
+              "roof_exit_time": 8.244010531369149,
+              "observed_roof_samples": 6,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.015026200007842059
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          17.248841352790464,
+          7.775179041107508,
+          0.4711944957085189
+        ],
+        "wall_seconds": 129.42940588900092
+      }
+    ],
+    "warp_kinematic-blue": [
+      {
+        "backend": "warp_kinematic",
+        "side": "blue",
+        "checkpoint": "initialized.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 39.199999999999996,
+          "policy_errors": 0,
+          "path_m": 27.6502302563894,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 4,
+          "rejected_skills": 21
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 34.25000000000019
+        },
+        "fold_requests": 50,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 9.1,
+                "position": [
+                  18.666072845458984,
+                  2.5134189128875732
+                ],
+                "fold": 1.0,
+                "along": 0.24841891288757356,
+                "across": 0.013927154541015325
+              },
+              "exit": {
+                "time": 9.6,
+                "position": [
+                  18.67374038696289,
+                  1.979894757270813
+                ],
+                "fold": 1.0,
+                "along": -0.2851052427291867,
+                "across": 0.006259613037109108
+              },
+              "roof_enter_time": 9.171302665792965,
+              "roof_exit_time": 9.499186773327706,
+              "observed_roof_samples": 3,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.015311889648437207
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          10.607616424560547,
+          7.494154453277588,
+          0.47824135422706604
+        ],
+        "wall_seconds": 128.39044066600036
+      },
+      {
+        "backend": "warp_kinematic",
+        "side": "blue",
+        "checkpoint": "model.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 30.1,
+          "policy_errors": 0,
+          "path_m": 26.312479336440468,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0
+        },
+        "control": {
+          "red": 0.0,
+          "blue": 25.150000000000222
+        },
+        "fold_requests": 30,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "blue_road_tunnel_roof",
+              "geometry": {
+                "id": "blue_road_tunnel_roof",
+                "center": [
+                  18.68,
+                  2.2649999999999997
+                ],
+                "axis": [
+                  -6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17500000000000004,
+                "width": 1.0
+              },
+              "direction": -1,
+              "entry": {
+                "time": 6.7,
+                "position": [
+                  18.682371139526367,
+                  2.5625057220458984
+                ],
+                "fold": 1.0,
+                "along": 0.29750572204589876,
+                "across": -0.00237113952636749
+              },
+              "exit": {
+                "time": 7.2,
+                "position": [
+                  18.681554794311523,
+                  2.0164713859558105
+                ],
+                "fold": 1.0,
+                "along": -0.24852861404418913,
+                "across": -0.0015547943115237065
+              },
+              "roof_enter_time": 6.813532872025408,
+              "roof_exit_time": 7.133255704837425,
+              "observed_roof_samples": 3,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.0029929351806643515
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          10.417220115661621,
+          7.280228614807129,
+          0.4726395010948181
+        ],
+        "wall_seconds": 126.01905549199728
+      }
+    ],
+    "warp_kinematic-red": [
+      {
+        "backend": "warp_kinematic",
+        "side": "red",
+        "checkpoint": "initialized.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 60.0,
+          "weak_seconds": 0.0,
+          "deaths": 0,
+          "revives": 0,
+          "takeover_seconds": {
+            "dead": 0.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 39.199999999999996,
+          "policy_errors": 0,
+          "path_m": 28.778870188761562,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 4,
+          "rejected_skills": 20
+        },
+        "control": {
+          "red": 34.25000000000019,
+          "blue": 0.0
+        },
+        "fold_requests": 29,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "red_road_tunnel_roof",
+              "geometry": {
+                "id": "red_road_tunnel_roof",
+                "center": [
+                  9.32,
+                  12.735
+                ],
+                "axis": [
+                  6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17499999999999982,
+                "width": 1.0
+              },
+              "direction": 1,
+              "entry": {
+                "time": 6.7,
+                "position": [
+                  9.314207077026367,
+                  12.488863945007324
+                ],
+                "fold": 1.0,
+                "along": -0.2461360549926752,
+                "across": 0.005792922973633082
+              },
+              "exit": {
+                "time": 7.2,
+                "position": [
+                  9.317427635192871,
+                  13.022358894348145
+                ],
+                "fold": 1.0,
+                "along": 0.2873588943481451,
+                "across": 0.0025723648071292082
+              },
+              "roof_enter_time": 6.769092488815198,
+              "roof_exit_time": 7.097106190643685,
+              "observed_roof_samples": 3,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.006346054077148713
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          17.447519302368164,
+          7.5002875328063965,
+          0.47838687896728516
+        ],
+        "wall_seconds": 127.89403866200155
+      },
+      {
+        "backend": "warp_kinematic",
+        "side": "red",
+        "checkpoint": "model.zip",
+        "steps": 600,
+        "simulation_seconds": 60.0,
+        "horizon_completed": true,
+        "censored": false,
+        "full_match": false,
+        "metrics": {
+          "alive_seconds": 46.05,
+          "weak_seconds": 19.0,
+          "deaths": 1,
+          "revives": 1,
+          "takeover_seconds": {
+            "dead": 14.0,
+            "recover": 0.0,
+            "tipped": 0.0,
+            "unreachable": 0.0
+          },
+          "capture_seconds": 8.900000000000002,
+          "policy_errors": 0,
+          "path_m": 33.88987754061394,
+          "tipped_seconds": 0.0,
+          "jump_commands": 0,
+          "fold_reversals": 2,
+          "rejected_skills": 0
+        },
+        "control": {
+          "red": 7.84999999999998,
+          "blue": 0.0
+        },
+        "fold_requests": 37,
+        "max_fold": 1.0,
+        "passed_tunnel": true,
+        "passed_tunnel_evidence": {
+          "passed_tunnel": true,
+          "algorithm": "recorded_passage_geometry_v1",
+          "crossings": [
+            {
+              "passage_id": "red_road_tunnel_roof",
+              "geometry": {
+                "id": "red_road_tunnel_roof",
+                "center": [
+                  9.32,
+                  12.735
+                ],
+                "axis": [
+                  6.123233995736766e-17,
+                  1.0
+                ],
+                "half": 0.17499999999999982,
+                "width": 1.0
+              },
+              "direction": 1,
+              "entry": {
+                "time": 7.7,
+                "position": [
+                  9.327323913574219,
+                  12.441182136535645
+                ],
+                "fold": 1.0,
+                "along": -0.2938178634643549,
+                "across": -0.007323913574218484
+              },
+              "exit": {
+                "time": 8.2,
+                "position": [
+                  9.324776649475098,
+                  12.987201690673828
+                ],
+                "fold": 1.0,
+                "along": 0.2522016906738287,
+                "across": -0.004776649475097356
+              },
+              "roof_enter_time": 7.810148925537231,
+              "roof_exit_time": 8.12992032134633,
+              "observed_roof_samples": 3,
+              "min_fold_during_roof_intersection": 1.0,
+              "max_abs_across_during_roof_intersection": 0.009223632812499721
+            }
+          ],
+          "tested_passages": 1,
+          "trace_samples": 600,
+          "invalid_samples": 0,
+          "thresholds": {
+            "fold": 0.8,
+            "longitudinal_clearance_m": 0.05,
+            "lateral_clearance_m": 0.0,
+            "max_gap_s": 0.25,
+            "max_speed_mps": 20.0
+          },
+          "limitations": [
+            "Tracked-center geometry, not a swept-body collision certificate",
+            "No independent vertical-clearance test without recorded roof height",
+            "Requires an observed roof-interior sample; sparse or incomplete traces may remain unconfirmed"
+          ]
+        },
+        "final_position": [
+          17.563312530517578,
+          7.676955699920654,
+          0.4737606644630432
+        ],
+        "wall_seconds": 126.37015787999553
+      }
+    ]
+  },
+  "limitations": [
+    "Six 60-second selection pairs, not independent full-match win-rate validation.",
+    "486 registered scenarios have not all been trained or evaluated.",
+    "Active radar chassis classifier remains unknown; held-out candidate has weak per-class evidence.",
+    "2026 absolute-map/action labels remain masked without confirmed coordinate mapping."
+  ]
+}

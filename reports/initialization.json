@@ -1,0 +1,17 @@
+{
+  "created_unix": 1794379596.8261273,
+  "purpose": "One-shot postmortem preservation; fresh backup budget only, no RL restart",
+  "original_run": "/home/lx/rmuc2027/data/research/sentry-v6-extension-20261111-0457-r04",
+  "copied_files_sha256": {
+    "main/checkpoint-ready.json": "c07a017839639c5194de419334c5ba46c7b019676ffe3ee72211e612c7cac155",
+    "main/checkpoints/update-000240/complete.json": "c07a017839639c5194de419334c5ba46c7b019676ffe3ee72211e612c7cac155",
+    "main/checkpoints/update-000240/model.zip": "6d9205bf36ea7256ce02ccb9d4538f8a24f7d183df988deb26ad5a01de5632dd",
+    "main/checkpoints/update-000240/resume-state.pt": "571803f62c6ca5e1c48d4837e6b6d7a7b0745412684b0cb59610effb4898aff2",
+    "main/checkpoints/update-000240/samplers.json": "06045d2130f606ec1c5d8b9a96aa74eefd32fb69a5c6e12a376631f65cb9cff2",
+    "main/checkpoints/update-000240/actor.json": "a1115101edc0ffa324efcfff1a9a7323988aecfb7577df1aca52195f7464a2fa",
+    "main/checkpoints/update-000240/experiment.json": "959ca8295f258491e0fe5a2393926bd73d68dd425044d57265afb57167e8d146",
+    "main/checkpoints/update-000240/coordinator-state.json": "3996e837139fd892301acd263b62943770f05feb2efca86311d7f7f233554e67",
+    "infantry/actor.json": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2",
+    "heavy/actor.json": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+  }
+}
