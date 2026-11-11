@@ -1,26 +1,26 @@
 {
-  "sha256": "467bf2c40a99e39860248e23f487152598980b7e48ca402c5d3187dfc501f4fa",
+  "sha256": "8592d20b4dede22c51bb691382a1408fdd3742321752835e8de2a65ce46d4e36",
   "files": {
-    "actor.json": "38e7e165b466e1f77d5b6de95d432eb6aa1e59a0b9b9e4af93898eab5bbb6c69",
-    "coordinator-state.json": "9104c6666ed500d9e78a6a825f00364a53387b2146c1a0b90f9445e91526085f",
+    "actor.json": "2de0e4808822091123e39c2aa41447edf32d1881142aab5ddc983e7cc12927b2",
+    "coordinator-state.json": "ba20d2edfc335fbce34dd7375b1c61f3b7db0b73c76219dbdbcf8891a700f6c7",
     "experiment.json": "d04be08c2382e7b990a7b3d3fa564e62b5bb2a7bba1c9ae489aded56765de34a",
-    "model.zip": "7e49c5e5adbcc056c766edaef3577afb2d901b7c4b6078b05fc8b1ec29009eb5",
-    "resume-state.pt": "65ea25097c644e666e4e8641766685647430ed99286e1cb54bbb29a2d5505376",
-    "samplers.json": "d75a9949b1898d59cd5212839701c0e90d544c198b92dba6d1cca2907097146a"
+    "model.zip": "4402b020a79bf1d2581de4c663f7cc00bfe4f6056717a50a932da349f90c6372",
+    "resume-state.pt": "00a2df98ee3c70e48197af2900f6dd787b3b1c21f0d5d04f2ca2804edeca0ef6",
+    "samplers.json": "20db0d8736288f47874d3ee088b714b014f21773621913f00f8ef3fd8fd7791a"
   },
-  "samples": 14086,
-  "update_id": 139,
-  "directory": "main/checkpoints/update-000139",
-  "path": "checkpoints/467bf2c40a99e39860248e23f487152598980b7e48ca402c5d3187dfc501f4fa",
+  "samples": 17606,
+  "update_id": 194,
+  "directory": "main/checkpoints/update-000194",
+  "path": "checkpoints/8592d20b4dede22c51bb691382a1408fdd3742321752835e8de2a65ce46d4e36",
   "parts": {
     "archive": "bundle.zip",
-    "bytes": 5645505,
-    "sha256": "467bf2c40a99e39860248e23f487152598980b7e48ca402c5d3187dfc501f4fa",
+    "bytes": 5664351,
+    "sha256": "8592d20b4dede22c51bb691382a1408fdd3742321752835e8de2a65ce46d4e36",
     "parts": [
       {
         "name": "bundle.part-0000",
-        "bytes": 5645505,
-        "sha256": "467bf2c40a99e39860248e23f487152598980b7e48ca402c5d3187dfc501f4fa"
+        "bytes": 5664351,
+        "sha256": "8592d20b4dede22c51bb691382a1408fdd3742321752835e8de2a65ce46d4e36"
       }
     ]
   }
