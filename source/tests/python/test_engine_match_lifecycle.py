@@ -23,6 +23,8 @@ if mode == 'bad_init':
     print('{broken', flush=True)
 else:
     print(json.dumps({'robots': [], 'rules_hash': rules_hash}), flush=True)
+if mode == 'teardown_sleep':
+    time.sleep(60)
 for line in sys.stdin:
     request = json.loads(line)
     if mode == 'bad_json':
@@ -36,10 +38,36 @@ for line in sys.stdin:
         if not sys.stdin.readline():
             break
         print(json.dumps({'digest': 'ok'}), flush=True)
+    elif mode in ('strict_callback', 'strict_encoded'):
+        if request['op'] == 'step':
+            encoded = mode == 'strict_encoded'
+            print(json.dumps({'op': 'kinematic_frame' if encoded else 'external_physics'}), flush=True)
+            reply = sys.stdin.readline()
+            if not reply:
+                break
+            if json.loads(reply).get('op') != ('kinematic_frame_result' if encoded else 'external_physics_result'):
+                sys.exit(4)
+        print(json.dumps({'digest': 'ok'}), flush=True)
     elif mode == 'batch_tail':
         print(json.dumps({'controlled_ids': [['3'], ['7']]}), flush=True)
         print(json.dumps({'controlled_ids': ['3']}), flush=True)
         time.sleep(5)
+    elif mode.startswith('framing_'):
+        if request['op'] == 'observation':
+            print(json.dumps({'controlled_ids': ['1']}), flush=True)
+            continue
+        if request['op'] == 'observations':
+            print(json.dumps({'controlled_ids': [['3'], ['7']]}), flush=True)
+            print(json.dumps({'controlled_ids': ['3']}), flush=True)
+            tail = json.dumps({'controlled_ids': ['7']})
+        else:
+            tail = json.dumps({'digest': 'ok'})
+        if mode == 'framing_complete':
+            print(tail, flush=True)
+        else:
+            sys.stdout.write(tail[:-1] if mode == 'framing_partial_json' else tail)
+            sys.stdout.flush()
+            break
     elif request['op'] == 'invalid':
         print(json.dumps({'error': 'invalid request'}), flush=True)
     else:
@@ -117,6 +145,103 @@ class MatchLifecycleTests(unittest.TestCase):
             self.assertIsNotNone(child.poll(), 'Constructor/close left its peer alive')
             self.assertTrue(child.stdin.closed)
             self.assertTrue(child.stdout.closed)
+
+    def bounded_close(self, match):
+        errors = []
+        def close():
+            try:
+                match.close()
+            except BaseException as error:
+                errors.append(error)
+            else:
+                errors.append(None)
+        worker = threading.Thread(target=close, daemon=True)
+        worker.start()
+        worker.join(1)
+        rescued = worker.is_alive()
+        if rescued:
+            # Bypass the injected instance method; rescue only this test's peer.
+            self.actual_popen.kill(match.process)
+            worker.join(2)
+        self.assertFalse(worker.is_alive(), 'Close did not unwind after killing its owned peer')
+        return errors[0], rescued
+
+    def test_interrupted_transport_close_can_retry_and_rejects_requests(self):
+        for target, error_type in (('wait', KeyboardInterrupt), ('kill', OSError)):
+            for direct in (True, False):
+                with self.subTest(target=target, direct=direct):
+                    adapter = Adapter()
+                    match = self.match('teardown_sleep', adapter, direct=direct)
+                    if target == 'kill':
+                        match._broken = True
+                    original = getattr(match.process, target)
+                    injected = error_type('injected teardown interruption')
+                    calls = []
+                    def fail_once(*args, **kwargs):
+                        calls.append((args, kwargs))
+                        if len(calls) == 1:
+                            raise injected
+                        return original(*args, **kwargs)
+                    with patch.object(match.process, target, side_effect=fail_once):
+                        first, first_rescued = self.bounded_close(match)
+                        self.assertIs(first, injected)
+                        self.assertTrue(match.closed)
+                        with self.assertRaisesRegex(RuntimeError, 'closed'):
+                            match.digest()
+                        second, second_rescued = self.bounded_close(match)
+                        calls_before_repeat = len(calls)
+                        match.close()
+                        self.assertEqual(len(calls), calls_before_repeat)
+                    self.assertIsNone(second)
+                    self.assertFalse(first_rescued or second_rescued, 'Teardown blocked and needed watchdog rescue')
+                    self.assertGreaterEqual(len(calls), 2)
+                    if target == 'wait':
+                        self.assertTrue(all(kwargs.get('timeout') is not None for _, kwargs in calls))
+                    self.assertEqual(adapter.close_calls, 1)
+                    if match._reader is not None:
+                        self.assertFalse(match._reader.is_alive())
+                    self.assert_reaped()
+
+    def test_persistent_kill_failure_stays_bounded_and_can_later_retry(self):
+        adapter = Adapter()
+        match = self.match('teardown_sleep', adapter, direct=False)
+        match._broken = True
+        injected = OSError('injected persistent kill refusal')
+        with patch.object(match.process, 'kill', side_effect=injected) as kill:
+            for _ in range(2):
+                observed, rescued = self.bounded_close(match)
+                self.assertIs(observed, injected)
+                self.assertFalse(rescued, 'Failed kill must not block closing threaded stdout')
+                self.assertTrue(match.closed)
+                self.assertIsNone(match.process.poll())
+                with self.assertRaisesRegex(RuntimeError, 'closed'):
+                    match.digest()
+            self.assertEqual(kill.call_count, 2)
+        observed, rescued = self.bounded_close(match)
+        self.assertIsNone(observed)
+        self.assertFalse(rescued)
+        match.close()
+        self.assertEqual(adapter.close_calls, 1)
+        self.assertFalse(match._reader.is_alive())
+        self.assert_reaped()
+
+    def test_adapter_cleanup_cannot_start_a_new_request(self):
+        adapter = Adapter()
+        match = self.match(adapter=adapter)
+        original = adapter.close
+        errors = []
+        def close_adapter():
+            try:
+                match.digest()
+            except RuntimeError as error:
+                errors.append(error)
+            original()
+        with patch.object(adapter, 'close', side_effect=close_adapter):
+            match.close()
+        self.assertEqual(len(errors), 1)
+        self.assertIn('closed', str(errors[0]))
+        self.assertEqual(adapter.close_calls, 1)
+        self.assert_reaped()
 
     def test_binary_lookup_and_spawn_failure_release_owned_adapter(self):
         for stage in ('lookup', 'popen'):
@@ -242,6 +367,62 @@ class MatchLifecycleTests(unittest.TestCase):
         finally:
             match.close()
         self.assert_reaped()
+
+    def test_eof_without_newline_rejects_requests_and_cached_observations(self):
+        for direct in (True, False):
+            for operation in ('request', 'batch'):
+                for mode in ('framing_partial_json', 'framing_valid_json'):
+                    with self.subTest(direct=direct, operation=operation, mode=mode):
+                        adapter = Adapter()
+                        match = self.match(mode, adapter, direct=direct)
+                        try:
+                            match.observation('red', [1])
+                            cache_before = dict(match._observation_cache)
+                            self.assertTrue(cache_before)
+                            started = time.monotonic()
+                            with self.assertRaisesRegex(RuntimeError, 'newline'):
+                                if operation == 'request':
+                                    match.digest()
+                                else:
+                                    match.observations([('red', [3]), ('blue', [7])])
+                            self.assertLess(time.monotonic() - started, 1)
+                            self.assertTrue(match._broken)
+                            self.assertEqual(match._observation_cache, cache_before)
+                            for query in (match.digest,
+                                          lambda: match.observation('red', [1]),
+                                          lambda: match.observations([('red', [1])]),
+                                          lambda: match.observations([])):
+                                with self.assertRaisesRegex(RuntimeError, 'transport interrupted'):
+                                    query()
+                        finally:
+                            match.close()
+                        self.assertEqual(adapter.close_calls, 1)
+                        if match._reader is not None:
+                            self.assertFalse(match._reader.is_alive())
+                        self.assert_reaped()
+
+    def test_complete_newline_frames_preserve_queries_and_batch_cache(self):
+        for direct in (True, False):
+            with self.subTest(direct=direct):
+                match = self.match('framing_complete', direct=direct)
+                try:
+                    self.assertEqual(match.digest(), 'ok')
+                    viewers = [('red', [3]), ('blue', [7])]
+                    ids, lines = match.observations(viewers)
+                    self.assertEqual(ids, [['3'], ['7']])
+                    self.assertTrue(all(line.endswith(b'\n') for line in lines))
+                    self.assertEqual([json.loads(line) for line in lines],
+                                     [{'controlled_ids': ['3']}, {'controlled_ids': ['7']}])
+                    with patch.object(match, '_write_payload', wraps=match._write_payload) as write:
+                        self.assertEqual(match.observations(viewers), (ids, lines))
+                        write.assert_not_called()
+                    self.assertEqual(match.digest(), 'ok')
+                    self.assertFalse(match._broken)
+                finally:
+                    match.close()
+                if match._reader is not None:
+                    self.assertFalse(match._reader.is_alive())
+                self.assert_reaped()
 
     def test_callback_and_adapter_cleanup_failures_still_reap_peer(self):
         callback_error = ValueError('injected callback failure')
@@ -447,6 +628,114 @@ class MatchLifecycleTests(unittest.TestCase):
                         match.close()
                     self.assertEqual(adapter.close_calls, 1)
                     self.assert_reaped()
+
+    def test_callback_rpc_reentry_is_rejected_before_writing(self):
+        class QueryingAdapter(Adapter):
+            def step(self, request):
+                # A purely local read must remain usable within callbacks.
+                self.local_snapshot = self.match.snapshot()
+                try:
+                    self.match.digest()
+                except RuntimeError as error:
+                    self.inner_error = error
+                    if not self.catch_error:
+                        raise
+                return {'op': 'external_physics_result'}
+
+            def step_encoded(self, request):
+                self.step(request)
+                return b'{"op":"kinematic_frame_result"}\n'
+
+        for encoded in (False, True):
+            for direct in (True, False):
+                for catch_error in (False, True):
+                    with self.subTest(encoded=encoded, direct=direct, catch_error=catch_error):
+                        adapter = QueryingAdapter()
+                        adapter.catch_error = catch_error
+                        adapter.inner_error = None
+                        if encoded:
+                            adapter.protocol = 'kinematic_frame'
+                        match = adapter.match = self.match('strict_encoded' if encoded else 'strict_callback', adapter, direct)
+                        writes = []
+                        actual_write = match._write_payload
+                        def write(payload):
+                            writes.append(json.loads(payload)['op'])
+                            return actual_write(payload)
+                        try:
+                            with patch.object(match, '_write_payload', side_effect=write):
+                                if catch_error:
+                                    self.assertEqual(match._request({'op': 'step'}), {'digest': 'ok'})
+                                    self.assertFalse(match._broken)
+                                    self.assertEqual(match.digest(), 'ok')
+                                    self.assertEqual(writes, ['step', 'kinematic_frame_result' if encoded else 'external_physics_result', 'digest'])
+                                else:
+                                    with self.assertRaises(RuntimeError) as raised:
+                                        match._request({'op': 'step'})
+                                    self.assertIs(raised.exception, adapter.inner_error)
+                                    self.assertTrue(match._broken)
+                                    with self.assertRaisesRegex(RuntimeError, 'transport interrupted'):
+                                        match.digest()
+                                    self.assertEqual(writes, ['step'])
+                            self.assertIn('active physics callback', str(adapter.inner_error))
+                            self.assertEqual(adapter.local_snapshot['robots'], [])
+                            self.assertEqual(match._physics_callback_depth, 0)
+                        finally:
+                            match.close()
+                            match.close()
+                        self.assertEqual(adapter.close_calls, 1)
+                        if match._reader is not None:
+                            self.assertFalse(match._reader.is_alive())
+                        self.assert_reaped()
+
+    def test_other_thread_query_waits_for_physics_callback(self):
+        adapter = Adapter()
+        match = self.match('strict_callback', adapter, direct=False)
+        writes, responses, errors = [], {}, []
+        query_started = threading.Event()
+        query_done = threading.Event()
+        actual_write = match._write_payload
+        def write(payload):
+            writes.append(json.loads(payload)['op'])
+            return actual_write(payload)
+        def step():
+            try:
+                responses['step'] = match._request({'op': 'step'})
+            except BaseException as error:
+                errors.append(error)
+        def query():
+            query_started.set()
+            try:
+                responses['query'] = match.digest()
+            except BaseException as error:
+                errors.append(error)
+            finally:
+                query_done.set()
+        stepping = threading.Thread(target=step, daemon=True)
+        querying = threading.Thread(target=query, daemon=True)
+        try:
+            with patch.object(match, '_write_payload', side_effect=write):
+                stepping.start()
+                self.assertTrue(adapter.entered.wait(1))
+                querying.start()
+                self.assertTrue(query_started.wait(1))
+                self.assertFalse(query_done.wait(.02))
+                self.assertEqual(writes, ['step'])
+                adapter.release.set()
+                stepping.join(2)
+                querying.join(2)
+            self.assertFalse(stepping.is_alive() or querying.is_alive())
+            self.assertEqual(errors, [])
+            self.assertEqual(responses, {'step': {'digest': 'ok'}, 'query': 'ok'})
+            self.assertEqual(writes, ['step', 'external_physics_result', 'digest'])
+            self.assertEqual(match._physics_callback_depth, 0)
+        finally:
+            adapter.release.set()
+            stepping.join(2)
+            if querying.ident is not None:
+                querying.join(2)
+            match.close()
+        self.assertEqual(adapter.close_calls, 1)
+        self.assert_reaped()
 
     def test_failed_match_can_be_closed_and_recreated_without_state_or_reader_leak(self):
         for direct in (True, False):

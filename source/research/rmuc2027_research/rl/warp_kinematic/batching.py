@@ -5,14 +5,15 @@ worker skew and episode resets; it is never owned by a cache slot.
 """
 from collections import OrderedDict, defaultdict
 from concurrent.futures import Future
+from copy import deepcopy
 import json
 import queue
 import threading
 import time
 import numpy as np
 import warp as wp
-from .arena import ArenaMotion
-from .protocol import DT, MotionFrame
+from .arena import ArenaMotion, validate_request_identity
+from .protocol import MotionFrame
 from .uploads import HostUploads
 from .pose import resting_origin, collision_heights
 
@@ -53,6 +54,7 @@ class BatchClient:
         self.ids=None;self.state=None;self.expected_positions=None
         self.arena=None;self.designs=None
         self.scene_signature=None;self.design_signature=None
+        self.version=None;self.body_signature=None
 
     def step(self,request):
         return self.step_frame(request).response(request['sequence'])
@@ -62,18 +64,36 @@ class BatchClient:
 
     def step_frame(self,request):
         if self.closed:raise RuntimeError('Adapter closed')
-        if (request.get('op')!='kinematic_frame' or request.get('version') not in (1,2) or
-            request.get('sequence')!=self.next_sequence or request.get('substeps')!=6 or abs(request.get('dt',0)-DT)>1e-12):
-            raise ValueError('Invalid motion request identity')
-        ids=tuple(r['id'] for r in request['robots'])
+        validate_request_identity(request,self.next_sequence)
+        robots=request['robots']
+        ids=tuple(r['id'] for r in robots)
+        body_signature=tuple((r['radius'],r['role']) for r in robots)
         if self.ids is None:
+            if request.get('arena') is None or any(r.get('design') is None for r in robots):
+                raise ValueError('Initial motion request requires arena and robot designs')
+            scene_signature=json.dumps([request['version'],request['arena']],sort_keys=True,separators=(',',':'))
+            design_signature=topology_signature(robots)
             self.ids=ids
-            self.arena=request['arena']
-            self.designs=[r['design'] for r in request['robots']]
-            self.scene_signature=json.dumps([request['version'],request['arena']],sort_keys=True,separators=(',',':'))
-            self.design_signature=topology_signature(request['robots'])
-        if ids!=self.ids:raise ValueError('Robot order changed')
-        for design,robot in zip(self.designs,request['robots']):
+            self.version=request['version'];self.body_signature=body_signature
+            self.arena=deepcopy(request['arena'])
+            self.designs=[deepcopy(r['design']) for r in robots]
+            self.scene_signature=scene_signature;self.design_signature=design_signature
+        else:
+            if request['version']!=self.version:raise ValueError('Motion protocol changed within world')
+            if ids!=self.ids:raise ValueError('Robot order changed')
+            if body_signature!=self.body_signature:raise ValueError('Motion topology changed within world')
+            if request.get('arena') is not None:
+                scene_signature=json.dumps([request['version'],request['arena']],sort_keys=True,separators=(',',':'))
+                if scene_signature!=self.scene_signature:raise ValueError('Motion scene changed within world')
+            # Native compact frames omit designs; avoid rehashing them in that
+            # hot path. Full frames may refresh only the uploaded drive fields.
+            if any(r.get('design') is not None for r in robots):
+                full=[dict(r,design=r['design'] if r.get('design') is not None else d)
+                      for r,d in zip(robots,self.designs)]
+                if topology_signature(full)!=self.design_signature:raise ValueError('Motion topology changed within world')
+                self.designs=[deepcopy(r['design']) if r.get('design') is not None else d
+                              for r,d in zip(robots,self.designs)]
+        for design,robot in zip(self.designs,robots):
             design.update({k:v for k,v in robot.get('drive_parameters',{}).items() if k in DRIVE_UPLOAD_FIELDS})
         response=self.service.submit(self,request)
         self.next_sequence+=1
@@ -97,7 +117,9 @@ class WorldBatch:
         engine=self.engine;robots=[];slices=[]
         for world,(client,request) in enumerate(items):
             start=len(robots)
-            robots.extend(dict(r,id=f'{world}:{r["id"]}',_world=world,
+            # Cache keys describe ordered topology, not external robot names.
+            # Stable slot ids permit reuse by a new client or reordered worlds.
+            robots.extend(dict(r,id=f'{world}:{index}',_world=world,
                 design=client.designs[index] if client.designs is not None else r['design'])
                 for index,r in enumerate(request['robots']))
             slices.append(slice(start,len(robots)))
@@ -133,7 +155,14 @@ class WorldBatch:
                 authoritative=np.asarray([r['pos'] for r in request['robots']])
                 changed=np.linalg.norm(authoritative-client.expected_positions,axis=1)>.05
                 state[np.ix_(changed,[6,8,9,10,15])]=0.
-                if engine.extended:state[np.ix_(changed,[17,18])]=0.
+                if engine.extended:
+                    state[np.ix_(changed,[17,18])]=0.
+                    airborne=changed & np.asarray([r.get('enabled',True) and not r.get('grounded',True) and r['role']!='aerial'
+                                                   for r in bodies],dtype=bool)
+                    # Match direct-adapter authority restoration after reset.
+                    state[airborne,9]=4.;state[airborne,15]=1.
+                    state[airborne,10]=np.asarray([r['velocity'][2] for r in bodies])[airborne]
+                    state[airborne,11]=authoritative[airborne,2]
                 reset_pose=changed & np.asarray([r.get('grounded',True) for r in bodies],dtype=bool)
                 if reset_pose.any():
                     bodies=request['robots']

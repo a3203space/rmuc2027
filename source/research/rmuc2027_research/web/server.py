@@ -10,8 +10,10 @@ import tempfile
 import threading
 import time
 import uuid
+import weakref
 from typing import Literal
 
+import anyio
 from fastapi import FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -19,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictBool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.background import BackgroundTask
+from starlette.concurrency import run_in_threadpool
 
 from .paths import data_path, STRATEGIES
 from .engine import DT, Match, arena_map, SLOT_IDS, RULES_PROFILE
@@ -205,6 +208,10 @@ class ArenaService:
         if len(self.referee_token)<32:
             raise ValueError("Invalid organizer referee token")
         self.lock = threading.RLock()
+        self._step_condition = threading.Condition(self.lock)
+        self._step_waiters = weakref.WeakSet()
+        self._step_in_progress = False
+        self._standard_events = ()
         self.battle, self.thread, self.error = None, None, None
         self.speed, self.paused, self.stopping, self.revision = 1, False, False, 0
         with Match(duration=420, map_name=season_rules.map_of(season_rules.DEFAULT_SEASON)) as match:
@@ -270,14 +277,14 @@ class ArenaService:
                 self.revision += 1
             events = []
             if self.battle:
-                frames = self.battle.frames
                 if self.metadata.get('match_mode') == 'research':
+                    frames = self.battle.frames
                     with frames.lock:
                         end = min(len(frames.events), self.frame['tick'] + 1)
                         start = max(1, since + 1, end - 1000)
                         events = [event for batch in frames.events[start:end] for event in batch]
                 else:
-                    events = frames.events_since(since)
+                    events = [event for tick, batch in self._standard_events if tick > since for event in batch]
             # Published frames and their events are never mutated, so they are shared rather
             # than copied on every websocket poll.
             return {"frame": self.frame, "revision": self.revision, "paused": self.paused,
@@ -486,50 +493,101 @@ class ArenaService:
                     self.prematch = None
                     self.revision += 1
 
+    @staticmethod
+    def _standard_snapshot(frame, metadata, events):
+        # Detach everything read by state() from the worker's mutable Battle.
+        frame, metadata = copy.deepcopy(frame), copy.deepcopy(metadata)
+        tick = frame["tick"]
+        events = tuple((at, batch) for at, batch in events if max(1, tick - 999) <= at < tick)
+        if tick > 0 and frame.get("events"):
+            events += ((tick, frame["events"]),)
+        return frame, metadata, events
+
+    @staticmethod
+    def _wake_step_waiter(waiter):
+        # Runs on the waiting request's loop, including cancellation races.
+        if not waiter.done():
+            waiter.set_result(None)
+
+    def _notify_step_waiters(self):
+        # Caller holds the state lock. Never wait for an event loop from here.
+        self._step_condition.notify_all()
+        waiters = list(self._step_waiters)
+        self._step_waiters.clear()
+        for waiter in waiters:
+            try:
+                waiter.get_loop().call_soon_threadsafe(self._wake_step_waiter, waiter)
+            except RuntimeError:
+                pass  # A disconnected client's loop may already be closed.
+
+    def _discard_step_waiter(self, waiter):
+        with self.lock:
+            self._step_waiters.discard(waiter)
+
     def _run(self, match_id, red, blue, args, decks=None, free_team_strategies=None, skins=None):
+        events = ()
         try:
             with Battle(red,blue,args.seed,args.duration,args.map,self.sandbox,decks=decks,team_lineup=args.team_lineup,free_team_strategies=free_team_strategies,battle_settings=args.battle_settings) as battle:
-                battle.metadata["match_id"] = match_id
-                battle.metadata["save_mp4"] = args.save_mp4
-                if skins and any(skins.values()):
-                    battle.metadata["skins"] = skins
-                with self.lock:
-                    self.battle, self.metadata = battle, battle.metadata
-                self.store.running(match_id,battle.metadata)
-                self._prematch()
-                while battle.match.status != "finished":
+                try:
+                    battle.metadata["match_id"] = match_id
+                    battle.metadata["save_mp4"] = args.save_mp4
+                    if skins and any(skins.values()):
+                        battle.metadata["skins"] = skins
+                    frame, metadata, events = self._standard_snapshot(battle.match.snapshot(), battle.metadata, events)
                     with self.lock:
-                        if self.stopping:
-                            break
-                        paused,speed = self.paused,self.speed
-                    if paused:
-                        time.sleep(.03)
-                        continue
-                    started = time.monotonic()
-                    # Publish frames atomically; readers cannot capture half a replay.
-                    with self.lock:
-                        self.frame = battle.step()
+                        self.battle = battle
+                        self.frame, self.metadata, self._standard_events = frame, metadata, events
                         self.revision += 1
-                    time.sleep(max(0,DT/speed-(time.monotonic()-started)))
-                if self.stopping and battle.match.status != "finished":
-                    battle.match.finish(None,"stopped")
+                    self.store.running(match_id,battle.metadata)
+                    self._prematch()
+                    while battle.match.status != "finished":
+                        with self.lock:
+                            if self.stopping:
+                                break
+                            paused,speed = self.paused,self.speed
+                            if not paused:
+                                self._step_in_progress = True
+                        if paused:
+                            time.sleep(.03)
+                            continue
+                        started = time.monotonic()
+                        frame, metadata, events = self._standard_snapshot(battle.step(), battle.metadata, events)
+                        with self._step_condition:
+                            self.frame, self.metadata, self._standard_events = frame, metadata, events
+                            self._step_in_progress = False
+                            self.revision += 1
+                            self._notify_step_waiters()
+                        time.sleep(max(0,DT/speed-(time.monotonic()-started)))
+                    # Finish, export and cleanup may also touch live Battle state.
                     with self.lock:
-                        self.frame = battle.match.snapshot()
-                        battle.frames[-1] = self.frame
-                        self.revision += 1
-                replay_path = self.store.directory / "replays" / f"{match_id}.json"
-                battle.save(replay_path)
-                self.store.finish(match_id,battle.result(),replay_path)
+                        self._step_in_progress = True
+                    if self.stopping and battle.match.status != "finished":
+                        battle.match.finish(None,"stopped")
+                        frame = battle.match.snapshot()
+                        battle.frames[-1] = frame
+                        frame, metadata, events = self._standard_snapshot(frame, battle.metadata, events)
+                        with self.lock:
+                            self.frame, self.metadata, self._standard_events = frame, metadata, events
+                            self.revision += 1
+                    replay_path = self.store.directory / "replays" / f"{match_id}.json"
+                    battle.save(replay_path)
+                    self.store.finish(match_id,battle.result(),replay_path)
+                finally:
+                    # Keep replay/referee waiters out of __exit__, including failures.
+                    with self.lock:
+                        self._step_in_progress = True
         except Exception as exc:
             with self.lock:
                 self.error = str(exc)
                 self.revision += 1
             self.store.finish(match_id,{},error=str(exc))
         finally:
-            with self.lock:
+            with self._step_condition:
                 self.busy = False
                 self.prematch = None
+                self._step_in_progress = False
                 self.revision += 1
+                self._notify_step_waiters()
 
     def _prematch(self):
         """Hold the initial frame through self-check and countdown; honours pause, speed, stop and skip."""
@@ -921,21 +979,76 @@ def create_app(sandbox="docker",submission_root=None,data_root=None,test_mode=Fa
         except ValueError as exc:
             raise HTTPException(400,str(exc)) from exc
 
+    async def wait_for_disconnect(request):
+        while (await request.receive())["type"] != "http.disconnect":
+            pass
+
+    async def stable_operation(request, attempt):
+        # All lock acquisition and live Battle work stays in the bounded pool.
+        # Only the notification wait runs here, without borrowing a pool token.
+        target, disconnected = None, None
+        try:
+            while True:
+                waiter = asyncio.get_running_loop().create_future()
+                operation = asyncio.create_task(run_in_threadpool(attempt, target, waiter))
+                try:
+                    try:
+                        target, response = await asyncio.shield(operation)
+                    except asyncio.CancelledError:
+                        # An already admitted export cannot be interrupted safely.
+                        # Finish it and release any temporary response file.
+                        with anyio.CancelScope(shield=True):
+                            try:
+                                _, response = await asyncio.shield(operation)
+                                if background := getattr(response, "background", None):
+                                    await background()
+                            except Exception:
+                                pass
+                        raise
+                    if response is not None:
+                        return response
+                    if disconnected is None:
+                        disconnected = asyncio.create_task(wait_for_disconnect(request))
+                    done, _ = await asyncio.wait((waiter, disconnected), return_when=asyncio.FIRST_COMPLETED)
+                    if disconnected in done:
+                        return JSONResponse({"detail":"Client disconnected"}, status_code=499)
+                finally:
+                    waiter.cancel()
+                    with anyio.CancelScope(shield=True):
+                        await run_in_threadpool(service._discard_step_waiter, waiter)
+        finally:
+            if disconnected is not None:
+                disconnected.cancel()
+                with anyio.CancelScope(shield=True):
+                    await asyncio.gather(disconnected, return_exceptions=True)
+
     @app.post("/api/referee")
-    def referee(data:RefereeRequest,authorization:str|None=Header(default=None)):
+    async def referee(data:RefereeRequest,request:Request,authorization:str|None=Header(default=None)):
         supplied = (authorization or "").removeprefix("Bearer ")
         if not secrets.compare_digest(supplied.encode(), service.referee_token.encode()):
             raise HTTPException(403,"Organizer authorization required")
-        try:
-            with service.lock:
-                if service.stopping or not service.battle or service.battle.match.status == "finished":
-                    raise ValueError("No running match")
-                if service.metadata.get('match_mode') == 'research':
-                    raise ValueError("Frozen research matches do not allow referee interventions")
-                service.battle.queue_referee(data.model_dump(exclude_none=True))
-            return {"ok":True,"queued":True}
-        except ValueError as exc:
-            raise HTTPException(409,str(exc)) from exc
+
+        def attempt(target, waiter):
+            try:
+                with service.lock:
+                    target = (service.battle,) if target is None else target
+                    battle = target[0]
+                    if service.battle is not battle:
+                        raise ValueError("No running match")
+                    if (service.metadata or {}).get('match_mode') == 'research':
+                        raise ValueError("Frozen research matches do not allow referee interventions")
+                    if service._step_in_progress:
+                        service._step_waiters.add(waiter)
+                        return target, None
+                    if (service.stopping or not service.busy or service.initializing
+                            or not battle or battle.match.status == "finished"):
+                        raise ValueError("No running match")
+                    battle.queue_referee(data.model_dump(exclude_none=True))
+                return target, {"ok":True,"queued":True}
+            except ValueError as exc:
+                raise HTTPException(409,str(exc)) from exc
+
+        return await stable_operation(request, attempt)
 
     @app.websocket("/api/ws")
     async def broadcast(websocket:WebSocket):
@@ -1021,24 +1134,30 @@ def create_app(sandbox="docker",submission_root=None,data_root=None,test_mode=Fa
                             background=BackgroundTask(path.unlink, missing_ok=True))
 
     @app.get("/api/replay")
-    def current_replay():
-        with service.lock:
-            match_id, battle = service.match_id, service.battle
-            if service.busy and not service.initializing:
-                if service.metadata.get('match_mode') == 'research':
-                    raise HTTPException(409, "Research replay is available after the match completes or stops")
-                if not battle:
-                    raise HTTPException(404,"No match yet")
-                # An active standard battle still needs an atomic replay capture.
-                return captured_replay(battle)
-        # A start reservation still references the previous completed match.
-        # Prefer its immutable archive, or export that captured Battle unlocked.
-        path = service.store.replay_path(match_id) if match_id else None
-        if path and path.is_file():
-            return FileResponse(path,media_type="application/json",filename=f"rmuc-{match_id}.json")
-        if not battle:
-            raise HTTPException(404,"No match yet")
-        return captured_replay(battle)
+    async def current_replay(request:Request):
+        def attempt(target, waiter):
+            with service.lock:
+                target = (service.match_id, service.battle) if target is None else target
+                match_id, battle = target
+                if service.battle is battle and service.busy and not service.initializing:
+                    if service.metadata.get('match_mode') == 'research':
+                        raise HTTPException(409, "Research replay is available after the match completes or stops")
+                    if not battle:
+                        raise HTTPException(404,"No match yet")
+                    if service._step_in_progress:
+                        service._step_waiters.add(waiter)
+                        return target, None
+                    # Recheck and capture under one lock: a new step cannot enter.
+                    return target, captured_replay(battle)
+            # Pin the original completed match even across a new start or step.
+            path = service.store.replay_path(match_id) if match_id else None
+            if path and path.is_file():
+                return target, FileResponse(path,media_type="application/json",filename=f"rmuc-{match_id}.json")
+            if not battle:
+                raise HTTPException(404,"No match yet")
+            return target, captured_replay(battle)
+
+        return await stable_operation(request, attempt)
 
     @app.post("/api/submissions")
     def upload(data:SubmissionRequest):

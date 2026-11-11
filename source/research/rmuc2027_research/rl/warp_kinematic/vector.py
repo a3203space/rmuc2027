@@ -1,5 +1,5 @@
 """SB3 vector adapter: CPU policies concurrently feed one batched GPU worker."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 from copy import deepcopy
 import numpy as np
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -66,9 +66,13 @@ class WarpVecEnv(DummyVecEnv):
         self._check_open()
         self.physics.begin_round(len(self.envs))
         futures = [self._submit(self._step_one,i) for i in range(len(self.envs))]
+        # Recovery may start as soon as an error escapes. Finish every peer
+        # before exposing a worker exception to the caller.
+        wait(futures)
         results = [f.result() for f in futures]
         resets={i:self._submit(self.envs[i].reset)
                 for i,(_,_,terminated,truncated,_) in enumerate(results) if terminated or truncated}
+        wait(resets.values())
         for i, (obs, reward, terminated, truncated, info) in enumerate(results):
             self.buf_rews[i] = reward
             self.buf_dones[i] = terminated or truncated
@@ -84,6 +88,7 @@ class WarpVecEnv(DummyVecEnv):
         self._check_open()
         futures=[self._submit(env.reset,seed=self._seeds[i],options=self._options[i])
                  for i,env in enumerate(self.envs)]
+        wait(futures)
         for i,future in enumerate(futures):
             obs,self.reset_infos[i]=future.result()
             self._save_obs(i,obs)

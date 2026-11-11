@@ -106,6 +106,7 @@ class Match:
         # retains the exception traceback (and therefore this Match instance).
         self.lock = threading.RLock()
         self.closed = False
+        self._transport_closed = False
         self._broken = False
         self._physics_callback_depth = 0
         self.process = None
@@ -181,6 +182,10 @@ class Match:
     def _request(self, request, raw=False):
         with self.lock:
             self._ensure_available()
+            # The peer is awaiting a physics result, not another RPC. Reject
+            # before the write/poisoning boundary so callbacks may catch this.
+            if getattr(self, '_physics_callback_depth', 0):
+                raise RuntimeError('Cannot issue a request from an active physics callback')
             # Only explicit, pure engine queries preserve the current-state cache.
             # Unknown operations invalidate conservatively, including failed writes.
             if request.get('op') not in ('observation','observations','operator_observation','snapshot','digest','terrain_probe','sentry_sensors'):
@@ -268,6 +273,10 @@ class Match:
                 raise RuntimeError("Rust engine response timed out") from None
         if not line:
             raise RuntimeError("Rust engine exited unexpectedly")
+        # EOF tails are not complete protocol frames, even if valid JSON.
+        # Batch observation payloads are forwarded without JSON decoding.
+        if not line.endswith(b'\n'):
+            raise RuntimeError("Rust engine response missing newline terminator")
         return line
 
     def __getattr__(self, name):
@@ -385,6 +394,7 @@ class Match:
             # It must unwind before its resources can be safely disposed.
             if getattr(self, '_physics_callback_depth', 0):
                 raise RuntimeError('Cannot close Match from an active physics callback')
+            self.closed = True
             adapter = self.external_physics
             self.external_physics = None
             try:
@@ -406,10 +416,12 @@ class Match:
                 pass
 
     def _close_transport(self):
-        if self.closed:
+        # Reject requests immediately, but only completed teardown is a no-op.
+        if getattr(self, '_transport_closed', False):
             return
         self.closed = True
         if self.process is None:
+            self._transport_closed = True
             return
         try:
             if self._broken:
@@ -424,10 +436,18 @@ class Match:
                 self.process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 self.process.kill()
-                self.process.wait()
-        finally:
-            if self._reader is not None and self._reader.ident is not None:self._reader.join(timeout=2)
+                self.process.wait(timeout=2)
+            # Do not close buffered stdout while a reader still holds its lock.
+            # Failed kill/wait must leave this work for a later close attempt.
+            if self._reader is not None and self._reader.ident is not None:
+                self._reader.join(timeout=2)
+                if self._reader.is_alive():
+                    raise RuntimeError('Rust engine reader did not stop')
             self.process.stdout.close()
+        except BaseException:
+            self._broken = True
+            raise
+        self._transport_closed = True
 
     def __enter__(self):
         return self
@@ -439,5 +459,5 @@ class Match:
             self._close_after_error(error)
 
     def __del__(self):
-        if hasattr(self, "closed") and not self.closed:
+        if hasattr(self, "closed") and not getattr(self, '_transport_closed', False):
             self.close()

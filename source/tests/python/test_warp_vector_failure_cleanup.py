@@ -64,6 +64,48 @@ class Env(gym.Env):
             raise self.close_error
 
 
+class GatedEnv(Env):
+    """One failing call and one bounded delayed peer, then normal recovery."""
+    def __init__(self, index, stage, primary, entered, failed, release):
+        super().__init__()
+        self.index, self.stage, self.primary = index, stage, primary
+        self.entered, self.failed, self.release = entered, failed, release
+        self.lock = threading.Lock()
+        self.active = 0
+        self.overlapped = False
+        self.fault_used = False
+
+    def call(self, kind):
+        with self.lock:
+            self.overlapped |= self.active > 0
+            self.active += 1
+            gated = kind == ('step' if self.stage == 'step' else 'reset') and not self.fault_used
+            if gated:
+                self.fault_used = True
+        try:
+            if gated:
+                if self.index == 1:
+                    self.entered.set()
+                    if not self.release.wait(2.):
+                        raise TimeoutError('test peer release deadline')
+                else:
+                    if not self.entered.wait(1.):
+                        raise TimeoutError('test peer entry deadline')
+                    self.failed.set()
+                    raise self.primary
+        finally:
+            with self.lock:
+                self.active -= 1
+
+    def step(self, action):
+        self.call('step')
+        return np.zeros(1, np.float32), 2., self.stage == 'auto_reset', False, {}
+
+    def reset(self, *, seed=None, options=None):
+        self.call('reset')
+        return np.zeros(1, np.float32), {}
+
+
 class VectorFailureCleanupTests(unittest.TestCase):
     def setUp(self):
         self.assertIsNone(batching.active_service)
@@ -237,6 +279,71 @@ class VectorFailureCleanupTests(unittest.TestCase):
                         self.assertEqual(envs[failed_index].requests, after)
                         self.assertEqual(envs[1 - failed_index].requests, 3)
                         self.assert_stopped(vec, envs)
+
+    def check_error_waits_for_peer(self, stage, error_type):
+        entered, failed, release, returned = (threading.Event() for _ in range(4))
+        primary = error_type('controlled first-task failure')
+        primary.add_note('original task note')
+        envs = [GatedEnv(i, stage, primary, entered, failed, release) for i in range(2)]
+        vec = self.make_vec(envs)
+        errors = []
+
+        def invoke():
+            try:
+                if stage == 'reset':
+                    vec.reset()
+                else:
+                    vec.step_async(np.zeros((2, 1), np.float32))
+                    vec.step_wait()
+            except BaseException as error:
+                errors.append(error)
+            finally:
+                returned.set()
+
+        caller = threading.Thread(target=invoke, name='vector-gated-caller', daemon=True)
+        caller.start()
+        try:
+            self.assertTrue(entered.wait(1.), 'peer did not enter its task')
+            self.assertTrue(failed.wait(1.), 'first task did not fail')
+            returned_early = returned.wait(.05)
+            peer_active = envs[1].active > 0
+            release.set()
+            caller.join(1.)
+            self.assertFalse(caller.is_alive())
+            self.assertFalse(returned_early, 'error escaped while a same-round peer was active')
+            self.assertTrue(peer_active, 'the delayed peer was not held during the observation')
+            self.assertEqual(len(errors), 1)
+            self.assertIs(errors[0], primary)
+            self.assertEqual(errors[0].__notes__, ['original task note'])
+            trace = errors[0].__traceback__
+            names = []
+            while trace is not None:
+                names.append(trace.tb_frame.f_code.co_name)
+                trace = trace.tb_next
+            self.assertIn('call', names, 'original worker traceback was lost')
+            np.testing.assert_array_equal(vec.reset(), np.zeros((2, 1), np.float32))
+            self.assertFalse(any(env.overlapped for env in envs))
+            vec.close()
+            vec.close()
+            self.assert_stopped(vec, envs)
+        finally:
+            release.set()
+            caller.join(2.)
+
+    def test_step_error_waits_for_submitted_peers_before_recovery(self):
+        for error_type in (ValueError, TimeoutError, SystemExit):
+            with self.subTest(error=error_type.__name__):
+                self.check_error_waits_for_peer('step', error_type)
+
+    def test_explicit_reset_error_waits_for_submitted_peers_before_recovery(self):
+        for error_type in (ValueError, TimeoutError, SystemExit):
+            with self.subTest(error=error_type.__name__):
+                self.check_error_waits_for_peer('reset', error_type)
+
+    def test_auto_reset_error_waits_for_submitted_peers_before_recovery(self):
+        for error_type in (ValueError, TimeoutError, SystemExit):
+            with self.subTest(error=error_type.__name__):
+                self.check_error_waits_for_peer('auto_reset', error_type)
 
     def test_successful_rounds_keep_reset_and_observation_semantics(self):
         envs = [Env(terminated=True), Env(truncated=True)]

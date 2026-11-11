@@ -12,6 +12,20 @@ from .pose import parameters as pose_parameters, loaded_origin, resting_origin, 
 from .uploads import HostUploads
 
 
+def validate_request_identity(request, next_sequence):
+    """Reject invalid JSON identity scalars before any world state changes."""
+    op=request.get('op');version=request.get('version')
+    sequence=request.get('sequence');substeps=request.get('substeps');dt=request.get('dt')
+    # Exact integer types exclude bool and numerically equal floats. Positive
+    # interval membership also rejects NaN/infinities without numeric coercion.
+    if (type(op) is not str or op!='kinematic_frame' or
+        type(version) is not int or version not in (1,2) or
+        type(sequence) is not int or sequence<0 or sequence!=next_sequence or
+        type(substeps) is not int or substeps!=6 or
+        type(dt) not in (int,float) or not DT-1e-12<=dt<=DT+1e-12):
+        raise ValueError('Invalid motion request identity')
+
+
 @wp.func
 def wrapped(angle: float):
     return wp.atan2(wp.sin(angle),wp.cos(angle))
@@ -123,6 +137,16 @@ def reset_traversal(mask: wp.array(dtype=wp.vec2i),status: wp.array(dtype=wp.int
             base[i]=z[i]-surface_height(scene,pos[i]);offsets[i]=wp.vec2(base[i],base[i]+height)
             leg_command[i]=stance[i][2]
         flight[i]=0;latched[i]=0.0;strength[i]=0.0
+
+
+@wp.kernel
+def restore_airborne_authority(mask: wp.array(dtype=wp.int32),z: wp.array(dtype=float),
+                               vz: wp.array(dtype=float),status: wp.array(dtype=wp.int32),
+                               altitude: wp.array(dtype=float),fall_speed: wp.array(dtype=float),
+                               flight: wp.array(dtype=wp.int32)):
+    i=wp.tid()
+    if mask[i]!=0:
+        status[i]=4;altitude[i]=z[i];fall_speed[i]=vz[i];flight[i]=1
 
 
 @wp.kernel
@@ -259,8 +283,7 @@ class ArenaMotion:
 
     def step_frame(self,request):
         if self.closed:raise RuntimeError('Adapter closed')
-        if request.get('op')!='kinematic_frame' or request.get('version') not in (1,2) or request.get('sequence')!=self.next_sequence or request.get('substeps')!=6 or abs(request.get('dt',0)-DT)>1e-12:
-            raise ValueError('Invalid motion request identity')
+        validate_request_identity(request,self.next_sequence)
         robots=request['robots']
         if self.motion is None:self.initialize(request)
         if (request['version']==2)!=self.extended:raise ValueError('Motion protocol changed within world')
@@ -308,6 +331,15 @@ class ArenaMotion:
             mask=wp.array(np.asarray([[bool(c),bool(c) and r.get('grounded',True)] for c,r in zip(changed,robots)],dtype=np.int32),dtype=wp.vec2i,device=m.device)
             wp.launch(reset_traversal,m.count,inputs=[mask,self.jump_status,self.jump_elapsed,self.jump_cooldown,
                       self.fall_speed,self.terrain.data,m.pos,self.last_z,self.base,m.height_offsets,self.leg_command,self.stance,m.flight,self.jump_latched,self.jump_strength],device=m.device)
+            if self.extended:
+                airborne=np.asarray([bool(c) and r['enabled'] and not r.get('grounded',True) and r['role']!='aerial'
+                                     for c,r in zip(changed,robots)],dtype=np.int32)
+                if airborne.any():
+                    # Cancel the old jump, but do not turn an authoritative
+                    # airborne pose into a landing or discard its momentum.
+                    assign(self.passive_vz,[r['velocity'][2] for r in robots])
+                    wp.launch(restore_airborne_authority,m.count,inputs=[wp.array(airborne,dtype=wp.int32,device=m.device),
+                              self.last_z,self.passive_vz,self.jump_status,m.flight_z,self.fall_speed,m.flight],device=m.device)
         assign(self.targets,[[r.get('heading_goal') or 0.,r.get('yaw_rate') or 0.] for r in robots])
         self.host_uploads.assign(self.flags,np.asarray([[r.get('heading_goal') is not None,r.get('yaw_rate') is not None,r['transform']] for r in robots],dtype=np.int32))
         self.host_uploads.assign(m.enabled,np.asarray([r['enabled'] and r['role']!='aerial' for r in robots],dtype=np.int32))
