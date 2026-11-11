@@ -1,0 +1,84 @@
+{
+  "format": "rmuc-research-run-v1",
+  "run_id": "sentry-v6-extension-20261111-0457-r04",
+  "title": "折叠哨兵 v6：恢复与复活选择",
+  "runtime_config": {
+    "path": "main/experiment.json",
+    "sha256": "959ca8295f258491e0fe5a2393926bd73d68dd425044d57265afb57167e8d146"
+  },
+  "checkpoints": {
+    "baseline-1c7ec9df4552": {
+      "path": "main/catalog/1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00.zip",
+      "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+      "label": "baseline",
+      "policy_version": 6
+    },
+    "candidate-1c7ec9df4552": {
+      "path": "main/catalog/1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00.zip",
+      "sha256": "1c7ec9df45520b702dbcef14a6a04485a4ff02cfd128488179ce13b4d9b68f00",
+      "label": "candidate",
+      "policy_version": 6
+    }
+  },
+  "helpers": {
+    "infantry": {
+      "path": "infantry/actor.json",
+      "sha256": "a6c6a740ce1ae38c17bb2eb0a2daba1a7a632409a3909a70a67958d45c1e58f2"
+    },
+    "heavy": {
+      "path": "heavy/actor.json",
+      "sha256": "792909ec1e455112e506bc456867fb126072ebec44f89ebd1490f4ea284fe710"
+    }
+  },
+  "scenarios": {
+    "f2731-2732_e2731-2732_s2773_red": {
+      "friendly_infantry": [
+        2731,
+        2732
+      ],
+      "enemy_infantry": [
+        2731,
+        2732
+      ],
+      "enemy_sentry": 2773,
+      "learner_side": "red",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_red",
+      "ordered_id": "f2731-2732_e2731-2732_s2773",
+      "quantity_id": "f110_e110_sT"
+    },
+    "f2731-2732_e2731-2732_s2773_blue": {
+      "friendly_infantry": [
+        2731,
+        2732
+      ],
+      "enemy_infantry": [
+        2731,
+        2732
+      ],
+      "enemy_sentry": 2773,
+      "learner_side": "blue",
+      "scenario_id": "f2731-2732_e2731-2732_s2773_blue",
+      "ordered_id": "f2731-2732_e2731-2732_s2773",
+      "quantity_id": "f110_e110_sT"
+    }
+  },
+  "capability_profiles": {
+    "evaluation-red": {
+      "path": "capability-profiles/evaluation-red.json",
+      "sha256": "c5f404d47dc6c0912f49e4caaf4827d414ac8d0dba1ef44ad9d18227e906c949",
+      "label": "red 冻结能力",
+      "learner_side": "red"
+    },
+    "evaluation-blue": {
+      "path": "capability-profiles/evaluation-blue.json",
+      "sha256": "f6bddac35ecf727075283d82d630baf816b7df215eb76d9c6f6c68c41f6365d8",
+      "label": "blue 冻结能力",
+      "learner_side": "blue"
+    }
+  },
+  "replays": {},
+  "radar_classifier": {
+    "path": "radar-calibration/classifier.json",
+    "sha256": "812a7a62f185fa4402afa6f11698dca9d34b57e74ed104ad0b8fcb5b5fcbbfd8"
+  }
+}

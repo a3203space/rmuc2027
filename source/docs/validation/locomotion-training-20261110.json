@@ -1,0 +1,1592 @@
+{
+  "date": "2026-11-10",
+  "status": "finished",
+  "initial_campaign_wall_seconds": 7008.861427814905,
+  "deadline_unix": 1794295186.3760333,
+  "confirmed_unix": 1794284386.3760333,
+  "last_training_record_unix": 1794295085.8938026,
+  "training_stopped_before_deadline": true,
+  "extension_elapsed_to_last_training_record_seconds": 10699.5177693367,
+  "continuation_models_updated": 17,
+  "continuation_actual_steps": 146256,
+  "continuation_gradient_epochs": 17925,
+  "selected_kinds": {
+    "updated-reference": 1,
+    "ppo": 13,
+    "guided": 2,
+    "validated_correction": 1
+  },
+  "all_models_evaluated": true,
+  "baseline_rapier": {
+    "attempts": 102,
+    "stable_success": 68
+  },
+  "selected_totals": {
+    "rapier": {
+      "attempts": 102,
+      "stable_success": 101,
+      "tipped_seconds": 0.0,
+      "policy_errors": 0
+    },
+    "warp_kinematic": {
+      "attempts": 102,
+      "stable_success": 102,
+      "tipped_seconds": 0.0,
+      "policy_errors": 0
+    },
+    "mjwarp": {
+      "attempts": 102,
+      "stable_success": 100,
+      "tipped_seconds": 0.0,
+      "policy_errors": 0
+    }
+  },
+  "models": [
+    {
+      "model": 3,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/3/model.zip",
+      "export": "data/research/locomotion-selected/3/export",
+      "sha256": "465a03926b556ba42cc69da76f5de81659fcf1eaa2adbcbc25a246b72e28e82c",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.4725632646594988e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 4
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.75,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.9,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.5,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 4,
+        "initial_seconds": 28.4,
+        "selected_seconds": 27.0,
+        "initial_path_m": 25.389125816138392,
+        "selected_path_m": 23.871551436994288
+      }
+    },
+    {
+      "model": 4,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/4/model.zip",
+      "export": "data/research/locomotion-selected/4/export",
+      "sha256": "861045554d5611a90fe7fb7717f17183a64e8c7188d88679b6d131f25c6cd1cb",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 5.392040901275319e-08,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.5,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.8,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.4,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 57.0,
+        "selected_seconds": 57.0,
+        "initial_path_m": 51.343668143420786,
+        "selected_path_m": 51.343668143420786
+      }
+    },
+    {
+      "model": 7,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/7/model.zip",
+      "export": "data/research/locomotion-selected/7/export",
+      "sha256": "f5d4d06bd75b06e4730a5e568e1fa69fb9ea0f931ff7520d259bd740cb0bed08",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 5.758227505925362e-08,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.75,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.8,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.75,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 58.5,
+        "selected_seconds": 58.5,
+        "initial_path_m": 54.27066912671705,
+        "selected_path_m": 54.27066912671705
+      }
+    },
+    {
+      "model": 301,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/301/model.zip",
+      "export": "data/research/locomotion-selected/301/export",
+      "sha256": "d5a262c703438ebc21f08ca869e82ee6f3f207dcf32c0b5bb7a53d6291e33884",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.952064261345754e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 2
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 22.65,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 16.85,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 22.95,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 2,
+        "initial_seconds": 18.5,
+        "selected_seconds": 18.5,
+        "initial_path_m": 17.753722040919488,
+        "selected_path_m": 17.753722040919488
+      }
+    },
+    {
+      "model": 302,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/302/model.zip",
+      "export": "data/research/locomotion-selected/302/export",
+      "sha256": "9f04ca60ca5dc3867b4025258f23561f188618316182bd1a22beaaccca00be30",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.5440516343279143e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.65,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 7.05,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.6,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 57.900000000000006,
+        "selected_seconds": 57.900000000000006,
+        "initial_path_m": 52.181049212008766,
+        "selected_path_m": 52.181049212008766
+      }
+    },
+    {
+      "model": 303,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/303/model.zip",
+      "export": "data/research/locomotion-selected/303/export",
+      "sha256": "15b1a29271821ae0ad532ceae6e5e5a02a53aa01af058db5acf0a4cc7ca577e1",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.0556363660985113e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.15,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.75,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 9.1,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 54.900000000000006,
+        "selected_seconds": 54.900000000000006,
+        "initial_path_m": 54.58328996447902,
+        "selected_path_m": 54.58328996447902
+      }
+    },
+    {
+      "model": 304,
+      "selected_kind": "guided",
+      "checkpoint": "data/research/locomotion-guided-preparation/304/warm-0/model.zip",
+      "export": "data/research/locomotion-selected/304/export",
+      "sha256": "52e13e415f2232ea3c016ae00e5e50c9b94f6f02d03a683e2ebd3901091c9004",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 2.0932883504354294e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 4
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 7.5,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 7.1,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 7.45,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 4,
+        "initial_seconds": 26.8,
+        "selected_seconds": 30.0,
+        "initial_path_m": 23.569183244300817,
+        "selected_path_m": 25.930588778547254
+      }
+    },
+    {
+      "model": 305,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/305/model.zip",
+      "export": "data/research/locomotion-selected/305/export",
+      "sha256": "bae45e3ae49aec9dabc38095fbfaa714364278ff18bca9ea195f85a273c2e100",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.76446761535054e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 4
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.85,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.8,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.9,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 4,
+        "initial_seconds": 27.4,
+        "selected_seconds": 27.4,
+        "initial_path_m": 22.64633105153031,
+        "selected_path_m": 22.644797765957343
+      }
+    },
+    {
+      "model": 2711,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/2711/model.zip",
+      "export": "data/research/locomotion-selected/2711/export",
+      "sha256": "cd1440b8fd6d4ed7a5e14e5722ca79f8b4c9671c77ec49c6aa47c79183bd437f",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.199358288794805e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.2,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.15,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.25,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 37.2,
+        "selected_seconds": 37.2,
+        "initial_path_m": 28.272409249567175,
+        "selected_path_m": 28.272409249567175
+      }
+    },
+    {
+      "model": 2712,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/2712/model.zip",
+      "export": "data/research/locomotion-selected/2712/export",
+      "sha256": "a1e5f308659c8f13d9c2faa1299c54c88b020f70f35b42534f449d4b8b4330f8",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.0122595678341284e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.3,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.25,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.7,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 37.8,
+        "selected_seconds": 37.8,
+        "initial_path_m": 28.077545130297487,
+        "selected_path_m": 28.077545130297487
+      }
+    },
+    {
+      "model": 2713,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/2713/model.zip",
+      "export": "data/research/locomotion-selected/2713/export",
+      "sha256": "003fbf89707846b26c48b0a591468a144298cc5ae53106816073c89512095327",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 3.050275791949275e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.1,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.05,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.1,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 36.599999999999994,
+        "selected_seconds": 36.599999999999994,
+        "initial_path_m": 28.327600636494637,
+        "selected_path_m": 28.327600636494637
+      }
+    },
+    {
+      "model": 2714,
+      "selected_kind": "updated-reference",
+      "checkpoint": "data/research/locomotion-targeted-final-2714/corrected-2/model.zip",
+      "export": "data/research/locomotion-selected/2714/export",
+      "sha256": "57b1e21b7b0fc2fab74ad0a1e0ad8d543311a5d0715da9fdcacb5e42a0d43a8d",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 2.031864079765633e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 2
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.95,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.65,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 5.65,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 2,
+        "initial_seconds": 11.6,
+        "selected_seconds": 11.9,
+        "initial_path_m": 8.718644923974598,
+        "selected_path_m": 8.998675814288763
+      }
+    },
+    {
+      "model": 2731,
+      "selected_kind": "guided",
+      "checkpoint": "data/research/locomotion-guided-preparation/2731/warm-0/model.zip",
+      "export": "data/research/locomotion-selected/2731/export",
+      "sha256": "1e044577cb8fb735656071f125b57f5f52d7cb3931c26ac167ad54a05fae4e2a",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.3040554502907753e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 0
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.85,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 7.1,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 6.6,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 0,
+        "initial_seconds": 0,
+        "selected_seconds": 0,
+        "initial_path_m": 0,
+        "selected_path_m": 0
+      }
+    },
+    {
+      "model": 2732,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/2732/model.zip",
+      "export": "data/research/locomotion-selected/2732/export",
+      "sha256": "0e5123ec42cd88c15fbbca042b6013208418f35c9a8453c062af9d4e3f61e1f5",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.3314691171828485e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 2
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 24.15,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 17.05,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 24.35,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 2,
+        "initial_seconds": 19.5,
+        "selected_seconds": 18.5,
+        "initial_path_m": 17.52367499008197,
+        "selected_path_m": 17.792205967902234
+      }
+    },
+    {
+      "model": 2771,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/2771/model.zip",
+      "export": "data/research/locomotion-selected/2771/export",
+      "sha256": "f2bb5c62598f01c737f25a60fff2f12911e5adc1d62d2fd4828b45db9697e11c",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.6419289972091633e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 6
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 12.25,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 16.8,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 17.8,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 6,
+        "initial_seconds": 73.5,
+        "selected_seconds": 73.5,
+        "initial_path_m": 59.05172307706492,
+        "selected_path_m": 59.05172307706492
+      }
+    },
+    {
+      "model": 2772,
+      "selected_kind": "validated_correction",
+      "checkpoint": "data/research/locomotion-targeted-final-2772/corrected-1/model.zip",
+      "export": "data/research/locomotion-selected/2772/export",
+      "sha256": "15eb3da0e05e429edacf317e1926ade9046b106ea81b7c5cd893e4c6f0448f61",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 4.404976176042297e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 2
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 5,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 14.75,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": [
+            {
+              "seed": 43,
+              "side": "red",
+              "course": {
+                "kind": "ability",
+                "success": false,
+                "closest_goal_m": 1.8105475121199517,
+                "jump_complete": true
+              }
+            }
+          ]
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 15.3,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 4,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 14.65,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": [
+            {
+              "seed": 42,
+              "side": "red",
+              "course": {
+                "kind": "travel",
+                "success": false,
+                "closest_goal_m": 5.800755047641617,
+                "jump_complete": false
+              }
+            },
+            {
+              "seed": 42,
+              "side": "blue",
+              "course": {
+                "kind": "travel",
+                "success": false,
+                "closest_goal_m": 5.800369541361559,
+                "jump_complete": false
+              }
+            }
+          ]
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 2,
+        "initial_seconds": 29.5,
+        "selected_seconds": 29.5,
+        "initial_path_m": 18.68041924425024,
+        "selected_path_m": 18.68041924425024
+      }
+    },
+    {
+      "model": 2773,
+      "selected_kind": "ppo",
+      "checkpoint": "data/research/locomotion-guided-continuation/2773/model.zip",
+      "export": "data/research/locomotion-selected/2773/export",
+      "sha256": "1e2217680f4f973e518282785aff32a4e2892fc3fe85dd3876d6ff29abb073a4",
+      "finite_parameters": true,
+      "finite_optimizer": true,
+      "actor_parity_max_error": 1.9242568272126448e-07,
+      "baseline_rapier": {
+        "attempts": 6,
+        "stable_success": 0
+      },
+      "backends": {
+        "rapier": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 17.9,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "warp_kinematic": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 18.55,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        },
+        "mjwarp": {
+          "attempts": 6,
+          "stable_success": 6,
+          "tipped_seconds": 0.0,
+          "median_stable_completion_seconds": 18.4,
+          "policy_errors": 0,
+          "weights_unchanged": true,
+          "failures": []
+        }
+      },
+      "rapier_common_success_comparison": {
+        "pairs": 0,
+        "initial_seconds": 0,
+        "selected_seconds": 0,
+        "initial_path_m": 0,
+        "selected_path_m": 0
+      }
+    }
+  ],
+  "full_matches": [
+    {
+      "robot_model": 2773,
+      "backend": "rapier",
+      "exit_code": 0,
+      "report": "data/research/locomotion-selected-full-match-rapier/validation.json",
+      "weights_unchanged": true,
+      "gradient_updates": 0,
+      "failure": null,
+      "attempts": [
+        {
+          "seed": 1001,
+          "side": "red",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "red",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 420.0,
+            "weak_seconds": 0.0,
+            "deaths": 0,
+            "revives": 0,
+            "takeover_seconds": {
+              "dead": 0.0,
+              "recover": 137.39999999999998,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 66.99611954680397,
+            "tipped_seconds": 0.0,
+            "jump_commands": 0,
+            "fold_reversals": 8,
+            "rejected_skills": 35
+          },
+          "replay_evidence": {
+            "kind": "deterministic",
+            "verified_ticks": 8400,
+            "digest": "ad785bb54a4272c1ad336da060ea2c84a0b2b970e43618beb970ea0565a4b487",
+            "winner": "red"
+          },
+          "replay": "data/research/locomotion-selected-full-match-rapier/match-1001-red.json",
+          "outcome": "win"
+        },
+        {
+          "seed": 1001,
+          "side": "blue",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "red",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 339.75,
+            "weak_seconds": 22.30000000000004,
+            "deaths": 2,
+            "revives": 2,
+            "takeover_seconds": {
+              "dead": 80.30000000000001,
+              "recover": 68.79999999999995,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 272.73731764099847,
+            "tipped_seconds": 0.0,
+            "jump_commands": 0,
+            "fold_reversals": 19,
+            "rejected_skills": 179
+          },
+          "replay_evidence": {
+            "kind": "deterministic",
+            "verified_ticks": 8400,
+            "digest": "95e96b035d72dcfe596cf7e8540223e9946dd31cd367d02e107a8816eb27d9c6",
+            "winner": "red"
+          },
+          "replay": "data/research/locomotion-selected-full-match-rapier/match-1001-blue.json",
+          "outcome": "loss"
+        }
+      ]
+    },
+    {
+      "robot_model": 2773,
+      "backend": "warp_kinematic",
+      "exit_code": 0,
+      "report": "data/research/locomotion-selected-full-match-warp_kinematic/validation.json",
+      "weights_unchanged": true,
+      "gradient_updates": 0,
+      "failure": null,
+      "attempts": [
+        {
+          "seed": 1001,
+          "side": "red",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "red",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 420.0,
+            "weak_seconds": 0.0,
+            "deaths": 0,
+            "revives": 0,
+            "takeover_seconds": {
+              "dead": 0.0,
+              "recover": 0.0,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 406.5983911259392,
+            "tipped_seconds": 0.0,
+            "jump_commands": 0,
+            "fold_reversals": 2,
+            "rejected_skills": 275
+          },
+          "replay_evidence": {
+            "kind": "snapshot_structure",
+            "deterministic": false,
+            "frames": 8401,
+            "final_tick": 8400,
+            "sha256": "0ab5f37545ed5c2f7635877e97a9913cb420e30a4ea05032b5fa41847ecda7fd"
+          },
+          "replay": "data/research/locomotion-selected-full-match-warp_kinematic/match-1001-red.json",
+          "outcome": "win"
+        },
+        {
+          "seed": 1001,
+          "side": "blue",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "red",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 375.85,
+            "weak_seconds": 0.0,
+            "deaths": 1,
+            "revives": 0,
+            "takeover_seconds": {
+              "dead": 44.10000000000002,
+              "recover": 19.299999999999997,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 147.69402736563268,
+            "tipped_seconds": 0.0,
+            "jump_commands": 0,
+            "fold_reversals": 24,
+            "rejected_skills": 123
+          },
+          "replay_evidence": {
+            "kind": "snapshot_structure",
+            "deterministic": false,
+            "frames": 8401,
+            "final_tick": 8400,
+            "sha256": "1717df3e07acc2d88063de070498058b2b139fd6c4ab5073944e54ca54ef9fd3"
+          },
+          "replay": "data/research/locomotion-selected-full-match-warp_kinematic/match-1001-blue.json",
+          "outcome": "loss"
+        }
+      ]
+    },
+    {
+      "robot_model": 2773,
+      "backend": "mjwarp",
+      "exit_code": 0,
+      "report": "data/research/locomotion-selected-full-match-mjwarp-combined/validation.json",
+      "weights_unchanged": true,
+      "gradient_updates": 0,
+      "failure": null,
+      "attempts": [
+        {
+          "seed": 1001,
+          "side": "red",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "blue",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 342.54999999999995,
+            "weak_seconds": 5.800000000000011,
+            "deaths": 2,
+            "revives": 2,
+            "takeover_seconds": {
+              "dead": 77.49999999999997,
+              "recover": 88.30000000000001,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 302.1754487621076,
+            "tipped_seconds": 0.0,
+            "jump_commands": 0,
+            "fold_reversals": 18,
+            "rejected_skills": 232
+          },
+          "replay_evidence": {
+            "kind": "snapshot_structure",
+            "deterministic": false,
+            "frames": 8401,
+            "final_tick": 8400,
+            "sha256": "88d01d4cfd9d74dd6274f4e75d2245aa0585dc679e4948712dd9293019336cd7"
+          },
+          "replay": "data/research/locomotion-selected-full-match-mjwarp/match-1001-red.json",
+          "outcome": "loss"
+        },
+        {
+          "seed": 1001,
+          "side": "blue",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "red",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 420.0,
+            "weak_seconds": 0.0,
+            "deaths": 0,
+            "revives": 0,
+            "takeover_seconds": {
+              "dead": 0.0,
+              "recover": 0.0,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 112.55299851913264,
+            "tipped_seconds": 0.0,
+            "jump_commands": 0,
+            "fold_reversals": 26,
+            "rejected_skills": 146
+          },
+          "replay_evidence": {
+            "kind": "snapshot_structure",
+            "deterministic": false,
+            "frames": 8401,
+            "final_tick": 8400,
+            "sha256": "58bb8a6cc0fa9c03c49941925da0ef00471f818eff1546fdf6e2d4521655420e"
+          },
+          "replay": "data/research/locomotion-selected-full-match-mjwarp-blue/match-1001-blue.json",
+          "outcome": "loss"
+        }
+      ]
+    },
+    {
+      "robot_model": 2714,
+      "backend": "rapier",
+      "exit_code": 1,
+      "report": "data/research/locomotion-selected-heavy-match-rapier/validation.json",
+      "weights_unchanged": null,
+      "gradient_updates": null,
+      "failure": "rmuc2027_research.rl.session.OpeningIncomplete: Heavy opening ended before launcher installation; no match RL samples collected",
+      "attempts": [],
+      "aborted_opening_sides": [
+        "red"
+      ],
+      "unattempted_sides": [
+        "blue"
+      ],
+      "actor_samples_before_abort": 0
+    },
+    {
+      "robot_model": 2714,
+      "backend": "warp_kinematic",
+      "exit_code": 0,
+      "report": "data/research/locomotion-selected-heavy-match-warp_kinematic/validation.json",
+      "weights_unchanged": true,
+      "gradient_updates": 0,
+      "failure": null,
+      "attempts": [
+        {
+          "seed": 1001,
+          "side": "red",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "red",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 134.75,
+            "weak_seconds": 0.0,
+            "deaths": 0,
+            "revives": 0,
+            "takeover_seconds": {
+              "dead": 0.0,
+              "recover": 51.80000000000001,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 15.173498001518173,
+            "tipped_seconds": 0.0,
+            "jump_commands": 8,
+            "fold_reversals": 0,
+            "rejected_skills": 1
+          },
+          "replay_evidence": {
+            "kind": "snapshot_structure",
+            "deterministic": false,
+            "frames": 8401,
+            "final_tick": 8400,
+            "sha256": "e0d76187dab91d75c7fca2a82a9918beca18fa6ee53e3ee077ebc021cc86394d"
+          },
+          "replay": "data/research/locomotion-selected-heavy-match-warp_kinematic/match-1001-red.json",
+          "outcome": "win"
+        },
+        {
+          "seed": 1001,
+          "side": "blue",
+          "terminated": true,
+          "truncated": false,
+          "time": 420.0,
+          "winner": "blue",
+          "reason": "timeout",
+          "metrics": {
+            "alive_seconds": 134.64999999999998,
+            "weak_seconds": 0.0,
+            "deaths": 0,
+            "revives": 0,
+            "takeover_seconds": {
+              "dead": 0.0,
+              "recover": 0.0,
+              "tipped": 0.0,
+              "unreachable": 0.0
+            },
+            "capture_seconds": 0.0,
+            "policy_errors": 0,
+            "path_m": 37.99422929372698,
+            "tipped_seconds": 0.0,
+            "jump_commands": 16,
+            "fold_reversals": 0,
+            "rejected_skills": 8
+          },
+          "replay_evidence": {
+            "kind": "snapshot_structure",
+            "deterministic": false,
+            "frames": 8401,
+            "final_tick": 8400,
+            "sha256": "a3cbe9a60a73466d840508aad401ad45ab098239a3c6217deed57505e44e1ed0"
+          },
+          "replay": "data/research/locomotion-selected-heavy-match-warp_kinematic/match-1001-blue.json",
+          "outcome": "win"
+        }
+      ]
+    },
+    {
+      "robot_model": 2714,
+      "backend": "mjwarp",
+      "exit_code": 1,
+      "report": "data/research/locomotion-selected-heavy-match-mjwarp/validation.json",
+      "weights_unchanged": null,
+      "gradient_updates": null,
+      "failure": "rmuc2027_research.rl.session.OpeningIncomplete: Heavy opening ended before launcher installation; no match RL samples collected",
+      "attempts": [],
+      "aborted_opening_sides": [
+        "red"
+      ],
+      "unattempted_sides": [
+        "blue"
+      ],
+      "actor_samples_before_abort": 0
+    }
+  ],
+  "planned_full_match_attempts": 12,
+  "completed_full_match_attempts": 8,
+  "sdk_comparison_report": "data/research/locomotion-final-sdk-comparison.json",
+  "sdk_ability_summary": {
+    "3:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "3": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "4:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "4": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "7:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "7": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "301:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "301": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "302:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "302": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "303:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "303": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "304:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "304": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "305:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "305": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2711:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2711": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2712:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2712": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2713:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2713": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2714:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2714": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2731:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2731": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2732:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2732": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2771:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2771": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2772:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2772": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    },
+    "2773:mjwarp": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": true,
+      "ability_gate_pass": false
+    },
+    "2773": {
+      "paired_attempts": 2,
+      "minimum_attempts": 20,
+      "reference_success_rate": 1.0,
+      "simplified_success_rate": 1.0,
+      "successful_pairs_meet_time_gate": false,
+      "ability_gate_pass": false
+    }
+  },
+  "limitations": [
+    "Selection courses use one arena and a small seed set; they are not a full-match win-rate or a passed large-sample transfer gate.",
+    "Full-match validation plans one sentry and one heavy checkpoint, one seed and both sides; failed heavy openings are retained and do not count as completed actor matches. This is not a win-rate gate.",
+    "GPU replay checks validate structure and snapshots, not deterministic cross-backend resimulation.",
+    "Only Rapier has the matched original-weight course baseline in this run.",
+    "Warp remains a reduced-order approximation; not every model has improved ability traversal time."
+  ],
+  "reports": [
+    "data/research/locomotion-final-report.json",
+    "data/research/locomotion-selected-full-matches.json",
+    "data/research/locomotion-final-sdk-comparison.json",
+    "data/research/locomotion-selected-heavy-matches.json"
+  ]
+}
