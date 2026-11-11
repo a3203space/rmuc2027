@@ -8,18 +8,53 @@ from . import batching
 
 class WarpVecEnv(DummyVecEnv):
     def __init__(self, factories):
+        self.physics = self.pool = None
+        self.envs = []
+        self._closed = self._failed = False
         if batching.active_service is not None:
             raise RuntimeError('Only one kinematic vector environment may be active per process')
-        self.physics = batching.PhysicsService(len(factories))
-        self.pool = ThreadPoolExecutor(max_workers=len(factories))
-        batching.active_service = self.physics
+
+        def create(factory):
+            env = factory()
+            # DummyVecEnv assigns its list only after every factory succeeds.
+            self.envs.append(env)
+            return env
+
         try:
-            super().__init__(factories)
-        except BaseException:
-            self.pool.shutdown(wait=True)
-            self.physics.close()
-            batching.active_service = None
+            self.physics = batching.PhysicsService(len(factories))
+            self.pool = ThreadPoolExecutor(max_workers=len(factories))
+            batching.active_service = self.physics
+            super().__init__([lambda factory=factory: create(factory) for factory in factories])
+        except BaseException as error:
+            self._abort(error)
             raise
+
+    def _check_open(self):
+        if self._closed:
+            raise RuntimeError('WarpVecEnv is closed')
+
+    def _abort(self, error):
+        self._failed = True
+        try:
+            self.close()
+        except BaseException as cleanup_error:
+            if hasattr(error, 'add_note'):
+                error.add_note(f'Cleanup failed: {type(cleanup_error).__name__}: {cleanup_error}')
+                for note in getattr(cleanup_error, '__notes__', ()):
+                    error.add_note(note)
+
+    def _submit(self, function, *args, **kwargs):
+        try:
+            return self.pool.submit(function, *args, **kwargs)
+        except BaseException as error:
+            # submit may queue work before Thread.start fails, without returning
+            # its Future. The partially scheduled round cannot be reused.
+            self._abort(error)
+            raise
+
+    def step_async(self, actions):
+        self._check_open()
+        super().step_async(actions)
 
     def _step_one(self,i):
         try:
@@ -28,10 +63,11 @@ class WarpVecEnv(DummyVecEnv):
             self.physics.worker_done()
 
     def step_wait(self):
+        self._check_open()
         self.physics.begin_round(len(self.envs))
-        futures = [self.pool.submit(self._step_one,i) for i in range(len(self.envs))]
+        futures = [self._submit(self._step_one,i) for i in range(len(self.envs))]
         results = [f.result() for f in futures]
-        resets={i:self.pool.submit(self.envs[i].reset)
+        resets={i:self._submit(self.envs[i].reset)
                 for i,(_,_,terminated,truncated,_) in enumerate(results) if terminated or truncated}
         for i, (obs, reward, terminated, truncated, info) in enumerate(results):
             self.buf_rews[i] = reward
@@ -45,7 +81,8 @@ class WarpVecEnv(DummyVecEnv):
         return self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos)
 
     def reset(self):
-        futures=[self.pool.submit(env.reset,seed=self._seeds[i],options=self._options[i])
+        self._check_open()
+        futures=[self._submit(env.reset,seed=self._seeds[i],options=self._options[i])
                  for i,env in enumerate(self.envs)]
         for i,future in enumerate(futures):
             obs,self.reset_infos[i]=future.result()
@@ -54,9 +91,35 @@ class WarpVecEnv(DummyVecEnv):
         return self._obs_from_buf()
 
     def close(self):
-        try:
-            self.pool.shutdown(wait=True)
-            super().close()
-        finally:
-            self.physics.close()
+        if self._closed:
+            return
+        self._closed = True
+        error = None
+
+        def cleanup(function):
+            nonlocal error
+            try:
+                function()
+            except BaseException as cleanup_error:
+                if error is None:
+                    error = cleanup_error
+                elif hasattr(error, 'add_note'):
+                    error.add_note(f'Cleanup failed: {type(cleanup_error).__name__}: {cleanup_error}')
+
+        # A failed submit can leave workers waiting for an absent round peer.
+        # Wake physics before joining; healthy workers still finish normally.
+        if self._failed and self.physics is not None:
+            cleanup(self.physics.close)
+        if self.pool is not None:
+            cleanup(lambda: self.pool.shutdown(wait=True, cancel_futures=self._failed))
+        seen = set()
+        for env in self.envs:
+            if id(env) not in seen:
+                seen.add(id(env))
+                cleanup(env.close)
+        if not self._failed and self.physics is not None:
+            cleanup(self.physics.close)
+        if batching.active_service is self.physics:
             batching.active_service = None
+        if error is not None:
+            raise error

@@ -101,6 +101,26 @@ def binary_path():
 
 class Match:
     def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None, physics_adapter=None, observation_profile=None, training_capabilities=None, radar_classifier=None):
+        # Own the adapter before any validation/spawn can fail. Partially
+        # initialized matches must be explicitly cleanable even while a caller
+        # retains the exception traceback (and therefore this Match instance).
+        self.lock = threading.RLock()
+        self.closed = False
+        self._broken = False
+        self._physics_callback_depth = 0
+        self.process = None
+        self._reader = None
+        self.external_physics = physics_adapter
+        try:
+            self._initialize(seed, duration, map_name, replay_version, lineups, battle_settings,
+                             observation_profile, training_capabilities, radar_classifier)
+        except BaseException as error:
+            self._broken = True
+            self._close_after_error(error)
+            raise
+
+    def _initialize(self, seed, duration, map_name, replay_version, lineups, battle_settings,
+                    observation_profile, training_capabilities, radar_classifier):
         self.training_summary = False
         self.training_capabilities = copy.deepcopy(training_capabilities or {})
         self.training_capabilities_initial=copy.deepcopy(self.training_capabilities)
@@ -119,7 +139,6 @@ class Match:
         if observation_profile not in (None,'sentry_referee_2027_v1'):
             raise ValueError('Unknown observation profile')
         self.sentry_gateway = None
-        self.external_physics = physics_adapter
         environment = dict(os.environ)
         environment.pop('RMUC_EXTERNAL_PHYSICS', None)
         environment.pop('RMUC_KINEMATIC_PHYSICS', None)
@@ -128,44 +147,36 @@ class Match:
             if mode not in ('external_physics', 'kinematic_frame'):
                 raise ValueError('Unknown physics adapter protocol')
             environment['RMUC_KINEMATIC_PHYSICS' if mode == 'kinematic_frame' else 'RMUC_EXTERNAL_PHYSICS'] = '1'
-        self.lock = threading.RLock()
         self._observation_cache = {}
         if replay_version is not None:
             raise ValueError('Legacy engines are not included; historical 2027 replays remain viewable')
         binary = binary_path()
         self.process = subprocess.Popen([str(binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, env=environment)
-        self.closed = False
-        self._broken = False
         self._responses = queue.Queue()
         # The reader must not retain Match itself: callers also use temporary
         # Match().observation(...) instances whose destructor closes the engine.
-        self._reader = None
         self._direct_reader=_PosixLineReader(self.process.stdout) if _DIRECT_PIPE_READER else None
         self._direct_writer = _PosixPipeWriter(self.process.stdin) if os.name == 'posix' else None
         if self._direct_reader is None:
             self._reader=threading.Thread(target=self._read_output,args=(self.process.stdout,self._responses),daemon=True)
             self._reader.start()
-        try:
-            self._frame = self._request({"op": "init", "seed": int(seed), "duration": duration, "map": map_name, "lineups": lineups, "battle_settings": battle_settings, "observation_profile":observation_profile, "training_capabilities":self.training_capabilities or None})
-            self._aim_references={f'{r["team"]}:{r["slot"]}':[r['aim'],r['pitch']] for r in self._frame['robots']
-                                  if f'{r["team"]}:{r["slot"]}' in self._aim_executors}
-            self._static = {key: self._frame[key] for key in STATIC_FRAME_KEYS if key in self._frame}
-            # The latest compact step's JSON, for callers that store frames without static fields.
-            self.raw_frame = None
-            rule_path = ROOT / "configs/rules.json"
-            expected = hashlib.sha256(rule_path.read_bytes()).hexdigest()
-            if self._frame.get("rules_hash") != expected:
-                raise RuntimeError("Rust engine contains old rules; rebuild packages/simulation/Cargo.toml")
-            if observation_profile:
-                from .sentry_protocol import SentryGateway
-                self.sentry_gateway=SentryGateway(self._frame)
-                if radar_classifier is not None:
-                    from .radar_inference import ChassisClassifier
-                    for inference in self.sentry_gateway.inference.values():inference.classifier=ChassisClassifier(radar_classifier)
-        except BaseException:
-            self.close()
-            raise
+        self._frame = self._request({"op": "init", "seed": int(seed), "duration": duration, "map": map_name, "lineups": lineups, "battle_settings": battle_settings, "observation_profile":observation_profile, "training_capabilities":self.training_capabilities or None})
+        self._aim_references={f'{r["team"]}:{r["slot"]}':[r['aim'],r['pitch']] for r in self._frame['robots']
+                              if f'{r["team"]}:{r["slot"]}' in self._aim_executors}
+        self._static = {key: self._frame[key] for key in STATIC_FRAME_KEYS if key in self._frame}
+        # The latest compact step's JSON, for callers that store frames without static fields.
+        self.raw_frame = None
+        rule_path = ROOT / "configs/rules.json"
+        expected = hashlib.sha256(rule_path.read_bytes()).hexdigest()
+        if self._frame.get("rules_hash") != expected:
+            raise RuntimeError("Rust engine contains old rules; rebuild packages/simulation/Cargo.toml")
+        if observation_profile:
+            from .sentry_protocol import SentryGateway
+            self.sentry_gateway=SentryGateway(self._frame)
+            if radar_classifier is not None:
+                from .radar_inference import ChassisClassifier
+                for inference in self.sentry_gateway.inference.values():inference.classifier=ChassisClassifier(radar_classifier)
 
     def _request(self, request, raw=False):
         with self.lock:
@@ -182,14 +193,18 @@ class Match:
                 while value.get('op') in ('external_physics', 'kinematic_frame'):
                     if self.external_physics is None:
                         raise RuntimeError('Unexpected external physics request')
-                    encoded=getattr(self.external_physics,'step_encoded',None)
-                    if value.get('op')=='kinematic_frame' and callable(encoded):
-                        payload=encoded(value)
-                        if not isinstance(payload,bytes) or not payload.endswith(b'\n') or payload.count(b'\n')!=1:
-                            raise ValueError('Encoded physics response must be one newline-terminated JSON frame')
-                    else:
-                        result = self.external_physics.step(value)
-                        payload=json.dumps(result,allow_nan=False,separators=(",", ":")).encode()+b'\n'
+                    self._physics_callback_depth += 1
+                    try:
+                        encoded=getattr(self.external_physics,'step_encoded',None)
+                        if value.get('op')=='kinematic_frame' and callable(encoded):
+                            payload=encoded(value)
+                            if not isinstance(payload,bytes) or not payload.endswith(b'\n') or payload.count(b'\n')!=1:
+                                raise ValueError('Encoded physics response must be one newline-terminated JSON frame')
+                        else:
+                            result = self.external_physics.step(value)
+                            payload=json.dumps(result,allow_nan=False,separators=(",", ":")).encode()+b'\n'
+                    finally:
+                        self._physics_callback_depth -= 1
                     self._write_payload(payload)
                     line = self._read_line()
                     value = _response_json.loads(line)
@@ -362,18 +377,40 @@ class Match:
         self._frame = self._request({"op": "finish", "winner": winner, "reason": reason})
 
     def close(self):
-        adapter = self.external_physics
-        self.external_physics = None
+        # A request can be using the adapter while another thread closes the
+        # match. Wait for that request; never dispose live callback resources.
+        # This does not forcibly interrupt a blocked Python/GPU callback.
+        with self.lock:
+            # RLock also permits same-thread entry from the callback itself.
+            # It must unwind before its resources can be safely disposed.
+            if getattr(self, '_physics_callback_depth', 0):
+                raise RuntimeError('Cannot close Match from an active physics callback')
+            adapter = self.external_physics
+            self.external_physics = None
+            try:
+                if adapter is not None:
+                    adapter.close()
+            finally:
+                self._close_transport()
+
+    def _close_after_error(self, error):
         try:
-            if adapter is not None:
-                adapter.close()
-        finally:
-            self._close_transport()
+            self.close()
+        except BaseException as cleanup_error:
+            # Teardown must not replace the startup/callback failure traceback.
+            try:
+                if hasattr(error, 'add_note'):
+                    error.add_note('Match cleanup also failed: '+type(cleanup_error).__name__+': '+str(cleanup_error))
+            except BaseException:
+                # Exception formatting and custom note hooks are best effort too.
+                pass
 
     def _close_transport(self):
         if self.closed:
             return
         self.closed = True
+        if self.process is None:
+            return
         try:
             if self._broken:
                 # Do this before closing buffered stdin: its pending flush
@@ -389,15 +426,18 @@ class Match:
                 self.process.kill()
                 self.process.wait()
         finally:
-            if self._reader is not None:self._reader.join(timeout=2)
+            if self._reader is not None and self._reader.ident is not None:self._reader.join(timeout=2)
             self.process.stdout.close()
 
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
-        self.close()
+    def __exit__(self, exc_type, error, traceback):
+        if error is None:
+            self.close()
+        else:
+            self._close_after_error(error)
 
     def __del__(self):
-        if hasattr(self, "closed"):
+        if hasattr(self, "closed") and not self.closed:
             self.close()

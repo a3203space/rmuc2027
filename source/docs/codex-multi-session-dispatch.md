@@ -27,11 +27,13 @@
 
 ## 启动与控制会话
 
-默认启动 **3 个工作会话 + 你这个调度对话**；受当前环境实际并发额度约束。复用明确交接且空闲的会话，避免为了数量重复启动。各 worker 不再自行扩散子代理；额外并发由你统一安排。
+采用 **1 个监督主对话 → 3 个监督子 agent → 3 个独立 CLI 工作对话** 的分工，每个监督 agent 对应一个工作对话。监督 agent 负责派发提示词、看日志、复核结果；CLI 工作对话负责具体修复和测试。内置并发额度若只有主 agent 加 3 个子 agent，就由这 3 个子 agent 担任监督，工作对话使用独立 CLI 进程，不再递归创建子代理。先核对机器资源和当前占用，复用明确交接的会话，避免重复启动。
 
 Full Access 使用本机支持的 `--sandbox danger-full-access`。这是已获授权的子进程配置，不需要重新询问是否允许。保留环境的审批和规则设置；不使用忽略规则或绕过审批的额外开关。若宿主策略禁止该权限，准确报告限制，不能声称已经启用。
 
-模型延续我的 Astra / ultra 偏好，先核对当前会话和 CLI 可用的实际模型 ID、推理强度及服务档位；不要猜别名，不要擅自换模型或开启 Fast。之前允许某一批三个子代理使用 Fast，不代表所有新会话都获准使用。CLI 不一定继承调度对话的临时模型设置，应核实并显式传递已确认的设置。
+用户最新要求是本轮监督与工作会话统一 **Astra + Ultrafast，ultra 推理强度**。本机已核对 `gpt-6-astra` 支持 ultra 和 ultrafast；启动时显式设置并从实际会话记录核验，不只查看默认配置。若接口不能设置速度档位，使用可设置该档位的独立 CLI 会话；不得默默回退普通档或其它模型，启动不支持时报告真实错误。
+
+本次处理约 **40 分钟实际时间**。同一轮协作沿用 `data/research/agent-dispatch/20261111-1458-supervised/budget.json` 的绝对截止；收到本文件后不要为同一轮重新计时或启动训练。最后几分钟停止扩展范围，完成验证、记录和备份。若这是未来另一次明确授权的新轮次，再建立新的预算文件。
 
 优先采用可追踪的会话消息和 CLI 接口：
 
@@ -48,6 +50,10 @@ Full Access 使用本机支持的 `--sandbox danger-full-access`。这是已获�
 codex exec \
   --cd /home/lx/rmuc2027 \
   --sandbox danger-full-access \
+  --model gpt-6-astra \
+  -c 'model_reasoning_effort="ultra"' \
+  -c 'service_tier="ultrafast"' \
+  --enable ultrafast_mode \
   --json \
   --output-last-message /绝对路径/本轮任务/worker-a/result.txt \
   - < /绝对路径/本轮任务/worker-a/task.md \

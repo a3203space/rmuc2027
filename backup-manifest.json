@@ -1,7 +1,7 @@
 {
   "run_id": "sim-debug-20261111-1401-backup",
-  "source_tree": "b2794beb73635e1c5f9d2684e1b45096229e3ead",
-  "source_files": 1477,
+  "source_tree": "40f99147b386772c0e84ca8f14422261fe091b71",
+  "source_files": 1480,
   "source_base": "2e8e40463ed00a036b9e8c80ebd8c9763e412684",
   "checkpoint": {
     "sha256": "68d7eac97d0e41695e2b6fe28c39fe2fe80cffe6e21fbfedb6f735b95542305f",
@@ -41,7 +41,7 @@
     }
   },
   "final": null,
-  "campaign_status": "仿真修复已验证：合法坐标缺失、管道背压、连续跳跃强度、批服务关停、碰撞净空和回放时序；零新增训练，保留未验收r04检查点",
+  "campaign_status": "仿真可靠性第二批：线程池启动故障及时清理、Match初始化/回调重入保护、网页启动停止及回放锁拆分；三组独立复核通过，真实MJ短测通过；持续优化至16:00，零RL训练",
   "raw_database_included": false,
   "shared_head_unchanged": true,
   "shared_index_unchanged": true

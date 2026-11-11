@@ -211,6 +211,7 @@ class ArenaService:
             self.frame = match.snapshot()
         self.metadata, self.match_id = None, None
         self.busy = False
+        self.initializing = False
         self.test_mode = test_mode
         self.strategy_library = StrategyLibrary(self.store.directory / "strategy-library", enabled=not test_mode)
         self.strategy_version = self.strategy_library.status()["version"]
@@ -356,25 +357,51 @@ class ArenaService:
                 if selected!=season_rules.default_lineup(season) or season!=season_rules.DEFAULT_SEASON:lineups=mirrored_lineups(selected,season)
             fielded = lineups or mirrored_lineups(season_rules.default_lineup(season),season)
             skins = {team: self.custom_models.resolve(team, getattr(args, team + "_skins"), {d["model"] for d in fielded[team]}) for team in ("red", "blue")}
-            with Match(args.seed, args.duration, args.map, lineups=lineups, battle_settings=args.battle_settings) as match:
-                self.frame = match.snapshot()
-            self.error, self.paused, self.stopping, self.battle = None, False, False, None
-            self.match_id = uuid.uuid4().hex[:16]
-            self.metadata = {"engine":"rust","rules":season_rules.rules_profile(season),"season":season,"roster":list(season_rules.slots(season)),"test_match":args.duration!=420,"seed":args.seed,"duration":args.duration,"map":args.map,
-                             "teams":team_metadata if decks else {t:{k:v for k,v in choices[key].items() if k!="path"} for t,key in (("red",args.red),("blue",args.blue))}}
-            self.metadata.update({"battle_settings": args.battle_settings, "save_mp4": args.save_mp4})
-            if args.battle_settings:
-                self.metadata["test_match"] = True
-            if decks:
-                self.metadata.update({"lineups":lineups,"test_match":True,"match_mode":"deck"})
-            if any(skins.values()):
-                self.metadata["skins"] = skins
-            self.store.create(self.match_id, self.metadata)
-            self.revision += 1
+            # Reserve before initializing outside the API lock. Reset stop only
+            # here so a stop received during construction survives publication.
             self.busy = True
-            self.thread = threading.Thread(target=self._run, args=(self.match_id,None if decks else choices[args.red]["path"],None if decks else choices[args.blue]["path"],args,decks,free_team_strategies,skins), daemon=True)
-            self.thread.start()
-            return self.match_id
+            self.initializing = True
+            self.error, self.paused, self.stopping = None, False, False
+            self.revision += 1
+        created = False
+        try:
+            with Match(args.seed, args.duration, args.map, lineups=lineups, battle_settings=args.battle_settings) as match:
+                frame = match.snapshot()
+            match_id = uuid.uuid4().hex[:16]
+            metadata = {"engine":"rust","rules":season_rules.rules_profile(season),"season":season,"roster":list(season_rules.slots(season)),"test_match":args.duration!=420,"seed":args.seed,"duration":args.duration,"map":args.map,
+                             "teams":team_metadata if decks else {t:{k:v for k,v in choices[key].items() if k!="path"} for t,key in (("red",args.red),("blue",args.blue))}}
+            metadata.update({"battle_settings": args.battle_settings, "save_mp4": args.save_mp4})
+            if args.battle_settings:
+                metadata["test_match"] = True
+            if decks:
+                metadata.update({"lineups":lineups,"test_match":True,"match_mode":"deck"})
+            if any(skins.values()):
+                metadata["skins"] = skins
+            thread = threading.Thread(target=self._run, args=(match_id,None if decks else choices[args.red]["path"],None if decks else choices[args.blue]["path"],args,decks,free_team_strategies,skins), daemon=True)
+            with self.lock:
+                self.store.create(match_id, metadata)
+                created = True
+                previous = self.frame, self.battle, self.match_id, self.metadata, self.thread
+                self.frame, self.battle, self.match_id, self.metadata, self.thread = frame, None, match_id, metadata, thread
+                try:
+                    thread.start()
+                except BaseException:
+                    self.frame, self.battle, self.match_id, self.metadata, self.thread = previous
+                    raise
+                self.initializing = False
+                self.revision += 1
+                return match_id
+        except BaseException as exc:
+            try:
+                if created:
+                    self.store.finish(match_id, {}, error=str(exc))
+            finally:
+                with self.lock:
+                    self.error = str(exc)
+                    self.busy = False
+                    self.initializing = False
+                    self.revision += 1
+            raise
 
     def start_research(self, args):
         if args.research is None:
@@ -443,13 +470,21 @@ class ArenaService:
                 self.revision += 1
             self.store.finish(match_id, {}, error=str(exc))
         finally:
-            with self.lock:
-                self.battle = None
-                self.busy = False
-                self.prematch = None
-                self.revision += 1
+            try:
+                # Native/controller cleanup can wait for workers. Keep the match
+                # reserved until it finishes without blocking state/stop requests.
                 if frozen is not None:
                     frozen.close()
+            except Exception as exc:
+                with self.lock:
+                    cleanup_error = f"Match cleanup failed: {exc}"
+                    self.error = f"{self.error}; {cleanup_error}" if self.error else cleanup_error
+            finally:
+                with self.lock:
+                    self.battle = None
+                    self.busy = False
+                    self.prematch = None
+                    self.revision += 1
 
     def _run(self, match_id, red, blue, args, decks=None, free_team_strategies=None, skins=None):
         try:
@@ -973,26 +1008,37 @@ def create_app(sandbox="docker",submission_root=None,data_root=None,test_mode=Fa
             raise HTTPException(404,"Replay not found")
         return FileResponse(path,media_type="application/json",filename=f"rmuc-{match_id}.json")
 
+    def captured_replay(battle):
+        # Serve the captured file without creating a match-sized JSON heap.
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp:
+            path = Path(temp.name)
+        try:
+            battle.save(path)
+        except BaseException:
+            path.unlink(missing_ok=True)
+            raise
+        return FileResponse(path, media_type="application/json",
+                            background=BackgroundTask(path.unlink, missing_ok=True))
+
     @app.get("/api/replay")
     def current_replay():
         with service.lock:
-            if service.busy and service.metadata.get('match_mode') == 'research':
-                raise HTTPException(409, "Research replay is available after the match completes or stops")
-            if not service.battle:
-                path = service.store.replay_path(service.match_id) if service.match_id else None
-                if path and path.is_file():
-                    return FileResponse(path,media_type="application/json",filename=f"rmuc-{service.match_id}.json")
-                raise HTTPException(404,"No match yet")
-            # Serve the captured file without creating a match-sized JSON heap.
-            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp:
-                path = Path(temp.name)
-            try:
-                service.battle.save(path)
-            except BaseException:
-                path.unlink(missing_ok=True)
-                raise
-            return FileResponse(path, media_type="application/json",
-                                background=BackgroundTask(path.unlink, missing_ok=True))
+            match_id, battle = service.match_id, service.battle
+            if service.busy and not service.initializing:
+                if service.metadata.get('match_mode') == 'research':
+                    raise HTTPException(409, "Research replay is available after the match completes or stops")
+                if not battle:
+                    raise HTTPException(404,"No match yet")
+                # An active standard battle still needs an atomic replay capture.
+                return captured_replay(battle)
+        # A start reservation still references the previous completed match.
+        # Prefer its immutable archive, or export that captured Battle unlocked.
+        path = service.store.replay_path(match_id) if match_id else None
+        if path and path.is_file():
+            return FileResponse(path,media_type="application/json",filename=f"rmuc-{match_id}.json")
+        if not battle:
+            raise HTTPException(404,"No match yet")
+        return captured_replay(battle)
 
     @app.post("/api/submissions")
     def upload(data:SubmissionRequest):
