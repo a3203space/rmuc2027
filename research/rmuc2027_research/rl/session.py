@@ -18,10 +18,12 @@ from .terrain_witness import TerrainWitness
 
 DEFAULT_CONFIG = ROOT / 'configs/rl/sentry.json'
 
-# The four zones the rulebook scores control through (5.6.2): each team's
-# outpost and base position. A robot standing on one of them is contesting
-# ground itself, which is what `position_control` pays for.
-CONTROL_ZONES = ('red_outpost', 'red_base', 'blue_outpost', 'blue_base')
+# All eight zone cards backing the four rulebook 5.6.2 control positions:
+# outpost positions = {outpost, central}; base positions = {base, fortress}.
+CONTROL_ZONES = (
+    'red_outpost', 'red_central', 'red_base', 'red_fortress',
+    'blue_outpost', 'blue_central', 'blue_base', 'blue_fortress',
+)
 
 # Terms `_step` writes into `terms`, in the order they appear there. Declaring
 # them keeps a config from silently under-paying the rollout.
@@ -462,14 +464,10 @@ class ArenaSession:
                         terms['terrain_buff'] += cfg['rewards']['terrain_buff']*dt
                         for kind in (mine.get('crossing_firsts') or ()):
                             self.metrics['terrain_buff_kinds'][kind] = True
-            # Control positions the sentry itself is standing on. `control` above
-            # is a team-level score difference, which a stationary sentry collects
-            # whenever its allies hold ground; this term pays only for the ground
-            # this robot is personally occupying.
-            on_control = robot['alive'] and any(
-                robot['id'] in frame['zones'][zone].get('occupants', [])
-                for zone in CONTROL_ZONES if zone in frame['zones'])
-            if on_control:
+            # Control positions where the sentry's occupancy causally advances
+            # or protects control. Standing idle on an already full, uncontested
+            # own position (such as `red_base` outside spawn) pays zero.
+            if contributes_to_control(robot, before, frame, team):
                 self.metrics['position_control_seconds'] += dt
                 terms['position_control'] += cfg['rewards']['position_control']*dt
             if frame['status'] == 'finished' or frame['time']+1e-8 >= cfg['episode_seconds']:
@@ -535,3 +533,49 @@ class ArenaSession:
 
     def __exit__(self, *args):
         self.close()
+
+
+def contributes_to_control(robot, before, frame, team):
+    """True when `robot`'s card occupancy causally advances or protects control.
+
+    Standing on an already full, uncontested `own_base` or `own_outpost` pays
+    nothing: in the 24h run, unconditional per-second rent on `red_base` taught
+    the sentry to camp outside spawn for +3.61 while losing the match. A card
+    counts here only when the robot is alive, not weak, and its position either:
+      (a) belongs to an active pair currently scoring team `control` (+1/s or +3/s),
+      (b) advances capture or holds temporary control on an enemy-held position, or
+      (c) rolls back enemy progress, restores full control, or contests an enemy
+          attacker on an own-held position.
+    """
+    if not robot.get('alive') or robot.get('weak'):
+        return False
+    other = 'blue' if team == 'red' else 'red'
+    rid = robot['id']
+    zones = frame.get('zones') or {}
+    positions = frame.get('positions') or {}
+    prev_positions = before.get('positions') or {}
+    control_rising = (
+        frame['teams'][team]['control'] > before['teams'][team]['control'] + 1e-9
+    )
+    for pos_id, pos in positions.items():
+        if not any(rid in (zones.get(z) or {}).get('occupants', ()) for z in pos.get('zones', ())):
+            continue
+        prev = prev_positions.get(pos_id, pos)
+        kind = pos.get('kind')
+        pair_held = (
+            pos.get('controller') == team
+            and (positions.get(f'{other}_{kind}') or {}).get('controller') == team
+        )
+        if control_rising and pair_held:
+            return True
+        if prev.get('controller') == other:
+            if (pos.get('controller') == team
+                    or pos.get('progress', 0.0) > prev.get('progress', 0.0) + 1e-9
+                    or (prev.get('control') != 'full' and team in (pos.get('active') or ()))):
+                return True
+        elif prev.get('controller') == team:
+            if (pos.get('progress', 0.0) < prev.get('progress', 0.0) - 1e-9
+                    or (prev.get('control') != 'full' and pos.get('control') == 'full')
+                    or other in (pos.get('active') or ())):
+                return True
+    return False

@@ -15,7 +15,8 @@ def rollout_block(config, num_envs):
     """Steps per PPO update, honouring the config's own `n_steps`."""
     if num_envs < 1:
         raise ValueError('num-envs must be positive')
-    return config['ppo']['n_steps']*num_envs
+    n_steps = (config.get('ppo') or {}).get('n_steps', 64)
+    return n_steps*num_envs
 
 
 def check_steps(config, num_envs, steps):
@@ -27,9 +28,10 @@ def check_steps(config, num_envs, steps):
     what was actually trained. Returns the block size for the message.
     """
     block = rollout_block(config, num_envs)
+    n_steps = (config.get('ppo') or {}).get('n_steps', 64)
     if steps is not None and (steps <= 0 or steps % block):
         raise ValueError(f'Steps must be a positive multiple of rollout size {block} '
-                         f'(n_steps {config["ppo"]["n_steps"]} x num-envs {num_envs}); '
+                         f'(n_steps {n_steps} x num-envs {num_envs}); '
                          'no hidden overshoot')
     return block
 
@@ -45,7 +47,7 @@ def check_action_std(config):
     action here is a normalised map coordinate in [-1, 1] on both axes.
     """
     import math
-    std = float(config['ppo'].get('action_std', 1.0))
+    std = float((config.get('ppo') or {}).get('action_std', 1.0))
     if not math.isfinite(std) or std <= 0:
         raise ValueError('ppo.action_std must be finite and positive')
     if std > 1.0:

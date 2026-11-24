@@ -31,21 +31,21 @@
     }
   },
   "rewards": {
-    "control": 0.002,
-    "outcome": 2.0,
-    "capture_seconds": 0.001,
-    "death": -0.1,
-    "terrain_buff": 0.02,
+    "control": 0.01,
+    "outcome": 10.0,
+    "capture_seconds": 0.005,
+    "death": 0.0,
+    "terrain_buff": 0.0,
     "position_control": 0.01
   },
   "ppo": {
-    "n_steps": 64,
-    "batch_size": 64,
+    "n_steps": 256,
+    "batch_size": 256,
     "n_epochs": 4,
     "learning_rate": 0.0003,
     "gae_lambda": 0.95,
-    "gamma": 0.995,
-    "ent_coef": 0.01
+    "gamma": 0.998,
+    "ent_coef": 0.004
   },
   "sim_backend": "warp_kinematic",
   "sim_device": "cuda:0",

@@ -286,6 +286,12 @@ def fixed_opening(obs, state, config, baseline):
     return actions
 
 
+GOAL_STOP_RADIUS_M = 0.30
+MOVE_POSTURE_DISTANCE_M = 3.5
+POSTURE_INDEX = {"attack": 0, "defense": 1, "move": 2}
+ENHANCED_BUDGET_S = 14.9
+
+
 def execute_goal(obs, state, navigator, config, baseline):
     """Movement arbitration; weapon and resource operations remain rule modules."""
     robot = own_robot(obs, config['slot'])
@@ -293,11 +299,24 @@ def execute_goal(obs, state, navigator, config, baseline):
     fields = {}
     goal = state.get('goal')
     hp = _ratio(robot['hp'], robot['max_hp'])
-    recovering = state.get('recovering', False)
-    recovering = robot.get('weak', False) or hp < config['recover_enter'] or (recovering and hp < config['recover_exit'])
-    state['recovering'] = bool(recovering)
+    was_recovering = bool(state.get('recovering', False))
+    can_retreat = True
+    if robot['role'] == 'sentry':
+        central = ctx.zone(obs['team'], 'central')
+        covered = any(
+            r['alive'] and not r.get('weak') and r['slot'] != robot['slot'] and r['role'] != 'aerial'
+            and math.hypot(r['x'] - central[0], r['y'] - central[1]) < 0.8
+            for r in obs['robots']
+        )
+        can_retreat = covered or ctx.controls(f"{obs['team']}_outpost", full=True)
+    recovering = bool(
+        robot.get('weak', False)
+        or (can_retreat and (hp < config['recover_enter'] or (was_recovering and hp < config['recover_exit'])))
+    )
+    state['recovering'] = recovering
     if not robot['alive'] or robot.get('red_card'):
         mode, goal = 'dead', None
+        state['recovering'] = False
         state.pop('navigation', None)
         fields.update(baseline.revive_fields(robot, ctx))
     elif robot.get('tipped'):
@@ -309,20 +328,65 @@ def execute_goal(obs, state, navigator, config, baseline):
         goal = navigator.resolve_goal(robot, ctx.zone(obs['team'], 'supply'), obs['arena'])
     else:
         mode = 'policy' if goal is not None else 'unreachable'
-    move = navigator.command(robot, goal, obs) if goal is not None else (0.0, 0.0)
-    fields.update(_sdk.navigate_action(robot, goal, obs, state.setdefault('navigation', {}))
-                  if goal is not None else {'move': move})
+    control_dt = 1.0 / max(1.0, float(config.get('learning_control_hz', 10)))
+    nav_state = state.setdefault('navigation', {})
+    in_manoeuvre = any(nav_state.get(k, {}).get('phase', 'approach') != 'approach' for k in ('entry', 'tunnel'))
+    gap = math.hypot(robot['x'] - goal[0], robot['y'] - goal[1]) if goal is not None else 0.0
+    if goal is None:
+        fields['move'] = (0.0, 0.0)
+    elif gap <= GOAL_STOP_RADIUS_M and not in_manoeuvre:
+        nav_state.pop('teammate_detour', None)
+        nav_state.pop('teammate_wait_since', None)
+        fields.update(move=(0.0, 0.0), brake=True)
+    else:
+        nav_obs = obs if 'policy_dt' in obs else dict(
+            obs, policy_dt=control_dt, navigation_mode=config.get('navigation_mode', 'legacy'))
+        fields.update(_sdk.navigate_action(robot, goal, nav_obs, nav_state))
+        raw_move = fields['move']
+        step_travel = float(robot.get('speed_reference_mps', 3.0)) * control_dt
+        if (gap < step_travel
+                and not in_manoeuvre
+                and not any(fields.get(k) for k in ('jump', 'transform', 'brake'))
+                and getattr(raw_move, 'heading', None) is None):
+            mag = math.hypot(*raw_move)
+            if mag > 1e-6:
+                scale = min(1.0, gap / max(step_travel, 1e-6))
+                fields['move'] = (raw_move[0] * scale, raw_move[1] * scale)
     move = fields['move']
     if robot['alive']:
-        fields.update(baseline.weapon(robot, ctx, reach=10))
-        if fields.get('fire') and not held_fire_safe(robot, 1 / config.get('learning_control_hz', 10)):
+        shot = baseline.weapon(robot, ctx, reach=10)
+        fields.update(shot)
+        if fields.get('fire') and not held_fire_safe(robot, control_dt):
             fields['fire'] = False
-        fields.update(baseline.ammo_fields(robot, ctx, 8, 20, 10, 100) if robot['role'] == 'heavy'
-                      else baseline.ammo_fields(robot, ctx, 40, 100, 100, 50))
-        moving = math.hypot(*move) > .05
-        wanted = 'move' if moving else ('defense' if recovering else 'attack')
-        if robot['role'] == 'sentry' and obs['time'] >= (robot.get('posture_ready_at') or 0) and wanted != robot.get('posture'):
-            fields['posture'] = wanted
+        if not (mode == 'recover' and gap > 1.0):
+            fields.update(baseline.ammo_fields(robot, ctx, 8, 20, 10, 100) if robot['role'] == 'heavy'
+                          else baseline.ammo_fields(robot, ctx, 40, 100, 100, 50))
+        if robot['role'] == 'sentry':
+            moving = math.hypot(*move) > 0.05
+            threatened = obs['time'] - robot.get('last_damage_time', -99.0) < 2.0
+            if recovering or (hp < 0.5 and threatened):
+                wanted = 'defense'
+            elif shot and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
+                wanted = 'attack'
+            elif moving and gap > MOVE_POSTURE_DISTANCE_M:
+                wanted = 'move'
+            else:
+                wanted = 'defense'
+            enhanced_times = robot.get('posture_enhanced_time') or (0.0, 0.0, 0.0)
+            idx = POSTURE_INDEX[wanted]
+            budget_ok = idx < len(enhanced_times) and float(enhanced_times[idx]) < ENHANCED_BUDGET_S
+            heat_ratio = _ratio(robot.get('heat', 0.0), robot.get('max_heat', 260.0))
+            want_enhanced = bool(
+                budget_ok and (
+                    (wanted == 'defense' and hp < 0.35 and threatened)
+                    or (wanted == 'attack' and bool(shot) and heat_ratio >= 0.75)
+                )
+            )
+            if obs['time'] >= (robot.get('posture_ready_at') or 0.0):
+                if wanted != robot.get('posture'):
+                    fields['posture'] = wanted
+                if bool(robot.get('posture_enhanced', False)) != want_enhanced:
+                    fields['posture_enhanced'] = want_enhanced
     command = _sdk.action(**fields)
     state.update(mode=mode, executed_goal=goal, executed_action=command)
     return {str(config['slot']): command}

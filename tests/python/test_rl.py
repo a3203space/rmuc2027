@@ -524,10 +524,12 @@ class RewardTermTests(unittest.TestCase):
         self.assertEqual(set(config['rewards']), set(REQUIRED_REWARD_TERMS))
         for weight in config['rewards'].values():
             self.assertTrue(math.isfinite(float(weight)))
-        # The two team-level weights must stay below the sentry-level ones they
-        # compete with, or "stand still while the allies hold ground" wins.
-        self.assertLess(config['rewards']['control'], config['rewards']['position_control'])
-        self.assertLessEqual(config['rewards']['outcome'], 2.0)
+        # Outcome and team control must dominate per-second shaping so personal
+        # zone occupancy can never make a losing match net-positive.
+        self.assertGreaterEqual(config['rewards']['outcome'], 5.0)
+        self.assertGreater(config['rewards']['control'], 0.0)
+        self.assertLess(config['duration'] * config['rewards']['position_control'],
+                        2.0 * config['rewards']['outcome'])
 
     def test_omitting_a_term_falls_back_to_the_default_weight(self):
         # `rewards` is merged over the default file rather than replaced, so a
@@ -582,6 +584,122 @@ class RewardTermTests(unittest.TestCase):
                 session.step([0.0, 0.0])
             self.assertGreaterEqual(session.reward_totals['position_control'], 0.0)
             self.assertGreaterEqual(session.metrics['position_control_seconds'], 0.0)
+
+    def test_uncontested_own_base_pays_zero_position_control(self):
+        from rmuc2027_research.rl.session import contributes_to_control
+        robot = {'id': 'red-7', 'alive': True, 'weak': False}
+        base_frame = {
+            'teams': {'red': {'control': 10.0}, 'blue': {'control': 0.0}},
+            'zones': {
+                'red_base': {'occupants': ['red-7']},
+                'red_fortress': {'occupants': []},
+                'red_central': {'occupants': []},
+                'red_outpost': {'occupants': []},
+                'blue_central': {'occupants': ['red-3']},
+                'blue_outpost': {'occupants': []},
+                'blue_base': {'occupants': []},
+                'blue_fortress': {'occupants': []},
+            },
+            'positions': {
+                'red_base': {'kind': 'base', 'owner': 'red', 'controller': 'red',
+                             'control': 'full', 'progress': 0.0, 'active': ['red'],
+                             'zones': ['red_base', 'red_fortress']},
+                'blue_base': {'kind': 'base', 'owner': 'blue', 'controller': 'blue',
+                              'control': 'full', 'progress': 0.0, 'active': [],
+                              'zones': ['blue_base', 'blue_fortress']},
+                'red_outpost': {'kind': 'outpost', 'owner': 'red', 'controller': 'red',
+                                'control': 'full', 'progress': 0.0, 'active': [],
+                                'zones': ['red_outpost', 'red_central']},
+                'blue_outpost': {'kind': 'outpost', 'owner': 'blue', 'controller': 'red',
+                                 'control': 'temporary', 'progress': 0.0, 'active': ['red'],
+                                 'zones': ['blue_outpost', 'blue_central']},
+            },
+        }
+        next_frame = copy.deepcopy(base_frame)
+        # Even while allies score +1/s from dual outposts, camping on `red_base`
+        # (when `blue_base` is NOT held) must pay strictly zero.
+        next_frame['teams']['red']['control'] = 10.05
+        self.assertFalse(contributes_to_control(robot, base_frame, next_frame, 'red'))
+        # Holding `red_central` while the dual-outpost pair is actively scoring DOES pay.
+        next_frame['zones']['red_base']['occupants'] = []
+        next_frame['zones']['red_central']['occupants'] = ['red-7']
+        self.assertTrue(contributes_to_control(robot, base_frame, next_frame, 'red'))
+        # Advancing capture progress on an enemy-held position pays even before control rises.
+        capturing_before = copy.deepcopy(base_frame)
+        capturing_before['positions']['blue_outpost'].update(controller='blue', control='full', progress=1.0)
+        capturing_after = copy.deepcopy(capturing_before)
+        capturing_after['zones']['blue_central']['occupants'] = ['red-7']
+        capturing_after['positions']['blue_outpost'].update(progress=1.05, active=['red'])
+        self.assertTrue(contributes_to_control(robot, capturing_before, capturing_after, 'red'))
+
+
+class SentryExecutionTests(unittest.TestCase):
+    """Arrival deadband, 2 Hz damping, posture switching, and outpost guard."""
+
+    @classmethod
+    def setUpClass(cls):
+        with Match(seed=42, map_name='rmuc2027') as match:
+            cls.observation = match.observation('red', [7])
+        cls.config = {**load_config(), 'learning_control_hz': 2}
+
+    def test_arrival_deadband_stops_and_unlocks_non_move_postures(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['time'] = 10.0
+            obs['enemies'] = []
+            obs['outposts']['blue']['hp'] = 0
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            controller.state['goal'] = [robot['x'] + 0.15, robot['y'] - 0.10]
+            actions, _ = controller.decide(obs)
+            cmd = actions['7']
+            self.assertEqual(cmd['move'], [0.0, 0.0])
+            self.assertTrue(cmd.get('brake'))
+            # Parked with no targetable enemy or structure enters `defense` (50% reduction).
+            self.assertEqual(cmd.get('posture'), 'defense')
+
+            # Visible enemy in ballistic range switches parked sentry to `attack` (90/s cooling),
+            # and high barrel heat activates the 15 s enhanced attack (0-heat firing).
+            obs['enemies'] = [{
+                'id': 'blue-3', 'slot': 3, 'role': 'infantry', 'team': 'blue',
+                'x': robot['x'] + 2.0, 'y': robot['y'], 'z': robot.get('z', 0.0),
+                'vx': 0.0, 'vy': 0.0, 'hp': 200.0, 'max_hp': 200.0,
+                'alive': True, 'targetable': True, 'invulnerable': False,
+                'armor_center_z_m': 0.2,
+            }]
+            robot.update(posture='defense', posture_ready_at=5.0, heat=210.0, max_heat=260.0)
+            actions, _ = controller.decide(obs)
+            cmd = actions['7']
+            self.assertEqual(cmd.get('posture'), 'attack')
+            self.assertTrue(cmd.get('posture_enhanced'))
+        finally:
+            controller.close()
+
+    def test_uncovered_temporary_outpost_holds_ground_with_enhanced_defense(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['time'] = 25.0
+            # Own outpost degraded to temporary and no ally covers `red_central`.
+            obs['positions']['red_outpost']['control'] = 'temporary'
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            central = controller.baseline.Context(obs, {}).zone('red', 'central')
+            controller.state['goal'] = list(central)
+            robot.update(
+                x=central[0], y=central[1],
+                hp=robot['max_hp'] * 0.20,
+                last_damage_time=24.2,
+                posture='attack',
+                posture_ready_at=10.0,
+            )
+            actions, _ = controller.decide(obs)
+            cmd = actions['7']
+            self.assertEqual(controller.state['mode'], 'policy')
+            self.assertEqual(cmd['move'], [0.0, 0.0])
+            self.assertEqual(cmd.get('posture'), 'defense')
+            self.assertTrue(cmd.get('posture_enhanced'))
+        finally:
+            controller.close()
 
 
 class OutcomeCriterionTests(unittest.TestCase):
