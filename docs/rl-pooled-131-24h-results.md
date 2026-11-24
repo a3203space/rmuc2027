@@ -154,7 +154,42 @@ gemini38_2027_tech_overload      1/106 =  0.9%
 | `data/research/pooled-131-24h/updates.jsonl` | 1,112 行，每轮 `action_std` / loss / behavior |
 | `data/research/pooled-131-24h/episodes.jsonl` | 1,344 局，含 `reward_terms` / `control` / `witness` |
 | `data/research/pooled-131-24h/training.json` | 上文 §1 的元数据 |
-| `backup/rl-checkpoints/rl-run-8b55a3f7117730aa` | 训练期间 285 份检查点 + 最终权重（GitHub 分支） |
 
-`data/` 被 `.gitignore` 排除，权重不进主分支历史；GitHub 上的副本走
-`backup/rl-checkpoints/*` 分支，与既有 285 份检查点同一位置。
+### 8.1 GitHub 上的最终权重
+
+`data/` 被 `.gitignore` 排除，权重不进主分支历史。最终权重已推到既有检查点分支
+的**顶端**，与该次训练期间自动上传的 285 份检查点同一位置：
+
+| 项 | 值 |
+|---|---|
+| 分支 | `backup/rl-checkpoints/rl-run-8b55a3f7117730aa` |
+| commit | `df4ba1749f600889bada88d534965bd9476cbc80` |
+| bundle sha256 | `687ec2510ae23217fecf0fb3f95b68c052f699927f9e5673b08e7fafa0e31258` |
+| 内含 `model.zip` sha256 | `f4aea3d5ba8442854dd54ff1f39578efb20afc0b568534615bbb79c168cf629a` |
+
+bundle 里除权重外还有 `experiment.json`、`progress.json`（即最终 `training.json`）、
+`updates.jsonl`、`episodes.jsonl` 与 `checksums.json`，脱库也能独立复盘。
+
+取回方式（不污染工作区）：
+
+```bash
+cd /media/rm/E3E258F427E8E547/rmuc2027
+TMP=$(mktemp -d) && cd "$TMP" && git init --bare -q .
+git fetch --depth=1 git@github.com:a3203space/rmuc2027.git \
+  refs/heads/backup/rl-checkpoints/rl-run-8b55a3f7117730aa
+git cat-file blob FETCH_HEAD:latest.zip > final.zip
+git cat-file blob FETCH_HEAD:latest.json
+unzip -q final.zip -d ./final && sha256sum ./final/model.zip   # 应等于上面那行
+```
+
+**网络慢或被墙时，git/ssh 默认不走系统代理**，直连会长时间挂住（本次第一次上传
+就是这样超时的）。先按下面配一次，代理端口取自 GNOME 设置 `127.0.0.1:7897`：
+
+```bash
+export GIT_SSH_COMMAND="ssh -o ProxyCommand='nc -X connect -x 127.0.0.1:7897 %h %p'"
+# 或在仓库内持久化（本仓库已配置）：
+git config core.sshCommand "ssh -o ProxyCommand='nc -X connect -x 127.0.0.1:7897 %h %p'"
+git config http.proxy  http://127.0.0.1:7897
+git config https.proxy http://127.0.0.1:7897
+```
+
