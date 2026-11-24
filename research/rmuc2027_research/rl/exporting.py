@@ -30,7 +30,10 @@ def export_layers(layers, metadata, output):
         if metadata.get(key, current[key]) != current[key]:
             raise ValueError(f'Training runtime changed: {key}')
     # The deployment side follows the observation and therefore supports swaps.
-    runtime_config = {key: config[key] for key in ('slot', 'rl_seconds', 'grid_m', 'recover_enter', 'recover_exit')}
+    # `control_scale` is part of the observation definition, not a training
+    # preference: the actor is linear in that input, so shipping it with a
+    # different divisor rescales a feature the policy learned against.
+    runtime_config = {key: config[key] for key in ('slot', 'rl_seconds', 'grid_m', 'recover_enter', 'recover_exit', 'control_scale')}
     runtime_config['learning_control_hz'] = config.get('learning_control_hz', 10)
     runtime_config['navigation_mode'] = config.get('navigation_mode', 'legacy')
     source = Path(portable.__file__).read_text()
@@ -53,7 +56,8 @@ def act(obs, state):
         return opening, state
     # Integer scheduling agrees with the Gym session's exact game-tick count.
     if 'goal_time' not in state or obs['tick'] - state.get('goal_tick', 0) >= round(_CONFIG['rl_seconds']/.05):
-        features = encode_observation(obs, state, _CONFIG['slot'], _CONFIG['rl_seconds'])
+        features = encode_observation(obs, state, _CONFIG['slot'], _CONFIG['rl_seconds'],
+                                      None, _CONFIG['control_scale'])
         select_goal(obs, state, mlp_forward(features, _LAYERS), _NAVIGATOR, _CONFIG)
         state['goal_tick'] = obs['tick']
     if ('control_tick' not in state or obs['tick'] < state['control_tick']

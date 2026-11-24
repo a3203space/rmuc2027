@@ -10,14 +10,50 @@ try:
 except ImportError:
     from rmuc2027_core import sdk as _sdk
 
-OBS_VERSION = 1
-OBS_SIZE = 116
+OBS_VERSION = 2
+OBS_SIZE = 131
 SLOTS = (1, 3, 4, 6, 7)
+# Slot 6 carries the aerial system, which parks in a hangar and never drives:
+# the rulebook only ever marks the four ground robots, so it gets no capability
+# bits and its three trailing entries stay zero.
+GROUND_SLOTS = (1, 3, 4, 7)
 MODES = ("policy", "dead", "recover", "tipped", "unreachable")
+# Divisor for the two `control` features. The engine's control score is
+# uncapped, so the encoder has to pick a denominator, and the old hard-coded
+# 1680 was never observed: a full game of the recorded red-side pool peaked at
+# 863. Dividing by 1680 put every real value below 0.52 and then clipped, so the
+# feature spent its whole life in the bottom half of the range and the network
+# saw a dead input. 1000 is the measured peak rounded up, which keeps the
+# normal path unclipped while still bounding the tail. Export bakes the value
+# into the submission, so the divisor travels with the policy.
+CONTROL_SCALE = 1000.0
 
 
 def _ratio(value, maximum):
     return float(value) / max(1.0, float(maximum))
+
+
+def capability_bits(robot):
+    """Three orthogonal movement traits of one robot, from the public design table.
+
+    `chassis_type` alone cannot answer the question that matters in combat.
+    Mecanum covers both 2732/301/2773 (transform into a low profile and drive
+    through the tunnel) and 4/7 (do neither), so an attacker cannot use the
+    wheel type to predict where an opponent will reappear. The rulebook makes
+    the distinction behavioural instead: crossing the tunnel over the top
+    grants 25% defence for 30 s, while driving through it grants 1.5x barrel
+    cooling for 120 s (rulebook table 5-27), so an opponent that can take the
+    shortcut at all is the tactically different one. The 200 mm terrace next to
+    the goal (rulebook 4.3.1) is the mirror case: models that report jump are
+    the ones that can hop it, which is why 2731 carries step_climb_m == 0.2.
+    Omni drive is kept separately because it strafes and flanks in a way the
+    other two cannot, independent of either terrain feature.
+    """
+    design = _sdk.DESIGNS.get(str(robot.get('model_slot') or robot['slot']), {})
+    capabilities = design.get('capabilities', {})
+    return [float(bool(design.get('transform_allowed')) and bool(capabilities.get('tunnel'))),
+            float(bool(capabilities.get('jump'))),
+            float(design.get('chassis_type') == 'omni')]
 
 
 def own_robot(obs, slot=7):
@@ -26,12 +62,35 @@ def own_robot(obs, slot=7):
     return next(r for r in obs['robots'] if r['slot'] == slot)
 
 
-def encode_observation(obs, state, slot=7, rl_seconds=1.0):
-    """116 bounded features, with blue coordinates rotated into the red frame.
+def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control_scale=None):
+    """131 bounded features, with blue coordinates rotated into the red frame.
 
-    self 18 + four allies * 7 + five visible enemy slots * 8 + public match 6
-    + four public control positions * 4 + controller memory 8.
+    self 18 + four allies * 7 + five visible enemy slots * 11 (8 + 3 movement
+    traits) + public match 6 + four public control positions * 4 + controller
+    memory 8.
+
+    `witness` is an optional `terrain_witness.TerrainWitness`. When present, the
+    three trailing entries of each enemy slot report what that opponent was
+    *seen* doing (drove through a tunnel, climbed the terrace, neither), falling
+    back to the design table for any bit it was not seen doing. That is the
+    honest version of the question: the radar only reports coordinates, so the
+    ability has to be inferred from behaviour, and an inference that has not been
+    made yet costs the prior rather than a fabricated "no".
+
+    Exported submissions pass no witness at all and read the design table
+    throughout. The two agree on every slot with no evidence, which is what keeps
+    the trained policy and the shipped one looking at the same numbers.
+
+    `control_scale` is the divisor for the two `control` features; None means
+    `CONTROL_SCALE`. It is threaded through as an argument rather than read from
+    a module global because the same source is embedded in exported
+    submissions, where the trained run's value gets baked in - a module global
+    would be the compile-time default there and silently rescale the input
+    under a policy that learned against the configured one.
     """
+    if control_scale is None:
+        control_scale = CONTROL_SCALE
+    control_scale = max(1e-6, float(control_scale))
     me = own_robot(obs, slot)
     team = obs['team']
     other = 'blue' if team == 'red' else 'red'
@@ -62,10 +121,17 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0):
     enemies = {r['slot']: r for r in obs['enemies']}
     for s in SLOTS:
         r = enemies.get(s)
-        values += [1.0, *motion(r), float(r['alive']), float(r.get('invulnerable', False))] if r else [0.0]*8
+        if r is None:
+            values += [0.0] * 11
+            continue
+        values += [1.0, *motion(r), float(r['alive']), float(r.get('invulnerable', False))]
+        if s in GROUND_SLOTS:
+            values += witness.bits(s, r) if witness is not None else capability_bits(r)
+        else:
+            values += [0.0, 0.0, 0.0]
     values += [obs['remaining']/420,
-        obs['teams'][team].get('control', 0)/1680,
-        obs['teams'][other].get('control', 0)/1680,
+        obs['teams'][team].get('control', 0)/control_scale,
+        obs['teams'][other].get('control', 0)/control_scale,
         _ratio(obs['bases'][team]['hp'], obs['bases'][team]['max_hp']),
         _ratio(obs['bases'][other]['hp'], obs['bases'][other]['max_hp']),
         obs['teams'][team].get('resources', 0)/5000]

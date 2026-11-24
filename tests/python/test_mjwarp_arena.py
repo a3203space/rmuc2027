@@ -174,18 +174,19 @@ class SceneTests(unittest.TestCase):
         from rmuc2027_research.rl.learning import vector_env
         from rmuc2027_research.rl.session import load_config
         from rmuc2027_research.rl.mjwarp import batching
+        from rmuc2027_research.rl.portable import OBS_SIZE
         config = load_config({'sim_backend': 'mjwarp', 'sim_device': 'cpu', 'rl_seconds': .1,
                               'episode_seconds': .1})
         vec = vector_env(config, 2)
         try:
             obs = vec.reset()
-            self.assertEqual(obs.shape, (2, 116))
+            self.assertEqual(obs.shape, (2, OBS_SIZE))
             obs, reward, done, infos = vec.step(np.array([[.5, .5], [-.5, -.5]]))
             self.assertTrue(np.isfinite(obs).all())
             self.assertTrue(np.isfinite(reward).all())
             self.assertTrue(done.all())
             for info in infos:
-                self.assertEqual(info['terminal_observation'].shape, (116,))
+                self.assertEqual(info['terminal_observation'].shape, (OBS_SIZE,))
                 self.assertTrue(info['TimeLimit.truncated'])
                 self.assertEqual(set(info['bases']), {'red', 'blue'})
                 self.assertEqual(info['metrics']['policy_errors'], 0)

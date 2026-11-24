@@ -19,7 +19,10 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from .env import SentryEnv, make_env
 from .portable import OBS_SIZE, OBS_VERSION
-from .session import provenance, OpeningDeadline
+# Re-exported: these validators are pure config arithmetic and live in a
+# torch-free module so a shell preflight can run them without importing torch.
+from .preflight import rollout_block, check_steps, check_action_std
+from .session import provenance, OpeningDeadline, result_label
 
 
 def device_name(requested):
@@ -72,8 +75,49 @@ class TimedPPO(PPO):
             stream.write(json.dumps(event)+'\n')
         print(json.dumps(event), flush=True)
 
+    def apply_action_std_control(self):
+        """Pull the exploration width back to the action box on operator request.
+
+        `check_action_std` guards the configured value, but the width is a
+        learned parameter: the 22h run started at the 1.0 default and the very
+        first update took it to 1.969, ending at 2.219 - so every one of its
+        440 updates sampled with a std larger than the [-1, 1] box and roughly
+        half of every sample was clipped. The gradient then described actions
+        the environment never executed, and nothing in `losses` showed it.
+
+        This is a manual channel, not an automatic clamp, for the same reason
+        the learning-rate one is: silently correcting a policy that is drifting
+        hides the drift. Between two requests the curve stays honest.
+        """
+        path = getattr(self, 'action_std_control_path', None)
+        if not path or not Path(path).exists():
+            return
+        try:
+            request = json.loads(Path(path).read_text())
+            bound = float(request['max_std'])
+            if not math.isfinite(bound) or not 0 < bound <= 1.0:
+                raise ValueError('max_std must be finite and in (0, 1]')
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(json.dumps({'kind': 'action-std-control-error', 'error': str(exc)}), flush=True)
+            return
+        with torch.no_grad():
+            before = float(torch.exp(self.policy.log_std).mean())
+            # log_std is the parameter; the bound is in std space, so the clamp
+            # has to happen on log(bound) or it would clamp ~0.0 to ~0.0.
+            torch.clamp_(self.policy.log_std.data, max=math.log(bound))
+            after = float(torch.exp(self.policy.log_std).mean())
+        if after == before:
+            return
+        event = {'kind': 'action-std-clamp', 'total_samples': self.num_timesteps,
+                 'before': before, 'after': after, 'max_std': bound,
+                 'reason': str(request.get('reason', 'operator request')), 'time_unix': time.time()}
+        with Path(path).with_name('action-std-events.jsonl').open('a') as stream:
+            stream.write(json.dumps(event)+'\n')
+        print(json.dumps(event), flush=True)
+
     def train(self):
         self.apply_learning_rate_control()
+        self.apply_action_std_control()
         started = time.perf_counter()
         super().train()
         seconds = time.perf_counter()-started
@@ -83,11 +127,48 @@ class TimedPPO(PPO):
             row = {'kind': 'ppo-update', 'total_samples': self.num_timesteps,
                    'gradient_epochs': self._n_updates, 'optimization_seconds': seconds,
                    'learning_rate': float(self.lr_schedule(self._current_progress_remaining)),
+                   'action_std': action_std(self),
                    'behavior': getattr(self, 'last_rollout_behavior', {}),
                    'losses': {str(k): float(v) for k, v in self.logger.name_to_value.items()
                               if k.startswith('train/') and np.isscalar(v)}}
             with Path(path).open('a') as stream:
                 stream.write(json.dumps(row)+'\n')
+
+
+def action_std(model):
+    """The policy's per-dimension exploration scale, or None if it has none.
+
+    Logged because it is the one PPO state that can quietly invalidate an
+    action bound: the policy samples N(mean, std) and the env clips the result,
+    so a std that drifts up sends half of every sample into the clip. The
+    gradient then points at samples the environment never actually executed,
+    and nothing in `losses` shows it - the loss gets *smaller* as the policy
+    stops being able to tell clipping from a real preference. It is read from
+    the state-independent log_std so the value is comparable across updates.
+    """
+    log_std = getattr(model.policy, 'log_std', None)
+    if log_std is None:
+        return None
+    return float(torch.exp(log_std.detach().float().mean()))
+
+
+def _json_default(value):
+    """Make observations serialisable without losing their structure.
+
+    The per-step infos carry numpy arrays, numpy scalars and occasionally
+    torch scalars. json.dumps has no default encoder for any of them, so a run
+    configured with action_trace=false crashed the moment the summary line was
+    written - after the model had already been training for minutes.
+    """
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, torch.Tensor):
+        return value.detach().cpu().tolist()
+    if isinstance(value, (set, tuple)):
+        return list(value)
+    raise TypeError(f'Object of type {type(value).__name__} is not JSON serializable')
 
 
 class TraceCallback(BaseCallback):
@@ -96,6 +177,16 @@ class TraceCallback(BaseCallback):
         self.detailed = detailed
         self.path = Path(path)
         self.sampling_seconds = 0.0
+        # The first rollout is not sampling: 16 envs, warp's lazy compilation
+        # and the navigation mesh all happen inside it. On 1988 rollouts that
+        # is noise; on one it is the whole denominator, which is how a 25
+        # steps/s run reports 12. The legacy `sampling_seconds` stays exactly
+        # as defined so a long run is still comparable with the 22h baseline,
+        # and the split below is what the steady rate is read from.
+        self.init_seconds = 0.0
+        self.sampling_seconds_excluding_first = 0.0
+        self.rollouts = 0
+        self.saw_rollout_end = False
         self.last_metrics = []
         self.deadline = deadline
         self.last_checkpoint = time.perf_counter()
@@ -111,10 +202,18 @@ class TraceCallback(BaseCallback):
 
     def _on_rollout_start(self):
         self.started = time.perf_counter()
+        self.saw_rollout_end = False
         self.rollout_behavior = {'samples': 0, 'moving_commands': 0, 'modes': {}}
 
     def _on_rollout_end(self):
-        self.sampling_seconds += time.perf_counter()-self.started
+        seconds = time.perf_counter()-self.started
+        self.sampling_seconds += seconds
+        if not self.rollouts:
+            self.init_seconds = seconds
+        else:
+            self.sampling_seconds_excluding_first += seconds
+        self.rollouts += 1
+        self.saw_rollout_end = True
         self.model.last_rollout_behavior = copy.deepcopy(self.rollout_behavior)
 
     def _on_step(self):
@@ -130,16 +229,17 @@ class TraceCallback(BaseCallback):
             if self.locals['dones'][index]:
                 row = {'env': index, 'total_samples': self.num_timesteps,
                        **{key: info.get(key) for key in ('seed', 'time', 'winner', 'reason', 'metrics',
-                                                       'reward_totals', 'control', 'bases')}}
+                                                       'reward_totals', 'control', 'bases', 'opponent',
+                                                       'witness')}}
                 with (self.path.parent/'episodes.jsonl').open('a') as episodes:
-                    episodes.write(json.dumps(row)+'\n')
+                    episodes.write(json.dumps(row, default=_json_default)+'\n')
         for index, info in enumerate(self.locals['infos'] if self.detailed else []):
             # SB3 stores self.locals['actions'] and its original log probability
             # in RolloutBuffer. Do not replace them with clipped/snapped goals.
             self.stream.write(json.dumps({'env': index, 'total_steps': self.num_timesteps,
                 'sampled_action': self.locals['actions'][index].tolist(),
                 'environment_action': self.locals['clipped_actions'][index].tolist(),
-                **info}, allow_nan=False, default=lambda value: value.tolist() if isinstance(value, np.ndarray) else value.item())+'\n')
+                **info}, allow_nan=False, default=_json_default)+'\n')
         self.last_metrics = self.locals['infos']
         now = time.perf_counter()
         if now-self.last_progress >= 15:
@@ -152,7 +252,8 @@ class TraceCallback(BaseCallback):
                 'rollout_capacity': block}), flush=True)
             if not self.detailed:
                 self.stream.write(json.dumps({'kind': 'summary', 'total_steps': self.num_timesteps,
-                    'gradient_epochs': self.model._n_updates, 'metrics': self.last_metrics})+'\n')
+                    'gradient_epochs': self.model._n_updates, 'metrics': self.last_metrics},
+                    default=_json_default)+'\n')
                 self.stream.flush()
             self.last_progress = now
         if now-self.last_checkpoint >= 300:
@@ -169,7 +270,16 @@ class TraceCallback(BaseCallback):
 
     def _on_training_end(self):
         if self.timed_out:
-            self.sampling_seconds += time.perf_counter()-self.started
+            # A deadline that lands mid-rollout leaves the last block unclosed.
+            # It is still sampled wall time, so it belongs in the same bucket a
+            # closed rollout would have gone to - otherwise a --wall-seconds
+            # that happens to cut the first rollout short reports init as zero.
+            seconds = time.perf_counter()-self.started
+            self.sampling_seconds += seconds
+            if not self.rollouts:
+                self.init_seconds += seconds
+            else:
+                self.sampling_seconds_excluding_first += seconds
         if not self.detailed:
             self.stream.write(json.dumps({"kind":"final", "total_steps":self.num_timesteps, "gradient_epochs":self.model._n_updates, "metrics":self.last_metrics})+"\n")
         self.stream.close()
@@ -180,6 +290,16 @@ def _actor_parameters(model):
         if 'policy_net' in name or 'action_net' in name}
 
 
+def _ppo_kwargs(config):
+    """`config['ppo']` minus the keys that are checked here, not by SB3.
+
+    `action_std` is ours: SB3 has no such argument and would raise TypeError
+    the moment someone set it in a config file, so it is stripped after
+    `check_action_std` has validated it.
+    """
+    return {key: value for key, value in config['ppo'].items() if key != 'action_std'}
+
+
 def experiment(config):
     from .. import __version__
     return {**provenance(config), 'obs_version': OBS_VERSION, 'obs_size': OBS_SIZE,
@@ -187,15 +307,28 @@ def experiment(config):
             ('torch', 'gymnasium', 'stable-baselines3', 'numpy')}}
 
 
-def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_seconds=None):
+def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_seconds=None, init_from=None):
+    if resume and init_from:
+        raise ValueError('--resume and --init-from are mutually exclusive')
     if wall_seconds is not None and (not math.isfinite(wall_seconds) or wall_seconds <= 0):
         raise ValueError('wall-seconds must be finite and positive')
+    check_action_std(config)
+    # Rollout arithmetic is pure config, so it is checked here rather than
+    # after the environment exists: a mismatch used to be reported only once
+    # N operators had spawned, and the traceback pointed at the step loop
+    # instead of at the flag that caused it.
+    check_steps(config, num_envs, steps)
     device_name(device)
     torch.set_num_threads(1)
     torch.manual_seed(config['seed'])
     torch.use_deterministic_algorithms(True)
     output = Path(output)
-    output.mkdir(parents=True, exist_ok=False)
+    # A resumed experiment owns its directory already: experiment.json, the
+    # logs and the checkpoint being resumed all live there, so the run must
+    # reopen it rather than create a fresh one. init_from deliberately does not
+    # get this treatment - starting over in a new directory is what keeps the
+    # previous run's artifacts read-only and its counters untouched.
+    output.mkdir(parents=True, exist_ok=bool(resume))
     metadata = experiment(config)
     if resume:
         previous = json.loads((Path(resume).parent/'experiment.json').read_text())
@@ -207,6 +340,9 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
         for key in ('runtime_hash', 'engine_binary_sha256', 'rules_sha256'):
             if previous.get(key, metadata[key]) != metadata[key]:
                 raise ValueError(f'Resume incompatibility: {key}')
+        # Keep the original provenance when it matches: rewriting it would make
+        # the resumed run look like a new one to evaluate/compose comparisons.
+        metadata = previous
     (output/'experiment.json').write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
     started = time.perf_counter()
     runtime_config = dict(config)
@@ -215,6 +351,10 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
     vec = vector_env(runtime_config, num_envs)
     callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None,
                              detailed=config.get('action_trace', False),backup_seconds=config.get('github_backup_seconds',300.))
+    # Everything expensive that is not a rollout: spawning the operators,
+    # warping, the mesh, and building the policy. Measured separately so that
+    # `sampling_seconds` is never blamed for it on a short run.
+    setup_seconds = time.perf_counter()-started
     model = None
     if config.get('github_backup_repo'):
         from .backup import ReleaseBackup
@@ -222,20 +362,49 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
     try:
         if resume:
             model = TimedPPO.load(resume, env=vec, device=device)
+        elif init_from:
+            # Seed a fresh experiment from existing weights. _setup_learn only
+            # clears num_timesteps/_episode_num when reset_num_timesteps is set,
+            # so the remaining counters are reset here or the logs would start
+            # from the previous run's values. Adam state is kept on purpose:
+            # that is what continuing rather than re-initialising means.
+            model = TimedPPO.load(init_from, env=vec, device=device)
+            model.num_timesteps = 0
+            model._total_timesteps = 0
+            model._num_timesteps_at_start = 0
+            model._n_updates = 0
+            model._episode_num = 0
+            model.ep_info_buffer.clear()
+            model.ep_success_buffer.clear()
+            model._current_progress_remaining = 1.0
+            # Force learn() to reset the env instead of replaying a stale obs.
+            model._last_obs = None
+            model._last_episode_starts = None
         else:
             model = TimedPPO('MlpPolicy', vec, seed=config['seed'], device=device, verbose=1,
-                policy_kwargs={'net_arch': {'pi': [64, 64], 'vf': [64, 64]}}, **config['ppo'])
+                policy_kwargs={'net_arch': {'pi': [64, 64], 'vf': [64, 64]}}, **_ppo_kwargs(config))
         model.learning_rate_control_path = str((output/'learning-rate.json').resolve())
+        model.action_std_control_path = str((output/'action-std.json').resolve())
         model.update_log_path = str((output/'updates.jsonl').resolve())
         block = model.n_steps*num_envs
         if steps is None:
             steps = block * 1000000000 if wall_seconds is not None else 256
+        # A configured `n_steps` that disagrees with the env count would make the
+        # startup check above describe the wrong block, so restate the invariant
+        # against what the model actually holds. A None `steps` is synthesised
+        # here and can therefore be checked only now.
         if steps <= 0 or steps % block:
             raise ValueError(f'Steps must be a positive multiple of rollout size {block}; no hidden overshoot')
         before = _actor_parameters(model)
+        callback.block = block
         previous_steps, previous_updates = model.num_timesteps, model._n_updates
         model.optimization_seconds = 0.0
+        # Starting exploration width. A run that begins at the bound is already
+        # clipping every other sample, so it is reported rather than assumed
+        # away; the per-update trace in updates.jsonl shows where it drifts.
+        start_std = action_std(model)
         model.learn(total_timesteps=steps, callback=callback, reset_num_timesteps=resume is None)
+        end_std = action_std(model)
         after = _actor_parameters(model)
         delta = math.sqrt(sum(float(torch.sum((after[name]-value)**2)) for name, value in before.items()))
         if not math.isfinite(delta) or (delta <= 0 and wall_seconds is None):
@@ -262,7 +431,19 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
             'optimization_seconds': model.optimization_seconds,
             'rl_steps_per_second': (model.num_timesteps-previous_steps)/max(callback.sampling_seconds, 1e-9),
             'simulation_seconds_per_second': (model.num_timesteps-previous_steps)*config['rl_seconds']/max(callback.sampling_seconds, 1e-9),
-            'losses': losses, 'model_sha256': hashlib.sha256((output/'model.zip').read_bytes()).hexdigest()}
+            # Same run, denominator with the first rollout taken out. `None`
+            # rather than a number when there is no second rollout: one
+            # rollout has no steady state to report, and a fabricated rate is
+            # what produced the 12.57 steps/s that looked like a regression.
+            'setup_seconds': setup_seconds, 'init_seconds': callback.init_seconds,
+            'sampling_seconds_excluding_first': callback.sampling_seconds_excluding_first,
+            'rl_rollouts': callback.rollouts,
+            'rl_steps_per_second_excluding_first': (
+                (model.num_timesteps-previous_steps-block)/callback.sampling_seconds_excluding_first
+                if callback.rollouts > 1 and callback.sampling_seconds_excluding_first > 0 else None),
+            'losses': losses, 'model_sha256': hashlib.sha256((output/'model.zip').read_bytes()).hexdigest(),
+            'action_std': {'start': start_std, 'end': end_std,
+                           'bound': 1.0, 'clipping': end_std is not None and end_std >= 1.0}}
         (output/'training.json').write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
         return report
@@ -298,11 +479,15 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
         vec.close()
 
 
-def evaluate(model_path, output, seeds, sides, duration=420, device='cpu'):
+def evaluate(model_path, output, seeds, sides, duration=420, device='cpu', backend=None):
     device_name(device)
     torch.set_num_threads(1)
     model_path, output = Path(model_path), Path(output)
-    output.mkdir(parents=True, exist_ok=False)
+    try:
+        output.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        raise ValueError(f'evaluate output directory already exists: {output}; '
+                         'pick another --run-dir or move the old one aside') from None
     metadata = json.loads((model_path.parent/'experiment.json').read_text())
     current = experiment(metadata['config'])
     if current['navigation']!=metadata.get('navigation'):
@@ -320,7 +505,11 @@ def evaluate(model_path, output, seeds, sides, duration=420, device='cpu'):
         for side in sides:
             config = copy.deepcopy(metadata['config'])
             old_side = config['team']
-            config.update(team=side, episode_seconds=duration, sim_backend='rapier')
+            # The reported outcome has to come from the same simulator the run
+            # trained on. Pinning 'rapier' here once meant an evaluation could be
+            # scored on a backend the policy had never seen; --backend still wins
+            # when the caller asks for a specific one.
+            config.update(team=side, episode_seconds=duration, sim_backend=backend or config['sim_backend'])
             config['controllers'] = {f'{side if key.split(":")[0] == old_side else ("blue" if side == "red" else "red")}:{key.split(":")[1]}': value
                                      for key, value in config['controllers'].items()}
             env = SentryEnv(config, record_replay=True)
@@ -334,7 +523,7 @@ def evaluate(model_path, output, seeds, sides, duration=420, device='cpu'):
                         obs, reward, terminated, truncated, info = env.step(action)
                         total_reward += reward
                         stream.write(json.dumps(info, allow_nan=False)+'\n')
-                outcome = ('win' if info['winner'] == side else 'draw' if info['winner'] is None else 'loss') if terminated else 'truncated'
+                outcome = result_label(info['winner'], side, terminated)
                 replay = output/f'{seed}-{side}.json'
                 env.session.save_replay(replay)
                 from rmuc2027_core.replay import verify_replay

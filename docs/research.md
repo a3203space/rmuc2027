@@ -56,7 +56,7 @@ Windows 的解释器路径为 `research\.venv\Scripts\python.exe`。在已有独
 
 已验证的 Linux/Python 3.10 CPU 依赖快照保存在 `research/requirements-rl-cpu.lock`，仅用于匹配的平台环境。
 
-Actor 仍为 116 维合法局部观测，输出二维目标点。其余机器人由固定脚本控制，导航、瞄准、射击和回补由原执行模块负责。PPO 默认每 64 步更新，网络为两层 64 单元，默认回合在 60 个仿真秒截断；自然比赛持续 420 秒。完整配置位于 `configs/rl/sentry.json`。
+Actor 为 131 维合法局部观测（`OBS_VERSION = 2`；116 维是 `OBS_VERSION = 1` 的历史契约），输出二维目标点。敌方每个槽位 11 维：可见标志、平面运动 5 项、存活与无敌、外加三个移动能力位 `can_tunnel / can_climb / is_omni`——它们按 `model_slot` 查 `sdk.DESIGNS` 得出，用来区分「能钻隧道拿 1.5 倍冷却」与「只能跨越拿 25% 防御」的对手（规则 p.106 表 5-27）。判据与官方出处见 `docs/obs-dimension-chassis-audit.md`。其余机器人由固定脚本控制，导航、瞄准、射击和回补由原执行模块负责。PPO 默认每 64 步更新，网络为两层 64 单元，默认回合在 60 个仿真秒截断；自然比赛持续 420 秒。完整配置位于 `configs/rl/sentry.json`。
 
 旧模型需显式迁移，迁移保留原权重、优化器和原始实验元数据，记录运行时版本变化：
 
@@ -148,7 +148,7 @@ research/.venv/bin/python -m rmuc2027_research.rl.mjwarp.doctor \
 如果用户终端能运行 CUDA，而代理执行环境没有 `/dev/nvidia*`，需要在执行环境管理层解决设备可见性。安装 CUDA 版 PyTorch 并不能解除执行环境的设备隔离。必须在代理执行工具中重新通过检查，才能声称已完成代理侧 GPU 接入。
 
 
-MJWarp 后端已接入完整比赛与 PPO。保留原 116 维局部观测、二维目标点动作、固定队友与对手、射击、占点、资源、死亡复活和胜负规则。CPU 的 Rust 引擎计算驱动及规则，并维护光学/弹丸查询镜像；MJWarp 负责每个 120 Hz 子步的刚体运动与接触求解。规则与物理按原六子步顺序交替，Rapier 不再同时积分训练世界。
+MJWarp 后端已接入完整比赛与 PPO。保留局部观测（当前 131 维，敌方槽位含三个移动能力位）、二维目标点动作、固定队友与对手、射击、占点、资源、死亡复活和胜负规则。CPU 的 Rust 引擎计算驱动及规则，并维护光学/弹丸查询镜像；MJWarp 负责每个 120 Hz 子步的刚体运动与接触求解。规则与物理按原六子步顺序交替，Rapier 不再同时积分训练世界。
 
 模型直接从 Rust 创建的碰撞几何与质量属性转换，覆盖现有 18 种型号。凹地形分解为凸棱柱，复合机器人保留各碰撞部件，折叠与机械臂变化在子步前同步。非同构碰撞掩码的世界分组运行，不会为并行而移除规则或机器人。
 
@@ -245,11 +245,13 @@ research/.venv/bin/python -m rmuc2027_research.rl.warp_kinematic.terrain_audit \
 research/.venv/bin/python -m rmuc2027_research.rl evaluate \
   --model data/research/sentry-mjwarp-first/model.zip \
   --seeds 7 42 91 --sides red blue --duration 420 \
-  --device cuda --run-dir data/research/sentry-mjwarp-eval
+  --device cuda --backend rapier --run-dir data/research/sentry-mjwarp-eval
 research/.venv/bin/python -m rmuc2027_research.rl export \
   --model data/research/sentry-mjwarp-first/model.zip \
   --output data/research/sentry-mjwarp-policy
 ```
+
+不带 `--backend` 时 `evaluate` 跟随训练配置的 `sim_backend`；上面的 `--backend rapier` 是显式要求回到原引擎验收。训练、评估的胜负判据现已同源（`session.result_sign`），报告里的 win/draw/loss 就是奖励里 `outcome` 的符号。
 
 训练回放保留完整状态帧，可供原网页回放；标记 `physics_backend=mjwarp`，不能用 Rapier 的逐帧确定性验证器复算。物理引擎不同，轨迹不保证一致，实际部署能力必须以上述原引擎评估为准。
 

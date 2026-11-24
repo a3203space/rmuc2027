@@ -1,0 +1,63 @@
+{
+  "seed": 42,
+  "team": "red",
+  "slot": 7,
+  "map": "rmuc2027",
+  "duration": 420,
+  "episode_seconds": 420,
+  "rl_seconds": 0.5,
+  "grid_m": 0.25,
+  "recover_enter": 0.25,
+  "recover_exit": 0.8,
+  "friendly": "examples/claude_opus55_xhigh_2027_squad",
+  "opponent": "examples/claude_opus55_xhigh_2027_hold",
+  "opponent_pool": [
+    "examples/claude_opus55_xhigh_2027_hold",
+    "examples/claude_opus55_xhigh_2027_team",
+    "examples/dsv41_1017_heavy",
+    "examples/dsv41_1017_pair",
+    "examples/dsv41_1017_sentry",
+    "examples/dsv41_2027_control",
+    "examples/gemini38_2027_blitz",
+    "examples/gemini38_2027_hunter",
+    "examples/gemini38_2027_tech_overload",
+    "examples/gpt61_2027_control",
+    "examples/gpt61_2027_pressure",
+    "examples/step5_2027_echo"
+  ],
+  "controllers": {
+    "red:7": {
+      "kind": "learning"
+    }
+  },
+  "rewards": {
+    "control": 0.002,
+    "outcome": 2.0,
+    "capture_seconds": 0.001,
+    "death": -0.1,
+    "terrain_buff": 0.02,
+    "position_control": 0.01
+  },
+  "ppo": {
+    "n_steps": 64,
+    "batch_size": 64,
+    "n_epochs": 4,
+    "learning_rate": 0.0003,
+    "gae_lambda": 0.95,
+    "gamma": 0.995,
+    "ent_coef": 0.01
+  },
+  "sim_backend": "warp_kinematic",
+  "sim_device": "cuda:0",
+  "policy_timeout_s": 5.0,
+  "learning_control_hz": 2,
+  "drones_enabled": false,
+  "navigation_mode": "legacy",
+  "timed_assembly": true,
+  "github_backup_seconds": 300,
+  "github_backup_repo": "a3203space/rmuc2027",
+  "fixed_policy_hz": 10,
+  "training_summary": true,
+  "action_trace": false,
+  "navigation_precompute": null
+}

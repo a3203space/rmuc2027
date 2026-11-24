@@ -17,10 +17,12 @@
     }
   },
   "rewards": {
-    "control": 0.01,
-    "outcome": 10.0,
+    "control": 0.002,
+    "outcome": 2.0,
     "capture_seconds": 0.001,
-    "death": -0.1
+    "death": -0.1,
+    "terrain_buff": 0.02,
+    "position_control": 0.01
   },
   "ppo": {
     "n_steps": 64,

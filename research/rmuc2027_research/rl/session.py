@@ -14,8 +14,44 @@ from ..strategies.battle import Battle
 from rmuc2027_core.policy import EncodedObservation, Policy
 from rmuc2027_core.submissions import load_submission
 from .portable import SdkNavigator, encode_observation, execute_goal, select_goal, fixed_opening, learning_ready, own_robot
+from .terrain_witness import TerrainWitness
 
 DEFAULT_CONFIG = ROOT / 'configs/rl/sentry.json'
+
+# The four zones the rulebook scores control through (5.6.2): each team's
+# outpost and base position. A robot standing on one of them is contesting
+# ground itself, which is what `position_control` pays for.
+CONTROL_ZONES = ('red_outpost', 'red_base', 'blue_outpost', 'blue_base')
+
+# Terms `_step` writes into `terms`, in the order they appear there. Declaring
+# them keeps a config from silently under-paying the rollout.
+REQUIRED_REWARD_TERMS = frozenset({
+    'control', 'outcome', 'capture_seconds', 'death', 'terrain_buff', 'position_control'})
+
+
+def result_sign(winner, side):
+    """+1 won, -1 lost, 0 drew - the one definition of `outcome`'s sign.
+
+    Both the rollout (`_step`) and the evaluator (`learning.evaluate`) ask this,
+    so a training run can never optimise a different notion of "winning" than
+    the number reported in `evaluation.json`. `winner` is the engine's team key
+    or None; a finished match with no winner is a draw, not a loss.
+    """
+    if winner is None:
+        return 0
+    return 1 if winner == side else -1
+
+
+def result_label(winner, side, finished):
+    """The audit label for the same call: win / draw / loss / truncated.
+
+    A rollout cut short by the step budget has no result at all, so it is
+    labelled `truncated` rather than guessed at from a winner that was never
+    decided.
+    """
+    if not finished:
+        return 'truncated'
+    return {1: 'win', 0: 'draw', -1: 'loss'}[result_sign(winner, side)]
 
 
 def load_config(source=None):
@@ -32,6 +68,20 @@ def load_config(source=None):
             raise ValueError('lineups requires red and blue')
         config['lineups'] = {team: normalize_team_lineup(value, '2027')
                              for team, value in config['lineups'].items()}
+    if 'opponent_pool' in config:
+        # Only validated when supplied: omitting the key must keep the fixed
+        # single-opponent path byte-for-byte, so no default is ever written.
+        pool = config['opponent_pool']
+        if (not isinstance(pool, list) or not pool
+                or not all(isinstance(item, str) and item for item in pool)):
+            raise ValueError('opponent_pool must be a non-empty list of strategy paths')
+        if len(set(pool)) != len(pool):
+            raise ValueError('opponent_pool contains duplicate strategies')
+        if config['opponent'] not in pool:
+            # The baseline must stay in the pool: the seed % len(pool) == 0 slot
+            # is then the original fixed opponent, keeping evaluate's default
+            # seed and the recorded `opponent` field meaningful.
+            raise ValueError('opponent_pool must contain the baseline opponent')
     config.setdefault('policy_timeout_s', 5.0)
     config.setdefault('navigation_mode', 'legacy')
     config.setdefault('timed_assembly', False)
@@ -69,10 +119,21 @@ def load_config(source=None):
         raise ValueError('episode_seconds must be a multiple of rl_seconds')
     if not .1 <= config['grid_m'] <= 1 or not 0 < config['recover_enter'] < config['recover_exit'] <= 1:
         raise ValueError('Invalid grid spacing or recovery hysteresis')
+    # Divisor for the two `control` observation features. It is a config value
+    # rather than a literal because export bakes it into the submission: the
+    # shipped actor has to divide by exactly what the trained actor divided by.
+    scale = config['control_scale']
+    if isinstance(scale, bool) or not isinstance(scale, (int, float)) or not math.isfinite(scale) or scale <= 0:
+        raise ValueError('control_scale must be finite and positive')
     if config['duration'] != 420:
         raise ValueError('Keep the 420-second game horizon; shorten episode_seconds for training truncation')
     if not all(math.isfinite(float(v)) for v in config['rewards'].values()):
         raise ValueError('Reward weights must be finite')
+    # Every term `_step` adds has to be declared, or `reward_totals` and the
+    # training log would silently omit a signal the rollout is actually paid.
+    missing = REQUIRED_REWARD_TERMS - set(config['rewards'])
+    if missing:
+        raise ValueError(f'Reward config is missing terms: {sorted(missing)}')
     # The selected side follows team. The default file is convenient for red;
     # explicit non-default controller maps must name the desired side themselves.
     if 'controllers' not in supplied:
@@ -97,6 +158,19 @@ def resource(path):
     return ROOT/path
 
 
+def opponent_for(config, seed):
+    """Per-episode opponent: a pure function of the match seed.
+
+    self.rng is deliberately not used here. SubprocVecEnv/WarpVecEnv workers
+    each own an independent copy of the session, so an RNG draw would only
+    agree by accident. The match seed is already transported to every worker
+    by VecEnv.reset(), so the choice stays reproducible from the seed recorded
+    in episodes.jsonl.
+    """
+    pool = config.get('opponent_pool') or ()
+    return pool[int(seed) % len(pool)] if pool else config['opponent']
+
+
 def baseline_module(config):
     manifest, entries = load_submission(resource(config['friendly']))
     source = entries[str(config['slot'])].read_text()
@@ -107,12 +181,23 @@ def baseline_module(config):
     return SimpleNamespace(**namespace)
 
 
-def provenance(config):
+def provenance(config, opponent=None):
+    """Fingerprint for resume/export/evaluate comparisons.
+
+    sources['opponent'] keeps its original meaning: the baseline opponent from
+    the config. Pass `opponent` only where the per-episode record matters (the
+    replay metadata written by ArenaSession.reset), so the three comparison
+    sites stay unchanged and "which opponent was evaluated" keeps one answer.
+    """
     result = {'config': config, 'sources': {}}
+    record = opponent or config['opponent']
     for name in ('friendly', 'opponent'):
+        # sources['opponent'] is always the baseline, even when `opponent`
+        # names this episode's pick: resume/evaluate/export compare `sources`,
+        # so letting it follow the per-episode draw would reject every run.
         manifest, entries = load_submission(resource(config[name]))
         result['sources'][name] = {'version': manifest['version'], 'manifest': manifest,
-            'hashes': {key: hashlib.sha256(path.read_bytes()).hexdigest() for key, path in entries.items()}}
+            'hashes': {key: hashlib.sha256(item.read_bytes()).hexdigest() for key, item in entries.items()}}
     for key, assignment in config['controllers'].items():
         if assignment['kind'] == 'learning':
             continue
@@ -121,6 +206,11 @@ def provenance(config):
             'hashes': {slot: hashlib.sha256(path.read_bytes()).hexdigest() for slot, path in entries.items()}}
     result['sdk_hash'] = hashlib.sha256((Path(__file__).resolve().parents[3]/'packages/core/rmuc2027_core/sdk.py').read_bytes()).hexdigest()
     result['runtime_hash'] = hashlib.sha256(Path(__file__).with_name('portable.py').read_bytes()).hexdigest()
+    # Observable normalisers that the actor's own arithmetic depends on. They
+    # live in the config, so they are not covered by runtime_hash (which only
+    # hashes the source), and changing one rescales a trained actor's input.
+    # Recording them makes resume/evaluate/export reject a silent change.
+    result['observation'] = {key: config[key] for key in ('rl_seconds', 'control_scale')}
     result['navigation']={'precompute':config.get('navigation_precompute') if config.get('navigation_precompute') is not None else config.get('sim_backend')=='warp_kinematic',
         'preparation_sha256':hashlib.sha256(Path(__file__).with_name('navigation.py').read_bytes()).hexdigest()}
     result['engine_binary_sha256'] = hashlib.sha256(binary_path().read_bytes()).hexdigest()
@@ -148,6 +238,17 @@ def provenance(config):
         if FRAME_ENCODER=='orjson-numpy':result['simulation']['dependencies']['orjson']=version('orjson')
     else:
         result['simulation'] = {'backend': 'rapier', 'dt': 1/120}
+    pool = config.get('opponent_pool') or []
+    if pool or record != config['opponent']:
+        # Written only when pooling is actually in play, so a config without
+        # opponent_pool yields exactly the previous output.
+        entries = {}
+        for path in pool:
+            manifest, files = load_submission(resource(path))
+            entries[path] = {'version': manifest['version'], 'manifest': manifest,
+                'hashes': {key: hashlib.sha256(item.read_bytes()).hexdigest() for key, item in files.items()}}
+        result['opponent_pool'] = entries
+        result['active_opponent'] = record
     return result
 
 
@@ -197,6 +298,7 @@ class ArenaSession:
         self.deadline = self.config.pop('_training_deadline', None)
         self.record_replay = record_replay
         self.rng = random.Random(self.config['seed'])
+        self.active_opponent = None
         self.battle = None
         self.controller = None
         self.done = True
@@ -207,11 +309,18 @@ class ArenaSession:
             self.rng.seed(int(seed))
         self.seed = int(seed) if seed is not None else self.rng.randrange(2**31)
         cfg = self.config
+        # Resolve before any Battle exists: a construction failure then cannot
+        # leave the previous episode's opponent in place for the except branch.
+        self.active_opponent = opponent_for(cfg, self.seed)
         learning = f"{cfg['team']}:{cfg['slot']}"
         assignments = cfg['controllers']
         if assignments.get(learning, {}).get('kind') != 'learning' or sum(v['kind'] == 'learning' for v in assignments.values()) != 1:
             raise ValueError('Exactly one learning controller must own the selected robot')
         self.controller = GoalController(cfg)
+        # Fresh per episode: the witness answers "what has this opponent been seen
+        # doing", and across a reset the opponents change, so carrying the flags
+        # over would credit one robot with another's feats.
+        self.witness = TerrainWitness()
         overrides = {(cfg['team'], cfg['slot']): self.controller}
         try:
             for key, spec in assignments.items():
@@ -226,16 +335,17 @@ class ArenaSession:
                 path = entries[str(int(slot))]
                 overrides[(team, int(slot))] = Policy(path, self.seed*100+int(slot), 'trusted-local', cfg['policy_timeout_s'],
                     expected_digest=manifest['hashes'][manifest['entries'][str(int(slot))]])
-            sources = (resource(cfg['friendly']), resource(cfg['opponent']))
+            sources = (resource(cfg['friendly']), resource(self.active_opponent))
             red, blue = sources if cfg['team'] == 'red' else sources[::-1]
             self.battle = Battle(red, blue, self.seed, cfg['duration'], cfg['map'], sandbox='trusted-local', timeout=cfg['policy_timeout_s'],
                 controller_overrides=overrides, record_replay=self.record_replay, side_lineups=cfg.get('lineups'),
                 navigation_mode=cfg['navigation_mode'], battle_settings={'drones_enabled': cfg['drones_enabled'], 'timed_assembly': cfg['timed_assembly']}, physics_backend=cfg.get('sim_backend', 'rapier'), sim_device=cfg.get('sim_device', 'cuda:0'), fixed_policy_hz=cfg['fixed_policy_hz'], learning_control_hz=cfg['learning_control_hz'])
             self.battle.match.training_summary = cfg['training_summary'] and not self.record_replay
-            self.battle.metadata['rl'] = provenance(cfg)
+            self.battle.metadata['rl'] = provenance(cfg, self.active_opponent)
             # These are development experiments, never ranked submissions.
             self.battle.metadata['test_match'] = True
             self.obs = self.battle.observation(cfg['team'], [cfg['slot']])
+            self.witness.observe(self.obs, cfg['slot'])
             self.opening_seconds = 0.0
             opening_started = time.monotonic()
             last_opening_report = opening_started
@@ -254,11 +364,14 @@ class ArenaSession:
                 if self.battle.diagnostics:
                     raise RuntimeError(f'Invalid fixed opening: {self.battle.diagnostics[-1]}')
                 self.obs = self.battle.observation(cfg['team'], [cfg['slot']])
+                self.witness.observe(self.obs, cfg['slot'])
                 self.opening_seconds = self.battle.match.time
             self.battle.held_commands[cfg['team']].pop(str(cfg['slot']), None)
             self.metrics = {'alive_seconds': 0.0, 'weak_seconds': 0.0, 'deaths': 0, 'revives': 0,
                 'takeover_seconds': {mode: 0.0 for mode in ('dead', 'recover', 'tipped', 'unreachable')},
-                'capture_seconds': 0.0, 'policy_errors': 0}
+                'capture_seconds': 0.0, 'policy_errors': 0,
+                'terrain_buff_seconds': 0.0, 'position_control_seconds': 0.0,
+                'terrain_buff_kinds': {}}
             self.reward_totals = dict.fromkeys(cfg['rewards'], 0.0)
             self.done = False
             return self.features(), self.info({})
@@ -269,7 +382,9 @@ class ArenaSession:
             raise
 
     def features(self):
-        return encode_observation(self.obs, self.controller.state, self.config['slot'], self.config['rl_seconds'])
+        return encode_observation(self.obs, self.controller.state, self.config['slot'],
+                                  self.config['rl_seconds'], self.witness,
+                                  self.config['control_scale'])
 
     def step(self, action):
         if self.done or self.battle is None:
@@ -291,6 +406,12 @@ class ArenaSession:
             previous = next(r for r in before['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
             frame = battle.step()
             robot = next(r for r in frame['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
+            # Refresh the scoped observation inside the loop, not just after it:
+            # the thin referee row above carries no buff state, and the terrain
+            # reward below needs this tick's cooling/defence figure, not the one
+            # from before the action. The engine caches the encoding, so this is
+            # not measurably slower than stepping alone.
+            self.obs = battle.observation(team, [cfg['slot']])
             dt = frame['time']-before['time']
             sampled_seconds+=dt
             delta = ((frame['teams'][team]['control']-frame['teams'][other]['control'])
@@ -311,14 +432,55 @@ class ArenaSession:
                 for zone in p['zones'])
             self.metrics['capture_seconds'] += dt*occupying
             terms['capture_seconds'] += cfg['rewards']['capture_seconds']*dt*occupying
+            # Terrain buffs are the only reward that teaches the sentry's own
+            # chassis question. Rulebook table 5-27 makes the two tunnel
+            # crossings worth different things: driving through grants 1.5x
+            # barrel cooling for 120 s, crossing over the top grants 25% defence
+            # for 30 s, and a folding model is the only one that can choose.
+            #
+            # The referee frame's robot rows are deliberately thin (alive/id/
+            # slot/team/weak) - that is all a strategy sees - so the buff state
+            # comes from the scoped observation refreshed just above.
+            #
+            # The unambiguous signal is `crossing_defense_until`: the engine
+            # stamps its own clock when it grants the 25% defence from a road,
+            # highland or over-the-top crossing. `crossing_cooling_until` is
+            # declared in the robot struct but never assigned, so the through-
+            # tunnel 1.5x cooling cannot be read from it yet; the over-the-top
+            # and highland crossings both pay defence and are caught here.
+            # cooling_multiplier is deliberately NOT used: the attack posture
+            # already multiplies cooling by 3 and the tunnel buff only adds 1.5,
+            # so a sentry sitting in attack is indistinguishable from one that
+            # just drove through a tunnel.
+            if robot['alive'] and not robot.get('weak'):
+                mine = next((r for r in self.obs['robots'] if r.get('slot') == cfg['slot']), None)
+                if mine is not None:
+                    now = float(self.obs.get('time') or frame['time'])
+                    defending = float(mine.get('crossing_defense_until', 0.0) or 0.0) > now + 1e-9
+                    if defending:
+                        self.metrics['terrain_buff_seconds'] += dt
+                        terms['terrain_buff'] += cfg['rewards']['terrain_buff']*dt
+                        for kind in (mine.get('crossing_firsts') or ()):
+                            self.metrics['terrain_buff_kinds'][kind] = True
+            # Control positions the sentry itself is standing on. `control` above
+            # is a team-level score difference, which a stationary sentry collects
+            # whenever its allies hold ground; this term pays only for the ground
+            # this robot is personally occupying.
+            on_control = robot['alive'] and any(
+                robot['id'] in frame['zones'][zone].get('occupants', [])
+                for zone in CONTROL_ZONES if zone in frame['zones'])
+            if on_control:
+                self.metrics['position_control_seconds'] += dt
+                terms['position_control'] += cfg['rewards']['position_control']*dt
             if frame['status'] == 'finished' or frame['time']+1e-8 >= cfg['episode_seconds']:
                 break
         terminated = battle.match.status == 'finished'
         truncated = not terminated and battle.match.time+1e-8 >= cfg['episode_seconds']
         if terminated:
-            terms['outcome'] = cfg['rewards']['outcome']*(0 if battle.match.winner is None else 1 if battle.match.winner == team else -1)
+            terms['outcome'] = cfg['rewards']['outcome']*result_sign(battle.match.winner, team)
         self.done = terminated or truncated
         self.obs = battle.observation(team, [cfg['slot']])
+        self.witness.observe(self.obs, cfg['slot'])
         self.metrics['policy_errors'] = len(battle.diagnostics)
         if battle.diagnostics:
             raise RuntimeError(f'Fixed controller error; rollout is invalid: {battle.diagnostics[-1]}')
@@ -334,11 +496,17 @@ class ArenaSession:
     def info(self, terms):
         battle, cfg = self.battle, self.config
         return {'opening_simulation_seconds': self.opening_seconds, 'seed': self.seed, 'tick': battle.match.tick, 'time': battle.match.time,
+            'opponent': self.active_opponent,
             'winner': battle.match.winner, 'reason': battle.match.reason,
             'bases': {team: {'hp': battle.match.bases[team]['hp'], 'max_hp': battle.match.bases[team]['max_hp']} for team in ('red', 'blue')},
             'control': {t: battle.match.teams[t]['control'] for t in ('red', 'blue')},
             'metrics': copy.deepcopy(self.metrics), 'reward_terms': dict(terms),
             'reward_totals': dict(self.reward_totals),
+            # What this episode actually witnessed, so a post-mortem can tell a
+            # policy that ignored the ability bits from one that never got them.
+            # The exported actor sees no witness at all, which is why the encoder
+            # falls back to the design table instead of reporting a bare zero.
+            'witness': self.witness.snapshot(),
             'action_trace': copy.deepcopy({key: self.controller.state.get(key) for key in
                 ('supplied_action', 'clipped_action', 'proposed_goal', 'goal', 'executed_goal', 'executed_action', 'mode')})}
 

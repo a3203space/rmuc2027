@@ -20,3 +20,57 @@
 轻量远端备份在 [矩阵记录](validation/kinematic-matrix-20261106.json)，详细阶段记录在 [进度日志](research-progress.md)。
 
 当前没有启动正式梯度训练。后续验收须保留失败项、来源哈希及测量限制。
+
+## 冒烟脚本改动（2026-11-22）
+
+`scripts/smoke-rl-pooled.sh` 的四步结构不变，仍不需要 torch。以下两点随本轮
+观测与配置改动同步，跑通过程中已复验：
+
+1. **第 2 步的指纹比对期望已改**：`runtime_hash` 哈希的是 `portable.py`，
+   OBS 从 v1/116 升到 v2/131 后它必然变化。脚本现在断言的是「`runtime_hash`
+   是否变化 == `OBS_SIZE` 是否变化」，而不是「与旧实验一致」——后者在 OBS
+   升版后永远失败，且失败的是一条本就该失败的断言。
+2. **`control_scale` 进入配置**：默认 1000（实测红方全场峰值 863，旧硬编码
+   1680 让该特征终生处于量程下半段）。它同时被写进 `experiment.json` 的
+   `observation` 字段和导出策略的 `_CONFIG`，所以改它会拒绝续训/评估/导出，
+   不会静默改变已训策略的输入。
+
+第 3、4 步的对手轮换与「无池行为不变」结论未受影响。
+
+## `rl-first-131-run.sh` 从五步改为六步（2026-11-22）
+
+新增的 **第 5 步「跑满一局」** 补的是一个真实缺口：第 4 步的 PPO 冒烟跑
+16 env × 64 步 × 0.5 s = 32 模拟秒，远在 420 秒一局之内，所以每局都以
+`truncated` 结束；而 `session.py` 只在 `terminated`（比赛真的结束）时支付
+`outcome`。结果是**整个奖励项可以是死的，而 `training.json` 看起来完全正常**。
+
+第 5 步跑一局真实的、会结束的比赛（`scripts/rl-episode-smoke.py`：
+`episode_seconds=32`、1 env、`n_steps=64` ⇒ 一个 rollout 恰好一局），在第 20 步
+调用 `Battle.queue_referee({'kind': 'forfeit', 'team': 'blue'})`，让引擎走
+`finish('red', 'forfeit')` —— 与真实胜利同一条路径 —— 并断言
+`reward_totals.outcome == rewards.outcome`（实测 +2.0）。该脚本不导入
+`learning.py`，也不继承 SB3 的 `BaseCallback`：两者都会在模块级拉进 torch，
+在受限地址空间上直接以 "failed to map segment" 崩掉。
+
+第 4 步的验收块同时加了三条计时断言，把两套分母钉死（详见
+[rl-randomized-opponents-plan.md](rl-randomized-opponents-plan.md) §9.4.1）：
+`rl_rollouts == 1`、`rl_steps_per_second_excluding_first is None`（单轮不能声称
+有稳态吞吐）、`sampling_seconds == init_seconds`（旧口径未变）。
+
+**重复跑要先清目录，这是预期操作。** `RUN_DIR`（默认 `data/research/pooled-v2`）与
+`EPISODE_DIR`（默认 `data/research/pooled-v2-episode`）都要求不存在，第 4、5 步各有
+一道守卫。上一次跑过再跑，会看到：
+
+```
+失败：data/research/pooled-v2 已存在。这是新 OBS 的首跑目录，请先改名或换 RUN_DIR
+```
+
+这不是错误，而是守卫按设计工作 —— 它防止把新权重写进旧实验目录、污染
+`experiment.json` 的指纹。两个选择：`rm -rf data/research/pooled-v2`（冒烟权重无保留价值），
+或 `RUN_DIR=data/research/smoke-2 sh scripts/rl-first-131-run.sh`。
+
+## 训练前自检顺序
+
+命令行的前置检查（`check_action_std`、`check_steps`）现在都在环境创建之前执行，
+配置合法性与步数倍数关系出错时会立即失败、不建 `--run-dir`、不拉起引擎进程。
+`--run-dir` 已存在时给的是「目录已存在，换一个」而不是 traceback。

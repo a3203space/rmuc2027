@@ -41,15 +41,20 @@ def _upload_git_archive(archive, remote, tag):
     if archive.stat().st_size>95*1024*1024:
         raise ValueError('Checkpoint bundle exceeds the SSH Git transport size limit')
     ref='refs/heads/backup/rl-checkpoints/'+tag
+    # Network git operations are slow over consumer links: a single SSH
+    # ls-remote can take 13 s and a push of a ~270 KB bundle much longer, so the
+    # old 60 s cap reported TimeoutExpired for uploads that had already landed.
+    # Local plumbing (hash-object/mktree/commit-tree) keeps a short cap.
+    def git(*args,payload=None,remote_operation=False):
+        return subprocess.run(['git','--git-dir',directory,*args],input=payload,
+                              capture_output=True,check=True,
+                              timeout=300 if remote_operation else 60).stdout.strip()
     with tempfile.TemporaryDirectory(prefix='rmuc-checkpoint-git-') as directory:
         subprocess.run(['git','init','--bare','--quiet',directory],capture_output=True,check=True,timeout=60)
-        def git(*args,payload=None):
-            return subprocess.run(['git','--git-dir',directory,*args],input=payload,
-                                  capture_output=True,check=True,timeout=60).stdout.strip()
-        old=git('ls-remote',remote,ref).split()
+        old=git('ls-remote',remote,ref,remote_operation=True).split()
         parent=[]
         if old:
-            git('fetch','--quiet','--depth=1',remote,ref)
+            git('fetch','--quiet','--depth=1',remote,ref,remote_operation=True)
             parent=['-p',old[0].decode()]
         data=archive.read_bytes();digest=hashlib.sha256(data).hexdigest()
         blob=git('hash-object','-w','--stdin',payload=data).decode()
@@ -59,25 +64,40 @@ def _upload_git_archive(archive, remote, tag):
         commit=git('-c','user.name=RMUC RL Backup','-c','user.email=rmuc2027-backup@users.noreply.github.com',
                    'commit-tree',tree,*parent,'-m','RL recovery checkpoint '+digest[:12]).decode()
         # A concurrent update is rejected rather than overwriting remote work.
-        git('push','--quiet',remote,commit+':'+ref)
-        verified=git('ls-remote',remote,ref).split()
+        git('push','--quiet',remote,commit+':'+ref,remote_operation=True)
+        verified=git('ls-remote',remote,ref,remote_operation=True).split()
         if not verified or verified[0].decode()!=commit:
             raise RuntimeError('Checkpoint ref could not be verified after push')
     return {'transport':'ssh-git','ref':ref,'commit':commit,'sha256':digest}
 
 
-def upload(archive, repository, tag):
-    if not shutil.which('gh'):
-        if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):
-            raise ValueError('Invalid backup repository')
-        return _upload_git_archive(archive,'git@github.com:'+repository+'.git',tag)
+def _upload_github_release(archive, repository, tag):
     def gh(*args, check=True):
-        return subprocess.run(['gh',*args,'--repo',repository],capture_output=True,text=True,timeout=60,check=check)
+        return subprocess.run(['gh',*args,'--repo',repository],capture_output=True,text=True,timeout=120,check=check)
     if gh('release','view',tag,check=False).returncode:
         gh('release','create',tag,'--target','backup/mjwarp-progress','--prerelease',
            '--title',tag,'--notes','RL recovery checkpoints; development run, not a validated release.')
     gh('release','upload',tag,str(archive),'--clobber')
     return {'transport':'github-release'}
+
+
+def upload(archive, repository, tag):
+    """Prefer the SSH key over the GitHub CLI.
+
+    `gh` can be installed and logged in while owning a different account than
+    the repository: here the CLI token has read access only, so every release
+    call answers HTTP 404 and the checkpoint is reported as failed although the
+    SSH key in ~/.ssh has write access. The key is therefore the primary
+    transport, and `gh` is kept as the fallback.
+    """
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):
+        raise ValueError('Invalid backup repository')
+    try:
+        return _upload_git_archive(archive,'git@github.com:'+repository+'.git',tag)
+    except Exception:
+        if not shutil.which('gh'):
+            raise
+    return _upload_github_release(archive,repository,tag)
 
 
 class ReleaseBackup:

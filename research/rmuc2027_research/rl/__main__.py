@@ -32,9 +32,25 @@ def rss_kib():
     return None
 
 
+def fresh_directory(path, command):
+    """Create a run directory that must not already exist, with a usable error.
+
+    `mkdir(exist_ok=False)` raises FileExistsError, which is not a ValueError or
+    a RuntimeError, so it escaped the handlers in main() as a traceback. Re-running
+    a finished command is a normal operator mistake; it should say which path is
+    in the way, not dump a stack.
+    """
+    path = Path(path)
+    try:
+        path.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        raise ValueError(f'{command} output directory already exists: {path}; '
+                         'pick another --run-dir or move the old one aside') from None
+    return path
+
+
 def random_run(config, steps, output):
-    output = Path(output)
-    output.mkdir(parents=True, exist_ok=False)
+    output = fresh_directory(output, 'random')
     rng = random.Random(config['seed']+901)
     started = time.perf_counter()
     with ArenaSession(config, record_replay=True) as session:
@@ -127,7 +143,7 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
     import numpy as np
     output = Path(output)
     if not math.isfinite(min_realtime) or min_realtime<=0:raise ValueError('min realtime factor must be positive and finite')
-    output.mkdir(parents=True, exist_ok=False)
+    output = fresh_directory(output, 'benchmark')
     manifest=provenance(config)
     write_json(output/'experiment.json',manifest)
     results = []
@@ -223,6 +239,8 @@ def main():
             p.add_argument('--wall-seconds', type=float)
             p.add_argument('--additional-steps', type=int)
             p.add_argument('--resume', type=Path)
+            p.add_argument('--init-from', type=Path,
+                help='PPO checkpoint whose weights seed a new experiment (counters reset)')
             p.add_argument('--num-envs', type=int, default=1)
             p.add_argument('--device', choices=('cpu', 'cuda'), default='cpu')
         else:
@@ -238,6 +256,9 @@ def main():
     p.add_argument('--sides', choices=('red', 'blue'), nargs='+', default=['red', 'blue'])
     p.add_argument('--duration', type=int, default=420)
     p.add_argument('--device', choices=('cpu', 'cuda'), default='cpu')
+    p.add_argument('--backend', choices=('rapier', 'mjwarp', 'warp_kinematic'), default=None,
+        help='Override the recorded sim_backend; default follows the training config so the '
+             'reported outcome comes from the simulator the run was trained on')
     p = sub.add_parser('export')
     p.add_argument('--model', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
@@ -262,14 +283,25 @@ def main():
                 raise ValueError('steps must be positive')
             random_run(config, args.steps, args.run_dir)
         elif args.command == 'train':
-            from .learning import train
+            from .learning import train, check_action_std, check_steps
             if args.additional_steps is not None and not args.resume:
                 raise ValueError('--additional-steps requires --resume')
-            train(config, args.run_dir, args.additional_steps if args.additional_steps is not None else args.total_steps,
-                args.num_envs, args.device, args.resume, args.wall_seconds)
+            if args.resume and args.init_from:
+                raise ValueError('--resume and --init-from are mutually exclusive')
+            if args.init_from is not None and not args.init_from.is_file():
+                raise ValueError(f'--init-from is not a file: {args.init_from}')
+            # Both checks are pure config, so they run before the environment
+            # and torch are touched. They used to surface minutes in - after N
+            # policies had spawned and the run directory existed - as a bare
+            # ValueError that read like a crash rather than like a bad flag.
+            check_action_std(config)
+            steps = args.additional_steps if args.additional_steps is not None else args.total_steps
+            check_steps(config, args.num_envs, steps)
+            train(config, args.run_dir, steps, args.num_envs, args.device, args.resume,
+                  args.wall_seconds, args.init_from)
         elif args.command == 'evaluate':
             from .learning import evaluate
-            evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device)
+            evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device, args.backend)
         elif args.command == 'compose':
             from .exporting import compose_exports
             print(json.dumps(compose_exports(args.exports, args.output)), flush=True)

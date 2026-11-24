@@ -5,6 +5,12 @@ node_modules/
 target/
 build/
 data/
+# Reference material, not source: competition rule PDFs and the 2026 region
+# dataset (~1.2 GB). Too large for Git and not needed to build or run anything.
+guize/
+# Agent tooling state (session notes, plans). The durable findings from it live
+# in docs/, so tracking the working directory as well would just duplicate them.
+.workbuddy/
 **/__pycache__/
 *.pyc
 *.egg-info/
