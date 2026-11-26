@@ -20,6 +20,9 @@ STATE_LIMIT = 256 * 1024
 ACTIONS_LIMIT = 16 * 1024
 
 
+_STATIC_OBS_KEYS = ("arena", "rulebook_rules", "simulation_assumptions", "specs")
+
+
 def main():
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     random.seed(int(sys.argv[2]))
@@ -46,9 +49,15 @@ def main():
         traceback.print_exc(file=sys.stderr)
         return
     stdin = getattr(sys.stdin, "buffer", sys.stdin)
+    cached_static = None
     for line in stdin:
         try:
             observation = _orjson.loads(line) if _orjson is not None else json.loads(line)
+            if observation.pop("__cache_static__", False):
+                cached_static = {key: observation[key] for key in _STATIC_OBS_KEYS if key in observation}
+            elif cached_static is not None:
+                for key, value in cached_static.items():
+                    observation.setdefault(key, value)
             with contextlib.redirect_stdout(sys.stderr):
                 result = strategy.act(observation, state)
             if not isinstance(result, (tuple, list)) or len(result) != 2:

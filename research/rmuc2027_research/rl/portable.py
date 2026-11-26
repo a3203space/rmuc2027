@@ -556,6 +556,34 @@ def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
     return {'move': list(u['escape']), 'heading': u['heading']}
 
 
+def _recover_nav_goal(robot, goal, obs):
+    """Route recover returns around the western road slope without east overshoot."""
+    arena = obs.get('arena') or {}
+    if goal is None or arena.get('layout_revision') != 'chapter4-2027-v1':
+        return goal
+    w = float(arena.get('width', 28.0))
+    h = float(arena.get('height', 15.0))
+    blue = robot.get('team') == 'blue'
+    lx = w - float(robot['x']) if blue else float(robot['x'])
+    ly = h - float(robot['y']) if blue else float(robot['y'])
+    gx = w - float(goal[0]) if blue else float(goal[0])
+    gy = h - float(goal[1]) if blue else float(goal[1])
+    if gx > 3.5 or gy < 11.0:
+        return goal
+    wp = None
+    if 3.9 <= lx <= 5.25 and ly >= 12.25:
+        wp = (4.95, 12.05)
+    elif 3.9 <= lx < 6.50 and 11.45 <= ly < 12.25:
+        wp = (6.65, 11.50)
+    elif 6.45 <= lx <= 7.80 and 10.65 <= ly < 12.15:
+        wp = (6.15, 10.55)
+    elif 4.20 <= lx < 6.45 and 10.10 <= ly <= 11.15:
+        wp = (3.85, 10.70)
+    if wp is None:
+        return goal
+    return [w - wp[0], h - wp[1]] if blue else [wp[0], wp[1]]
+
+
 def execute_goal(obs, state, navigator, config, baseline):
     """Movement arbitration; weapon and resource operations remain rule modules."""
     robot = own_robot(obs, config['slot'])
@@ -637,7 +665,11 @@ def execute_goal(obs, state, navigator, config, baseline):
     nav_state = state.setdefault('navigation', {})
     in_manoeuvre = any(nav_state.get(k, {}).get('phase', 'approach') != 'approach' for k in ('entry', 'tunnel'))
     gap = math.hypot(robot['x'] - goal[0], robot['y'] - goal[1]) if goal is not None else 0.0
+    nav_goal = _recover_nav_goal(robot, goal, obs) if mode == 'recover' else goal
+    nav_gap = math.hypot(robot['x'] - nav_goal[0], robot['y'] - nav_goal[1]) if nav_goal is not None else 0.0
     on_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=0.35, margin_y=0.25)
+    if mode == 'recover' and nav_goal != goal:
+        on_bumps = None
     approaching_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=1.5, margin_y=0.5)
     if goal is None:
         state['goal_settled'] = False
@@ -656,10 +688,11 @@ def execute_goal(obs, state, navigator, config, baseline):
         state['goal_settled'] = False
         nav_obs = obs if 'policy_dt' in obs else dict(
             obs, policy_dt=control_dt, navigation_mode=config.get('navigation_mode', 'legacy'))
-        fields.update(_sdk.navigate_action(robot, goal, nav_obs, nav_state))
+        fields.update(_sdk.navigate_action(robot, nav_goal, nav_obs, nav_state))
         raw_move = fields['move']
         step_travel = float(robot.get('speed_reference_mps', 3.0)) * control_dt
-        if (gap < step_travel
+        if (nav_goal == goal
+                and gap < step_travel
                 and not in_manoeuvre
                 and not any(fields.get(k) for k in ('jump', 'transform', 'brake'))
                 and getattr(raw_move, 'heading', None) is None):
@@ -668,7 +701,7 @@ def execute_goal(obs, state, navigator, config, baseline):
                 scale = min(1.0, gap / max(step_travel, 1e-6))
                 fields['move'] = (raw_move[0] * scale, raw_move[1] * scale)
         if not in_manoeuvre and gap > GOAL_RESUME_RADIUS_M and not any(fields.get(k) for k in ('jump', 'transform', 'brake')):
-            fields = _unstick_fields(robot, fields, goal, obs, state, on_bumps)
+            fields = _unstick_fields(robot, fields, nav_goal, obs, state, on_bumps)
         elif 'unstick' in state:
             state['unstick']['trail'].clear()
     now = float(obs['time'])

@@ -98,8 +98,15 @@ class FrameLog(Sequence):
 
 class EncodedObservation:
     """An engine observation line forwarded to a policy without decoding it."""
-    def __init__(self, payload, controlled_ids, has_messages):
-        self.payload, self.controlled_ids, self.has_messages = payload, controlled_ids, has_messages
+
+    __slots__ = ("payload", "controlled_ids", "has_messages", "static_payload", "static_data")
+
+    def __init__(self, payload, controlled_ids, has_messages, static_payload=None, static_data=None):
+        self.payload = payload
+        self.controlled_ids = controlled_ids
+        self.has_messages = has_messages
+        self.static_payload = static_payload
+        self.static_data = static_data
 
 
 class Policy:
@@ -107,6 +114,7 @@ class Policy:
         self.timeout, self.sandbox, self.disabled = timeout, sandbox, False
         self.deadline, self.stop_event = deadline, stop_event
         self.dynamic_messages = dynamic_messages
+        self._static_seeded = False
         self.logs, self.lines, self.calls, self.errors = deque(maxlen=32), queue.Queue(maxsize=2), 0, 0
         self.pending_response, self.consecutive_timeouts = None, 0
         self.name, self.temp = "rmuc-" + uuid.uuid4().hex[:16], tempfile.TemporaryDirectory(prefix="rmuc-policy-")
@@ -197,8 +205,19 @@ class Policy:
             return {}, None
         self.calls += 1
         try:
+            seed_static = False
             if isinstance(observation, EncodedObservation):
-                payload, controlled, has_messages = observation.payload, set(observation.controlled_ids), observation.has_messages
+                controlled, has_messages = set(observation.controlled_ids), observation.has_messages
+                if observation.static_payload is not None:
+                    if self.sandbox == "trusted-local" and self._static_seeded:
+                        payload = observation.payload
+                    else:
+                        body = observation.payload.rstrip(b"\n")
+                        suffix = b',"__cache_static__":true}\n' if self.sandbox == "trusted-local" else b"}\n"
+                        payload = body[:-1] + b"," + observation.static_payload + suffix
+                        seed_static = self.sandbox == "trusted-local"
+                else:
+                    payload = observation.payload
             else:
                 payload = json.dumps(observation, allow_nan=False, separators=(",", ":")).encode() + b"\n"
                 controlled, has_messages = set(observation["controlled_ids"]), "messages" in observation
@@ -217,6 +236,8 @@ class Policy:
             self.process.stdin.write(payload)
             self.process.stdin.flush()
             actions = self._receive(until)
+            if seed_static:
+                self._static_seeded = True
             self.consecutive_timeouts = 0
             return actions, None
         except queue.Empty:

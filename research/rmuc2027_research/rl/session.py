@@ -298,7 +298,14 @@ class GoalController:
         select_goal(obs, self.state, action, self.navigator, self.config)
 
     def decide(self, observation):
-        obs = decode_response_json(observation.payload) if isinstance(observation, EncodedObservation) else observation
+        if isinstance(observation, EncodedObservation):
+            obs = decode_response_json(observation.payload)
+            if observation.static_data is not None:
+                obs.update(observation.static_data)
+            elif observation.static_payload is not None:
+                obs.update(decode_response_json(b"{" + observation.static_payload + b"}"))
+        else:
+            obs = observation
         self.calls += 1
         opening = fixed_opening(obs, self.state, self.config, self.baseline)
         if opening is not None:

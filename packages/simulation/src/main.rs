@@ -95,15 +95,23 @@ fn main() {
                         .map_err(|e|e.to_string())?;
                     e.probe_terrain(&points)
                 }
+                "static_observation" => Ok(e.static_observation()),
                 "observations" => {
                     // One round trip for every policy: a header with each observation's
                     // controlled ids, then one raw observation line per request.
+                    let omit_static = request["static"].as_bool() == Some(false);
                     let mut controlled = Vec::new();
                     for item in request["requests"].as_array().ok_or("requests required")? {
                         let (team, slots) = viewer(item)?;
-                        let observation = e.observation_without_arena(team, slots.as_deref());
-                        controlled.push(observation["controlled_ids"].clone());
-                        extra.push(encode_with(&observation, &[("arena", &arena_json)])?);
+                        if omit_static {
+                            let observation = e.observation_without_static(team, slots.as_deref());
+                            controlled.push(observation["controlled_ids"].clone());
+                            extra.push(serde_json::to_vec(&observation).map_err(|err| err.to_string())?);
+                        } else {
+                            let observation = e.observation_without_arena(team, slots.as_deref());
+                            controlled.push(observation["controlled_ids"].clone());
+                            extra.push(encode_with(&observation, &[("arena", &arena_json)])?);
+                        }
                     }
                     Ok(json!({"controlled_ids": controlled}))
                 }

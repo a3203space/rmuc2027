@@ -30,14 +30,14 @@
     3.0,
     1.0,
     3.0,
+    0.5,
+    0.5,
+    2.0,
+    2.0,
+    2.0,
+    1.5,
     1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0
+    0.5
   ],
   "controllers": {
     "red:7": {
@@ -47,10 +47,10 @@
   "rewards": {
     "control": 0.01,
     "outcome": 10.0,
-    "capture_seconds": 0.005,
+    "capture_seconds": 0.01,
     "death": -0.5,
     "terrain_buff": 0.0,
-    "position_control": 0.01
+    "position_control": 0.03
   },
   "ppo": {
     "n_steps": 256,

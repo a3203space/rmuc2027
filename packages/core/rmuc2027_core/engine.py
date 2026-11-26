@@ -61,6 +61,7 @@ RULES_PROFILE = _config["version"]
 MATCH_DURATION = 420
 # Frame fields that never change during a match; compact engine steps leave them out.
 STATIC_FRAME_KEYS = ("arena", "rulebook_rules", "simulation_assumptions", "robot_models")
+STATIC_OBSERVATION_KEYS = ("arena", "rulebook_rules", "simulation_assumptions", "specs")
 
 
 def arena_map(name="rmuc2027"):
@@ -91,6 +92,8 @@ class Match:
             environment['RMUC_KINEMATIC_PHYSICS' if mode == 'kinematic_frame' else 'RMUC_EXTERNAL_PHYSICS'] = '1'
         self.lock = threading.RLock()
         self._observation_cache = {}
+        self._compact_observation_cache = {}
+        self._static_obs_cache = None
         if replay_version is not None:
             raise ValueError('Legacy engines are not included; historical 2027 replays remain viewable')
         binary = binary_path()
@@ -124,8 +127,9 @@ class Match:
             self._ensure_available()
             # Only explicit, pure engine queries preserve the current-state cache.
             # Unknown operations invalidate conservatively, including failed writes.
-            if request.get('op') not in ('observation','observations','operator_observation','snapshot','digest','terrain_probe'):
+            if request.get('op') not in ('observation','observations','static_observation','operator_observation','snapshot','digest','terrain_probe'):
                 self._observation_cache.clear()
+                self._compact_observation_cache.clear()
             payload = json.dumps(request, allow_nan=False, separators=(",", ":")).encode() + b"\n"
             try:
                 self.process.stdin.write(payload)
@@ -171,13 +175,14 @@ class Match:
                   all(type(slot) is int and slot in SLOT_IDS for slot in frozen)))
         return frozen, (team, frozen) if valid else None
 
-    def _remember_observation(self, key, ids, line):
+    def _remember_observation(self, key, ids, line, cache=None):
+        target = self._observation_cache if cache is None else cache
         if _CACHE_POLICY_OBSERVATIONS and key is not None:
-            if key not in self._observation_cache and len(self._observation_cache) >= 32:
-                del self._observation_cache[next(iter(self._observation_cache))]
+            if key not in target and len(target) >= 32:
+                del target[next(iter(target))]
             # Only immutable engine bytes/ids are retained. Policy augmentation
             # and caller mutation must never enter another viewer's observation.
-            self._observation_cache[key] = (tuple(ids), line)
+            target[key] = (tuple(ids), line)
 
     @staticmethod
     def _read_output(stream, responses):
@@ -235,33 +240,54 @@ class Match:
         value = self._request({"op": "operator_observation", "team": team, "slot": slot})
         return {"arena": self._static["arena"], **value}
 
+    def static_observation_data(self):
+        """Return and cache `(dict, inner_json_bytes)` for match-constant observation fields."""
+        with self.lock:
+            if self._static_obs_cache is None:
+                value, line = self._request({"op": "static_observation"}, raw=True)
+                raw = line.strip()
+                if not raw.startswith(b"{") or not raw.endswith(b"}"):
+                    raise RuntimeError("Invalid static observation JSON")
+                self._static_obs_cache = (value, raw[1:-1])
+            return self._static_obs_cache
+
+    def _fetch_observations(self, viewers, cache, include_static):
+        with self.lock:
+            self._ensure_available()
+            viewers = [(team, *self._viewer(team, slots)) for team, slots in viewers]
+            results = [cache.get(key) if _CACHE_POLICY_OBSERVATIONS else None for _, _, key in viewers]
+            missing = [i for i, result in enumerate(results) if result is None]
+            if not missing:
+                return [list(result[0]) for result in results], [result[1] for result in results]
+            request = {"op": "observations", "requests": [{"team": viewers[i][0], "slots": viewers[i][1]} for i in missing]}
+            if not include_static:
+                request["static"] = False
+            header = self._request(request)
+            # The engine builds every observation before replying, so the lines follow at once.
+            try:
+                lines = [self._read_line() for _ in missing]
+                controlled = header['controlled_ids']
+                if len(controlled) != len(missing):
+                    raise RuntimeError('Invalid observation batch size')
+                for i, ids, line in zip(missing, controlled, lines):
+                    results[i] = (tuple(ids), line)
+                    self._remember_observation(viewers[i][2], ids, line, cache=cache)
+                return [list(result[0]) for result in results], [result[1] for result in results]
+            except BaseException:
+                self._broken = True
+                raise
+
     def observations(self, viewers):
         """Encoded observations for (team, slots) viewers in a single engine round trip.
 
         Returns each observation's controlled ids and its JSON line, which policies can
         receive as is instead of being decoded and encoded again.
         """
-        with self.lock:
-            self._ensure_available()
-            viewers=[(team,*self._viewer(team,slots)) for team,slots in viewers]
-            results=[self._observation_cache.get(key) if _CACHE_POLICY_OBSERVATIONS else None for _,_,key in viewers]
-            missing=[i for i,result in enumerate(results) if result is None]
-            if not missing:
-                return [list(result[0]) for result in results], [result[1] for result in results]
-            header = self._request({"op": "observations", "requests": [{"team": viewers[i][0], "slots": viewers[i][1]} for i in missing]})
-            # The engine builds every observation before replying, so the lines follow at once.
-            try:
-                lines=[self._read_line() for _ in missing]
-                controlled=header['controlled_ids']
-                if len(controlled)!=len(missing):
-                    raise RuntimeError('Invalid observation batch size')
-                for i,ids,line in zip(missing,controlled,lines):
-                    results[i]=(tuple(ids),line)
-                    self._remember_observation(viewers[i][2],ids,line)
-                return [list(result[0]) for result in results], [result[1] for result in results]
-            except BaseException:
-                self._broken=True
-                raise
+        return self._fetch_observations(viewers, self._observation_cache, include_static=True)
+
+    def compact_observations(self, viewers):
+        """Encoded observations omitting match-constant fields for local caching policies."""
+        return self._fetch_observations(viewers, self._compact_observation_cache, include_static=False)
 
     def snapshot(self):
         return self._request({"op": "snapshot"}) if self.training_summary else copy.deepcopy(self._frame)

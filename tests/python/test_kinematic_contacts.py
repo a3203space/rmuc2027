@@ -77,6 +77,17 @@ class ContactTests(unittest.TestCase):
         self.assertFalse(sim.contact_exhausted.numpy().any())
         self.assertAlmostEqual(float(vel[:,0].sum()),4.,places=4)
 
+    def test_acute_wedge_zeno_exits_early_and_marks_exhausted(self):
+        sim = self.sim(
+            [[0.60, 1.0], [1.0001, 1.0]],
+            boxes=[[0.0, 1.20001, 2.0, 1.30001], [0.0, 0.69999, 2.0, 0.79999]],
+        )
+        sim.angles.assign(np.array([-0.03, 0.03], dtype=np.float32))
+        sim.step([[2.0, 0.0], [2.0, 0.0]], dt=0.05)
+        pos, _ = sim.state()
+        self.assertTrue(sim.contact_exhausted.numpy().all())
+        self.assertLessEqual(float(pos[1, 0]), 1.01)
+
     def test_wall_overlap_allows_escape_but_not_deeper_motion(self):
         sim=self.sim([[.40002,0]],boxes=[[.6,-1,.7,1]])
         sim.step([[.1,0]])

@@ -86,9 +86,13 @@ def resolve(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=wp.vec2)
                 touched[i] = 1
     remaining = float(1.0)
     events = int(0)
+    stalled = int(0)
+    stalled_limit = wp.max(256, 32 * size * size)
     # Preserve the event budget, contact skin, tie ordering and arithmetic.
     for iteration in range(4096):
         if remaining <= 1e-07:
+            break
+        if stalled >= stalled_limit:
             break
         earliest = remaining
         left = int(-1)
@@ -174,6 +178,10 @@ def resolve(previous: wp.array(dtype=wp.vec2), proposed: wp.array(dtype=wp.vec2)
                 result[i] = result[i] + moves[i] * earliest
             remaining = remaining - earliest
             events = events + 1
+            if earliest <= 1e-07:
+                stalled = stalled + 1
+            else:
+                stalled = 0
             touched[left] = 1
             if right >= 0:
                 touched[right] = 1

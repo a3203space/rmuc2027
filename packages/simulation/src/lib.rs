@@ -1672,8 +1672,21 @@ impl Engine {
         observation
     }
     /// `observation` minus the static arena map, which a transport can encode once per match.
+    pub fn static_observation(&self) -> Value {
+        json!({
+            "arena": self.arena,
+            "rulebook_rules": self.public_rule_summary(),
+            "simulation_assumptions": self.sim,
+            "specs": self.specs,
+        })
+    }
+
     pub fn observation_without_arena(&self, team: &str, slots: Option<&[u32]>) -> Value {
-        self.camera_observation(team, slots, false)
+        self.camera_observation_inner(team, slots, false, true)
+    }
+
+    pub fn observation_without_static(&self, team: &str, slots: Option<&[u32]>) -> Value {
+        self.camera_observation_inner(team, slots, false, false)
     }
     /// Human operators retain their own wreck's camera, never an allied/spectator camera.
     /// Policy observations deliberately continue to require a living observer.
@@ -1681,6 +1694,16 @@ impl Engine {
         self.camera_observation(team, Some(&[slot]), true)
     }
     fn camera_observation(&self, team: &str, slots: Option<&[u32]>, operator: bool) -> Value {
+        self.camera_observation_inner(team, slots, operator, true)
+    }
+
+    fn camera_observation_inner(
+        &self,
+        team: &str,
+        slots: Option<&[u32]>,
+        operator: bool,
+        include_static: bool,
+    ) -> Value {
         let friends: Vec<&Robot> = self.robots.iter().filter(|r| r.team == team).collect();
         let observers: Vec<&Robot> = friends
             .iter()
@@ -1794,8 +1817,13 @@ impl Engine {
         let mut observation = json!({"api_version":3,"seed":self.seed,"tick":self.tick,"time":self.time(),"dt":DT,"policy_dt":0.1,
             "remaining":(self.duration-self.time()).max(0.0),"team":team,
             "controlled_ids":friends.iter().filter(|r|slots.map(|s|s.contains(&r.slot)).unwrap_or(true)).map(|r|r.slot.to_string()).collect::<Vec<_>>(),
-            "robots":friends,"robot_models":observed_models,"enemies":enemies,"bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.observed_runes(team,&observers),"assemblies":self.assembly_snapshots(),"rulebook_rules":self.public_rule_summary(),"simulation_assumptions":self.sim,"roster":self.roster(),"teams":self.observed_teams(team),"zones":self.zones,
-            "projectiles":bullets,"vision":vision,"specs":self.specs,"referee":self.referee_telemetry(team)});
+            "robots":friends,"robot_models":observed_models,"enemies":enemies,"bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.observed_runes(team,&observers),"assemblies":self.assembly_snapshots(),"roster":self.roster(),"teams":self.observed_teams(team),"zones":self.zones,
+            "projectiles":bullets,"vision":vision,"referee":self.referee_telemetry(team)});
+        if include_static {
+            observation["specs"] = json!(self.specs);
+            observation["rulebook_rules"] = self.public_rule_summary();
+            observation["simulation_assumptions"] = json!(self.sim);
+        }
         {
             observation["season"] = json!("2027");
             observation["positions"] = self.position_snapshots();

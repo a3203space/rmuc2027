@@ -188,9 +188,15 @@ class Battle:
                 and robot.get('launcher') not in ('unlocked','installing','fitted','installed')
                 and any(d not in completed for d in (1,2,3)))
 
-    def encoded_observations(self, policies):
+    def encoded_observations(self, policies, compact=False):
         """The same observations as `observation`, fetched together and left encoded."""
-        controlled, lines = self.match.observations([(team, slots) for team, slots, _ in policies])
+        requests = [(team, slots) for team, slots, _ in policies]
+        if compact and hasattr(self.match, "compact_observations"):
+            static_dict, static_inner = self.match.static_observation_data()
+            controlled, lines = self.match.compact_observations(requests)
+        else:
+            static_dict, static_inner = None, None
+            controlled, lines = self.match.observations(requests)
         encoded = []
         for (team, slots, policy), ids, line in zip(policies, controlled, lines):
             additions={}
@@ -199,6 +205,8 @@ class Battle:
                         self.timed_assembly and (slots is None or 1 in slots)
                         and self.fixed_assembly_controls_slot(team,[1])):
                     value = decode_response_json(line)
+                    if static_dict is not None:
+                        value.update(static_dict)
                     if self.motion_trace:
                         value["motion_trace"] = True
                     self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
@@ -209,7 +217,15 @@ class Battle:
             # Append both keys last, in the order `observation` adds them.
             additions.update(message_inboxes=inboxes,messages=messages)
             tail = ',' + json.dumps(additions,allow_nan=False,separators=(",", ":"))[1:-1]
-            encoded.append(EncodedObservation(line.rstrip(b"\n")[:-1] + tail.encode() + b"}\n", ids, True))
+            encoded.append(
+                EncodedObservation(
+                    line.rstrip(b"\n")[:-1] + tail.encode() + b"}\n",
+                    ids,
+                    True,
+                    static_payload=static_inner,
+                    static_data=static_dict,
+                )
+            )
         return encoded
 
     def step(self):
@@ -227,7 +243,7 @@ class Battle:
         deciding = [item for item in due if not item[2].disabled]
         futures = []
         if deciding:
-            for (team, slots, p), observation in zip(deciding, self.encoded_observations(deciding)):
+            for (team, slots, p), observation in zip(deciding, self.encoded_observations(deciding, compact=True)):
                 if self.fixed_assembly_controls_slot(team,slots):
                     # The fixed opening below owns the entire command. Avoid
                     # executing a controller whose result would be discarded.

@@ -118,4 +118,38 @@ class ObservationReuseTests(unittest.TestCase):
         self.assertEqual(match.observation('blue',[7])['tick'],1)
 
 
+    def test_compact_observations_omit_static_fields_and_preserve_digest_parity(self):
+        from rmuc2027_core.engine import Match, STATIC_OBSERVATION_KEYS, decode_response_json
+        from rmuc2027_core.paths import ROOT
+        from rmuc2027_research.strategies.battle import Battle
+
+        with Match(seed=42) as match:
+            ids_full, lines_full = match.observations([("red", [7])])
+            ids_comp, lines_comp = match.compact_observations([("red", [7])])
+            static_dict, _ = match.static_observation_data()
+            self.assertEqual(ids_full, ids_comp)
+            self.assertEqual(set(static_dict.keys()), set(STATIC_OBSERVATION_KEYS))
+            full_obj = decode_response_json(lines_full[0])
+            comp_obj = decode_response_json(lines_comp[0])
+            self.assertFalse(any(key in comp_obj for key in STATIC_OBSERVATION_KEYS))
+            self.assertLess(len(lines_comp[0]), 0.60 * len(lines_full[0]))
+            self.assertEqual({**comp_obj, **static_dict}, full_obj)
+
+        opp = str(ROOT / "research/strategies/examples/claude_opus55_xhigh_2027_hold")
+        with Battle(red=opp, blue=opp, seed=1008, duration=10, sandbox="trusted-local") as b_compact:
+            while b_compact.step()["status"] != "finished":
+                if b_compact.match.tick >= 60:
+                    break
+            digest_compact = b_compact.match.digest()
+            self.assertTrue(all(getattr(item[2], "_static_seeded", False) for item in b_compact.policies))
+        with Battle(red=opp, blue=opp, seed=1008, duration=10, sandbox="trusted-local") as b_full:
+            orig_encoded = b_full.encoded_observations
+            b_full.encoded_observations = lambda policies, compact=True: orig_encoded(policies, compact=False)
+            while b_full.step()["status"] != "finished":
+                if b_full.match.tick >= 60:
+                    break
+            digest_full = b_full.match.digest()
+        self.assertEqual(digest_compact, digest_full)
+
+
 if __name__=='__main__':unittest.main()

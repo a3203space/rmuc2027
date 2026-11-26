@@ -1537,6 +1537,38 @@ class Stage3FixRegressionTests(unittest.TestCase):
             metadata = export_model(run / 'model.zip', exported)
             self.assertLess(metadata['actor_parity_max_error'], 1e-5)
 
+    def test_recover_corridor_targets_western_ramp_exit_without_east_overshoot(self):
+        from rmuc2027_research.rl import portable
+
+        cfg = load_config(rl_session.ROOT / 'configs/rl/sentry-pooled-v3.json')
+        cfg['learning_control_hz'] = 2
+        for side, start_xy, expected_wp in [
+            ('red', (4.9, 13.3), (4.95, 12.05)),
+            ('red', (5.4, 11.9), (6.65, 11.50)),
+            ('red', (6.6, 11.4), (6.15, 10.55)),
+            ('red', (5.4, 10.8), (3.85, 10.70)),
+            ('blue', (23.1, 1.7), (23.05, 2.95)),
+            ('blue', (22.6, 3.1), (21.35, 3.50)),
+            ('blue', (21.4, 3.6), (21.85, 4.45)),
+            ('blue', (22.6, 4.2), (24.15, 4.30)),
+        ]:
+            arena = {'layout_revision': 'chapter4-2027-v1', 'width': 28.0, 'height': 15.0}
+            supply = [1.5, 13.0] if side == 'red' else [26.5, 2.0]
+            wp = portable._recover_nav_goal(
+                {'team': side, 'x': start_xy[0], 'y': start_xy[1]},
+                supply,
+                {'arena': arena},
+            )
+            self.assertAlmostEqual(wp[0], expected_wp[0], places=6)
+            self.assertAlmostEqual(wp[1], expected_wp[1], places=6)
+        other_arena = {'layout_revision': 'other-layout', 'width': 28.0, 'height': 15.0}
+        self.assertEqual(
+            portable._recover_nav_goal(
+                {'team': 'red', 'x': 4.9, 'y': 13.3}, [1.5, 13.0], {'arena': other_arena},
+            ),
+            [1.5, 13.0],
+        )
+
     def test_v3_config_matches_requested_settings(self):
         cfg = load_config(rl_session.ROOT / 'configs/rl/sentry-pooled-v3.json')
         self.assertFalse(cfg['drones_enabled'])
@@ -1544,6 +1576,12 @@ class Stage3FixRegressionTests(unittest.TestCase):
         self.assertAlmostEqual(cfg['recover_enter'], 0.35)
         self.assertAlmostEqual(cfg['rewards']['death'], -0.5)
         self.assertEqual(cfg['rewards']['terrain_buff'], 0.0)
+        self.assertAlmostEqual(cfg['rewards']['position_control'], 0.03)
+        self.assertAlmostEqual(cfg['rewards']['capture_seconds'], 0.01)
+        self.assertEqual(
+            cfg['opponent_pool_weights'],
+            [1.0, 3.0, 1.0, 3.0, 0.5, 0.5, 2.0, 2.0, 2.0, 1.5, 1.0, 0.5],
+        )
         self.assertAlmostEqual(cfg['ppo']['action_std'], 0.48)
 
 
