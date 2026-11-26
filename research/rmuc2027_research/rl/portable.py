@@ -362,6 +362,7 @@ ATTACK_ENTRY_MIN_AMMO = 45
 LOW_HP_NO_ATTACK = 0.45
 MULTI_ENEMY_NO_ATTACK_HP = 0.55
 HEAVY_THREAT_RADIUS_M = 8.0
+HEAVY_MEMORY_S = 3.0
 
 
 def _segment_box_clear_3d(ax, ay, az, bx, by, bz, wall):
@@ -618,6 +619,7 @@ def execute_goal(obs, state, navigator, config, baseline):
         state['goal_settled'] = False
         state.pop('navigation', None)
         state.pop('unstick', None)
+        state.pop('last_heavy_near_time', None)
         fields.update(baseline.revive_fields(robot, ctx))
     elif robot.get('tipped'):
         mode, goal = 'tipped', None
@@ -742,22 +744,27 @@ def execute_goal(obs, state, navigator, config, baseline):
                 math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
                 for e in live_combat_enemies
             )
-            heavy_near = any(
+            heavy_seen_now = any(
                 e.get('role') == 'heavy'
                 and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= HEAVY_THREAT_RADIUS_M
                 for e in live_combat_enemies
+            )
+            if heavy_seen_now:
+                state['last_heavy_near_time'] = now
+            heavy_near = heavy_seen_now or (
+                0.0 <= now - float(state.get('last_heavy_near_time', -99.0)) <= HEAVY_MEMORY_S
             )
             outnumbered_close = sum(
                 1 for e in live_combat_enemies
                 if math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 6.0
             ) >= 2
             traverse_bumps = (
-                (on_bumps is not None or approaching_bumps is not None or in_unstick or bump_boost)
+                (on_bumps is not None or approaching_bumps is not None or bump_boost)
                 and goal is not None
                 and not state.get('goal_settled')
                 and gap > GOAL_RESUME_RADIUS_M
             )
-            bump_emergency_def = hp < 0.35 and threatened
+            bump_emergency_def = hp < 0.35
             combat_unsafe_attack = (
                 hp < LOW_HP_NO_ATTACK
                 or (hp < 0.65 and threatened)

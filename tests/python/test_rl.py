@@ -1412,7 +1412,9 @@ class Stage3FixRegressionTests(unittest.TestCase):
             actions, _ = controller.decide(obs)
             self.assertNotEqual(actions['7'].get('posture'), 'attack')
 
-            # Close-range enemy heavy hero (<= 8 m) blocks entering vulnerable 'attack' even at 100% HP.
+            # Close-range enemy heavy hero (<= 8 m) blocks entering vulnerable 'attack' even at 100% HP,
+            # and keeps a 3.0 s anti-flicker memory when the heavy briefly leaves line-of-sight.
+            obs['time'] = 60.0
             obs['enemies'] = [{
                 'id': 'blue-1', 'slot': 1, 'role': 'heavy', 'team': 'blue',
                 'x': 15.0, 'y': 5.0, 'z': robot.get('z', 0.0),
@@ -1424,6 +1426,19 @@ class Stage3FixRegressionTests(unittest.TestCase):
                          posture='defense', posture_ready_at=0.0)
             actions, _ = controller.decide(obs)
             self.assertNotEqual(actions['7'].get('posture'), 'attack')
+            obs['enemies'] = [{
+                'id': 'blue-3', 'slot': 3, 'role': 'infantry', 'team': 'blue',
+                'x': 12.0, 'y': 5.0, 'z': robot.get('z', 0.0),
+                'vx': 0.0, 'vy': 0.0, 'hp': 200.0, 'max_hp': 200.0,
+                'alive': True, 'targetable': True, 'invulnerable': False,
+                'armor_center_z_m': 0.2,
+            }]
+            obs['time'] = 62.0  # +2.0 s <= 3.0 s heavy memory: still blocks 'attack'
+            actions, _ = controller.decide(obs)
+            self.assertNotEqual(actions['7'].get('posture'), 'attack')
+            obs['time'] = 64.0  # +4.0 s > 3.0 s memory expired: normal infantry duel enters 'attack'
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7'].get('posture'), 'attack')
 
             # Emergency survival retreat bypasses uncovered outpost off central (< 25% HP or < recover_enter & 0 ammo).
             obs['positions']['red_outpost']['control'] = 'temporary'
@@ -1446,18 +1461,27 @@ class Stage3FixRegressionTests(unittest.TestCase):
                 actions, _ = controller.decide(obs)
                 self.assertEqual(controller.state['mode'], 'recover')
 
-            # Critical low HP under fire on speed bumps overrides 'move' with 'defense' + enhanced defense.
+            # Critical low HP (< 35%) on speed bumps keeps 'defense' unconditionally (even if threatened cleared),
+            # and activates enhanced defense when under fire; off-bumps unstick never drops 'defense' to 'move'.
             obs['time'] = 120.0
             controller.state['recovering'] = True
             controller.state['goal'] = [1.5, 13.0]
             robot.update(x=6.0, y=13.7, vx=0.0, vy=0.0, ammo=100,
-                         hp=robot['max_hp'] * 0.18, last_damage_time=119.5,
+                         hp=robot['max_hp'] * 0.18, last_damage_time=0.0,
                          posture='move', posture_ready_at=0.0,
                          posture_enhanced_time=[0.0, 0.0, 0.0])
             actions, _ = controller.decide(obs)
             self.assertEqual(controller.state['mode'], 'recover')
             self.assertEqual(actions['7'].get('posture'), 'defense')
+            robot.update(last_damage_time=119.5, posture='move', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7'].get('posture'), 'defense')
             self.assertTrue(actions['7'].get('posture_enhanced'))
+            controller.state['unstick'] = {'trail': [], 'tries': 1, 'until': 125.0, 'escape': [-0.7, 0.0], 'heading': 0.0}
+            robot.update(x=17.8, y=8.0, hp=robot['max_hp'] * 0.10, last_damage_time=0.0,
+                         posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertNotEqual(actions['7'].get('posture'), 'move')
         finally:
             controller.close()
 
