@@ -285,18 +285,16 @@ def select_goal(obs, state, action, navigator, config):
         locked_proposed = list(prev_proposed) if prev_proposed is not None else list(proposed)
     else:
         candidate = navigator.resolve_goal(robot, proposed, obs['arena'])
-        if (
-            prev_goal is not None
-            and candidate is not None
-            and same_fold
-            and (
-                math.hypot(candidate[0] - prev_goal[0], candidate[1] - prev_goal[1]) <= GOAL_HYSTERESIS_M
-                or (
-                    prev_proposed is not None
-                    and math.hypot(proposed[0] - prev_proposed[0], proposed[1] - prev_proposed[1]) <= PROPOSED_HYSTERESIS_M
-                )
+        keep_prev = False
+        if prev_goal is not None and candidate is not None and same_fold:
+            cand_jump = math.hypot(candidate[0] - prev_goal[0], candidate[1] - prev_goal[1])
+            prop_drift = (
+                math.hypot(proposed[0] - prev_proposed[0], proposed[1] - prev_proposed[1])
+                if prev_proposed is not None else float('inf')
             )
-        ):
+            prop_threshold = OBSTACLE_SNAP_PROPOSED_M if cand_jump > OBSTACLE_SNAP_JUMP_M else PROPOSED_HYSTERESIS_M
+            keep_prev = cand_jump <= GOAL_HYSTERESIS_M or prop_drift <= prop_threshold
+        if keep_prev:
             goal = list(prev_goal)
             locked_proposed = list(prev_proposed) if prev_proposed is not None else list(proposed)
         else:
@@ -350,6 +348,8 @@ GOAL_STOP_RADIUS_M = 0.30
 GOAL_RESUME_RADIUS_M = 0.48
 GOAL_HYSTERESIS_M = 1.15
 PROPOSED_HYSTERESIS_M = 1.0
+OBSTACLE_SNAP_JUMP_M = 2.0
+OBSTACLE_SNAP_PROPOSED_M = 1.8
 MOVE_POSTURE_DISTANCE_M = 3.5
 POSTURE_INDEX = {"attack": 0, "defense": 1, "move": 2}
 ENHANCED_BUDGET_S = 14.9
@@ -357,7 +357,11 @@ REMOTE_BUY_MIN_COINS = 200.0
 TEAM_17MM_BUY_LIMIT = 900
 FREE_GRANT_NEAR_M = 8.0
 RECOVER_COMMIT_M = 8.0
-ATTACK_ENTRY_MIN_AMMO = 25
+EMERGENCY_RECOVER_HP = 0.25
+ATTACK_ENTRY_MIN_AMMO = 45
+LOW_HP_NO_ATTACK = 0.45
+MULTI_ENEMY_NO_ATTACK_HP = 0.55
+HEAVY_THREAT_RADIUS_M = 8.0
 
 
 def _segment_box_clear_3d(ax, ay, az, bx, by, bz, wall):
@@ -565,6 +569,7 @@ def execute_goal(obs, state, navigator, config, baseline):
     coins = float(team_state.get('resources', 0.0) or 0.0)
     purchased_17 = int(team_state.get('purchased_17', 0) or 0)
     can_retreat = True
+    emergency_retreat = False
     if robot['role'] == 'sentry':
         central = ctx.zone(obs['team'], 'central')
         covered = any(
@@ -576,6 +581,16 @@ def execute_goal(obs, state, navigator, config, baseline):
             covered
             or ctx.controls(f"{obs['team']}_outpost", full=True)
             or (was_recovering and dist_to_supply <= RECOVER_COMMIT_M)
+        )
+        def_enh_times = robot.get('posture_enhanced_time') or (0.0, 0.0, 0.0)
+        def_idx = POSTURE_INDEX['defense']
+        def_enh_available = def_idx < len(def_enh_times) and float(def_enh_times[def_idx]) < ENHANCED_BUDGET_S
+        holding_central = math.hypot(robot['x'] - central[0], robot['y'] - central[1]) < 1.2
+        # Never trap a dying or empty-ammo sentry off `central` (or with its 99% defense budget spent)
+        # just because the team outpost degraded.
+        emergency_retreat = (
+            (hp < EMERGENCY_RECOVER_HP and (not holding_central or not def_enh_available))
+            or (hp < config['recover_enter'] and int(robot.get('ammo', 0)) == 0)
         )
     due_grants = int(obs['time'] // 60.0)
     taken_grants = int(robot.get('supply_grants_taken', 0) or 0)
@@ -589,6 +604,7 @@ def execute_goal(obs, state, navigator, config, baseline):
     )
     recovering = bool(
         robot.get('weak', False)
+        or emergency_retreat
         or (can_retreat and (
             hp < config['recover_enter']
             or (was_recovering and hp < config['recover_exit'])
@@ -718,22 +734,41 @@ def execute_goal(obs, state, navigator, config, baseline):
             has_ammo = int(robot.get('ammo', 0)) > 0
             attack_ammo_ok = int(robot.get('ammo', 0)) >= (1 if robot.get('posture') == 'attack' else ATTACK_ENTRY_MIN_AMMO)
             combat_ready = attack_ammo_ok and bool(shot)
+            live_combat_enemies = [
+                e for e in obs.get('enemies', ())
+                if e.get('alive') and not e.get('invulnerable') and e.get('role') != 'aerial'
+            ]
             live_duel = has_ammo and any(
-                e['alive'] and not e.get('invulnerable')
-                and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
-                for e in obs.get('enemies', ())
+                math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
+                for e in live_combat_enemies
             )
+            heavy_near = any(
+                e.get('role') == 'heavy'
+                and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= HEAVY_THREAT_RADIUS_M
+                for e in live_combat_enemies
+            )
+            outnumbered_close = sum(
+                1 for e in live_combat_enemies
+                if math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 6.0
+            ) >= 2
             traverse_bumps = (
                 (on_bumps is not None or approaching_bumps is not None or in_unstick or bump_boost)
                 and goal is not None
                 and not state.get('goal_settled')
                 and gap > GOAL_RESUME_RADIUS_M
             )
-            if traverse_bumps:
+            bump_emergency_def = hp < 0.35 and threatened
+            combat_unsafe_attack = (
+                hp < LOW_HP_NO_ATTACK
+                or (hp < 0.65 and threatened)
+                or heavy_near
+                or (hp <= MULTI_ENEMY_NO_ATTACK_HP and outnumbered_close)
+            )
+            if traverse_bumps and not bump_emergency_def:
                 wanted = 'move'
             elif recovering:
-                wanted = 'defense' if (hp < 0.40 or gap <= 3.0) else 'move'
-            elif hp < 0.65 and threatened:
+                wanted = 'defense' if (hp < 0.40 or gap <= 3.0 or threatened) else 'move'
+            elif combat_unsafe_attack:
                 wanted = 'defense'
             elif combat_ready and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
                 wanted = 'attack'

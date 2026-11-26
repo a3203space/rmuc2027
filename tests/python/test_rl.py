@@ -1147,13 +1147,13 @@ class Stage3FixRegressionTests(unittest.TestCase):
             # Small action perturbation resolving <= GOAL_HYSTERESIS_M keeps locked goal.
             select_goal(obs, state, [0.015, -0.015], navigator, self.config)
             self.assertEqual(state['goal'], first_goal)
-            # Even when resolve_goal snaps > 1.15 m across the central plinth, <= 1.0 m proposed_goal drift stays locked.
+            # Even when resolve_goal snaps > 2.0 m across the central plinth, <= 1.8 m proposed_goal drift stays locked.
             w, h = obs['arena']['width'], obs['arena']['height']
-            plinth_cand = navigator.resolve_goal(robot, [((0.055 + 1.0) * w) / 2.0, ((0.055 + 1.0) * h) / 2.0], obs['arena'])
-            self.assertGreater(math.hypot(plinth_cand[0] - first_goal[0], plinth_cand[1] - first_goal[1]), 1.15)
-            select_goal(obs, state, [0.055, 0.055], navigator, self.config)
+            plinth_cand = navigator.resolve_goal(robot, [((0.095 + 1.0) * w) / 2.0, ((0.06 + 1.0) * h) / 2.0], obs['arena'])
+            self.assertGreater(math.hypot(plinth_cand[0] - first_goal[0], plinth_cand[1] - first_goal[1]), 2.0)
+            select_goal(obs, state, [0.095, 0.06], navigator, self.config)
             self.assertEqual(state['goal'], first_goal)
-            # Large perturbation moves goal cleanly.
+            # Large perturbation (> 1.8 m proposed drift) moves goal cleanly.
             select_goal(obs, state, [0.5, 0.5], navigator, self.config)
             self.assertNotEqual(state['goal'], first_goal)
             # Dead/tipped mode freezes goal even under large action changes.
@@ -1397,14 +1397,67 @@ class Stage3FixRegressionTests(unittest.TestCase):
             actions, _ = controller.decide(obs)
             self.assertEqual(actions['7'].get('posture'), 'defense')
 
-            # Parked with < 25 ammo refuses to enter 'attack' from 'defense', whereas ammo=30 enters 'attack'.
-            robot.update(x=10.0, y=5.0, ammo=15, hp=robot['max_hp'],
+            # Parked with < 45 ammo refuses to enter 'attack' from 'defense', whereas ammo=50 enters 'attack'.
+            robot.update(x=10.0, y=5.0, ammo=40, hp=robot['max_hp'],
                          last_damage_time=0.0, posture='defense', posture_ready_at=0.0)
             actions, _ = controller.decide(obs)
             self.assertNotEqual(actions['7'].get('posture'), 'attack')
-            robot.update(ammo=30, posture='defense', posture_ready_at=0.0)
+            robot.update(ammo=50, posture='defense', posture_ready_at=0.0)
             actions, _ = controller.decide(obs)
             self.assertEqual(actions['7'].get('posture'), 'attack')
+
+            # Unconditional low-HP defense floor (< 45% HP) refuses 'attack' even when threatened cleared.
+            robot.update(ammo=150, hp=robot['max_hp'] * 0.40, last_damage_time=0.0,
+                         posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertNotEqual(actions['7'].get('posture'), 'attack')
+
+            # Close-range enemy heavy hero (<= 8 m) blocks entering vulnerable 'attack' even at 100% HP.
+            obs['enemies'] = [{
+                'id': 'blue-1', 'slot': 1, 'role': 'heavy', 'team': 'blue',
+                'x': 15.0, 'y': 5.0, 'z': robot.get('z', 0.0),
+                'vx': 0.0, 'vy': 0.0, 'hp': 600.0, 'max_hp': 600.0,
+                'alive': True, 'targetable': True, 'invulnerable': False,
+                'armor_center_z_m': 0.25,
+            }]
+            robot.update(ammo=150, hp=robot['max_hp'], last_damage_time=0.0,
+                         posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertNotEqual(actions['7'].get('posture'), 'attack')
+
+            # Emergency survival retreat bypasses uncovered outpost off central (< 25% HP or < recover_enter & 0 ammo).
+            obs['positions']['red_outpost']['control'] = 'temporary'
+            for r in obs['robots']:
+                if r['slot'] != 7:
+                    r.update(x=2.0, y=2.0)
+            controller.state['recovering'] = False
+            robot.update(x=16.0, y=8.0, ammo=100, hp=robot['max_hp'] * 0.20,
+                         last_damage_time=0.0, posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+            controller.state['recovering'] = False
+            with patch.dict(controller.config, {'recover_enter': 0.35}):
+                robot.update(x=12.3, y=7.1, ammo=100, hp=robot['max_hp'] * 0.31,
+                             last_damage_time=0.0, posture='defense', posture_ready_at=0.0)
+                actions, _ = controller.decide(obs)
+                self.assertEqual(controller.state['mode'], 'policy')
+                robot.update(x=12.3, y=7.1, ammo=0, hp=robot['max_hp'] * 0.31,
+                             last_damage_time=0.0, posture='defense', posture_ready_at=0.0)
+                actions, _ = controller.decide(obs)
+                self.assertEqual(controller.state['mode'], 'recover')
+
+            # Critical low HP under fire on speed bumps overrides 'move' with 'defense' + enhanced defense.
+            obs['time'] = 120.0
+            controller.state['recovering'] = True
+            controller.state['goal'] = [1.5, 13.0]
+            robot.update(x=6.0, y=13.7, vx=0.0, vy=0.0, ammo=100,
+                         hp=robot['max_hp'] * 0.18, last_damage_time=119.5,
+                         posture='move', posture_ready_at=0.0,
+                         posture_enhanced_time=[0.0, 0.0, 0.0])
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+            self.assertEqual(actions['7'].get('posture'), 'defense')
+            self.assertTrue(actions['7'].get('posture_enhanced'))
         finally:
             controller.close()
 
