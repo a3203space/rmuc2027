@@ -53,6 +53,16 @@ class RotationTests(unittest.TestCase):
         picked = {opponent_for(config, seed) for seed in range(len(pool))}
         self.assertEqual(picked, set(pool))
 
+    def test_weighted_rotation_matches_exact_deterministic_ratios(self):
+        pool = [BASELINE, OTHER, THIRD]
+        config = load_config({'opponent': BASELINE, 'opponent_pool': pool, 'opponent_pool_weights': [1.0, 3.0, 2.0]})
+        picks = [opponent_for(config, seed) for seed in range(6)]
+        self.assertEqual(picks[0], BASELINE)
+        self.assertEqual(picks.count(BASELINE), 1)
+        self.assertEqual(picks.count(OTHER), 3)
+        self.assertEqual(picks.count(THIRD), 2)
+        self.assertEqual(opponent_for(config, 7), opponent_for(config, 1))
+
 
 class ValidationTests(unittest.TestCase):
     def test_pool_must_contain_baseline(self):
@@ -73,6 +83,13 @@ class ValidationTests(unittest.TestCase):
     def test_non_string_pool_rejected(self):
         with self.assertRaises(ValueError):
             config_with([BASELINE, 7])
+
+    def test_invalid_pool_weights_rejected(self):
+        with self.assertRaises(ValueError):
+            load_config({'opponent': BASELINE, 'opponent_pool_weights': [1.0]})
+        for bad in ([1.0], [1.0, 0.0], [1.0, -2.0], [1.0, True], [1.0, float('nan')]):
+            with self.assertRaises(ValueError):
+                load_config({'opponent': BASELINE, 'opponent_pool': [BASELINE, OTHER], 'opponent_pool_weights': bad})
 
 
 class ProvenanceTests(unittest.TestCase):

@@ -1506,6 +1506,9 @@ impl Engine {
         if buff == "road" {
             r.road_cooldown_until = now + n(&v, "cooldown_s");
         }
+        if buff == "tunnel_through" {
+            r.crossing_cooling_until = r.crossing_cooling_until.max(now + duration);
+        }
         let first_kind = if buff.starts_with("tunnel") {
             "tunnel".to_string()
         } else {

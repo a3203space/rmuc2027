@@ -84,6 +84,15 @@ def load_config(source=None):
             # is then the original fixed opponent, keeping evaluate's default
             # seed and the recorded `opponent` field meaningful.
             raise ValueError('opponent_pool must contain the baseline opponent')
+    if 'opponent_pool_weights' in config:
+        pool = config.get('opponent_pool')
+        weights = config['opponent_pool_weights']
+        if not pool:
+            raise ValueError('opponent_pool_weights requires opponent_pool')
+        if (not isinstance(weights, list) or len(weights) != len(pool)
+                or any(isinstance(w, bool) or not isinstance(w, (int, float)) or not math.isfinite(float(w)) or float(w) <= 0
+                       for w in weights)):
+            raise ValueError('opponent_pool_weights must be a list of positive finite numbers matching opponent_pool length')
     config.setdefault('policy_timeout_s', 5.0)
     config.setdefault('navigation_mode', 'legacy')
     config.setdefault('timed_assembly', False)
@@ -170,7 +179,20 @@ def opponent_for(config, seed):
     in episodes.jsonl.
     """
     pool = config.get('opponent_pool') or ()
-    return pool[int(seed) % len(pool)] if pool else config['opponent']
+    if not pool:
+        return config['opponent']
+    weights = config.get('opponent_pool_weights')
+    if weights:
+        counts = [max(1, round(float(w) * 100)) for w in weights]
+        divisor = math.gcd(*counts)
+        counts = [c // divisor for c in counts]
+        slot = int(seed) % sum(counts)
+        running = 0
+        for item, count in zip(pool, counts):
+            running += count
+            if slot < running:
+                return item
+    return pool[int(seed) % len(pool)]
 
 
 def baseline_module(config):
@@ -207,7 +229,10 @@ def provenance(config, opponent=None):
         result['sources']['controller:'+key] = {'version': manifest['version'], 'manifest': manifest,
             'hashes': {slot: hashlib.sha256(path.read_bytes()).hexdigest() for slot, path in entries.items()}}
     result['sdk_hash'] = hashlib.sha256((Path(__file__).resolve().parents[3]/'packages/core/rmuc2027_core/sdk.py').read_bytes()).hexdigest()
-    result['runtime_hash'] = hashlib.sha256(Path(__file__).with_name('portable.py').read_bytes()).hexdigest()
+    result['runtime_hash'] = hashlib.sha256(
+        Path(__file__).with_name('portable.py').read_bytes()
+        + Path(__file__).with_name('terrain_witness.py').read_bytes()
+    ).hexdigest()
     # Observable normalisers that the actor's own arithmetic depends on. They
     # live in the config, so they are not covered by runtime_hash (which only
     # hashes the source), and changing one rescales a trained actor's input.
@@ -320,9 +345,10 @@ class ArenaSession:
             raise ValueError('Exactly one learning controller must own the selected robot')
         self.controller = GoalController(cfg)
         # Fresh per episode: the witness answers "what has this opponent been seen
-        # doing", and across a reset the opponents change, so carrying the flags
-        # over would credit one robot with another's feats.
-        self.witness = TerrainWitness()
+        # doing" (with use_prior=False to avoid design-table cheating), and across
+        # a reset the opponents change, so carrying the flags over would credit
+        # one robot with another's feats.
+        self.witness = TerrainWitness(use_prior=False)
         overrides = {(cfg['team'], cfg['slot']): self.controller}
         try:
             for key, spec in assignments.items():
@@ -458,7 +484,10 @@ class ArenaSession:
                 mine = next((r for r in self.obs['robots'] if r.get('slot') == cfg['slot']), None)
                 if mine is not None:
                     now = float(self.obs.get('time') or frame['time'])
-                    defending = float(mine.get('crossing_defense_until', 0.0) or 0.0) > now + 1e-9
+                    defending = (
+                        float(mine.get('crossing_defense_until', 0.0) or 0.0) > now + 1e-9
+                        or float(mine.get('crossing_cooling_until', 0.0) or 0.0) > now + 1e-9
+                    )
                     if defending:
                         self.metrics['terrain_buff_seconds'] += dt
                         terms['terrain_buff'] += cfg['rewards']['terrain_buff']*dt

@@ -13,8 +13,11 @@ from functools import partial
 import numpy as np
 os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')
 import torch
+from torch import nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.distributions import DiagGaussianDistribution
+from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from .env import SentryEnv, make_env
@@ -46,6 +49,16 @@ def vector_env(config, count):
         vec = DummyVecEnv(factories) if count == 1 or config.get('slot') == 1 else SubprocVecEnv(factories, start_method='spawn')
     vec.seed(config['seed'])
     return vec
+
+
+class TanhActorCriticPolicy(ActorCriticPolicy):
+    """Gaussian actor whose deterministic mean is bounded in (-1, 1)^2 via Tanh."""
+
+    def _build(self, lr_schedule):
+        super()._build(lr_schedule)
+        if not isinstance(self.action_dist, DiagGaussianDistribution):
+            raise NotImplementedError('TanhActorCriticPolicy requires DiagGaussianDistribution')
+        self.action_net = nn.Sequential(self.action_net, nn.Tanh())
 
 
 class TimedPPO(PPO):
@@ -101,15 +114,20 @@ class TimedPPO(PPO):
             print(json.dumps({'kind': 'action-std-control-error', 'error': str(exc)}), flush=True)
             return
         with torch.no_grad():
-            before = float(torch.exp(self.policy.log_std).mean())
+            before_vec = self.policy.log_std.data.detach().clone()
+            before = float(torch.exp(before_vec).mean())
+            before_max = float(torch.exp(before_vec).max())
             # log_std is the parameter; the bound is in std space, so the clamp
             # has to happen on log(bound) or it would clamp ~0.0 to ~0.0.
             torch.clamp_(self.policy.log_std.data, max=math.log(bound))
-            after = float(torch.exp(self.policy.log_std).mean())
-        if after == before:
+            after_vec = self.policy.log_std.data.detach()
+            after = float(torch.exp(after_vec).mean())
+            after_max = float(torch.exp(after_vec).max())
+        if torch.equal(after_vec, before_vec):
             return
         event = {'kind': 'action-std-clamp', 'total_samples': self.num_timesteps,
-                 'before': before, 'after': after, 'max_std': bound,
+                 'before': before, 'after': after,
+                 'before_max': before_max, 'after_max': after_max, 'max_std': bound,
                  'reason': str(request.get('reason', 'operator request')), 'time_unix': time.time()}
         with Path(path).with_name('action-std-events.jsonl').open('a') as stream:
             stream.write(json.dumps(event)+'\n')
@@ -381,8 +399,19 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
             model._last_obs = None
             model._last_episode_starts = None
         else:
-            model = TimedPPO('MlpPolicy', vec, seed=config['seed'], device=device, verbose=1,
-                policy_kwargs={'net_arch': {'pi': [64, 64], 'vf': [64, 64]}}, **_ppo_kwargs(config))
+            init_std = check_action_std(config)
+            model = TimedPPO(
+                TanhActorCriticPolicy,
+                vec,
+                seed=config['seed'],
+                device=device,
+                verbose=1,
+                policy_kwargs={
+                    'net_arch': {'pi': [64, 64], 'vf': [64, 64]},
+                    'log_std_init': math.log(init_std),
+                },
+                **_ppo_kwargs(config),
+            )
         model.learning_rate_control_path = str((output/'learning-rate.json').resolve())
         model.action_std_control_path = str((output/'action-std.json').resolve())
         model.update_log_path = str((output/'updates.jsonl').resolve())

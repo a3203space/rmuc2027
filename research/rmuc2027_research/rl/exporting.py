@@ -37,27 +37,36 @@ def export_layers(layers, metadata, output):
     runtime_config['learning_control_hz'] = config.get('learning_control_hz', 10)
     runtime_config['navigation_mode'] = config.get('navigation_mode', 'legacy')
     source = Path(portable.__file__).read_text()
+    witness_source = '\n'.join(
+        line for line in Path(__file__).with_name('terrain_witness.py').read_text().splitlines()
+        if line.strip() != 'from .portable import capability_bits'
+    )
     base_manifest, entries = load_submission(resource(config['friendly']))
     from rmuc2027_core.models import normalize_team_lineup
     lineup = normalize_team_lineup(config.get('lineups', {}).get(config['team'], base_manifest.get('team_lineup')), '2027')
     baseline = entries[str(config['slot'])].read_text()
     packed = base64.b85encode(zlib.compress(json.dumps(layers, allow_nan=False).encode())).decode()
-    code = source + '\nimport base64, json, zlib\n'
+    code = source + '\n' + witness_source + '\nimport base64, json, zlib\n'
     code += '_baseline_namespace = {}\nexec(' + repr(baseline) + ', _baseline_namespace)\n'
     code += 'from types import SimpleNamespace\n_BASELINE = SimpleNamespace(**_baseline_namespace)\n'
     code += '_CONFIG = ' + repr(runtime_config) + '\n'
     code += '_LAYERS = json.loads(zlib.decompress(base64.b85decode(' + repr(packed) + ')))\n'
     code += '_NAVIGATOR = SdkNavigator(_CONFIG["grid_m"])\n'
+    code += '_WITNESS_STATE = {"tick": -1, "witness": TerrainWitness(use_prior=False)}\n'
     code += '''
 def act(obs, state):
     state = dict(state or {})
     opening = fixed_opening(obs, state, _CONFIG, _BASELINE)
     if opening is not None:
         return opening, state
+    if obs['tick'] < _WITNESS_STATE['tick'] or 'goal_time' not in state:
+        _WITNESS_STATE['witness'] = TerrainWitness(use_prior=False)
+    _WITNESS_STATE['tick'] = obs['tick']
     # Integer scheduling agrees with the Gym session's exact game-tick count.
     if 'goal_time' not in state or obs['tick'] - state.get('goal_tick', 0) >= round(_CONFIG['rl_seconds']/.05):
+        _WITNESS_STATE['witness'].observe(obs, _CONFIG['slot'])
         features = encode_observation(obs, state, _CONFIG['slot'], _CONFIG['rl_seconds'],
-                                      None, _CONFIG['control_scale'])
+                                      _WITNESS_STATE['witness'], _CONFIG['control_scale'])
         select_goal(obs, state, mlp_forward(features, _LAYERS), _NAVIGATOR, _CONFIG)
         state['goal_tick'] = obs['tick']
     if ('control_tick' not in state or obs['tick'] < state['control_tick']
@@ -91,8 +100,23 @@ def export_model(model_path, output):
     modules = list(model.policy.mlp_extractor.policy_net.children())
     if not all(isinstance(layer, (nn.Linear, nn.Tanh)) for layer in modules):
         raise ValueError('Only the documented Linear/Tanh actor can be exported')
+    action_modules = (
+        list(model.policy.action_net.children())
+        if isinstance(model.policy.action_net, nn.Sequential)
+        else [model.policy.action_net]
+    )
+    if not (
+        (len(action_modules) == 1 and isinstance(action_modules[0], nn.Linear))
+        or (len(action_modules) == 2 and isinstance(action_modules[0], nn.Linear) and isinstance(action_modules[1], nn.Tanh))
+    ):
+        raise ValueError('Only Linear or Sequential(Linear, Tanh) action_net can be exported')
     layers = [{'weight': layer.weight.detach().cpu().tolist(), 'bias': layer.bias.detach().cpu().tolist()}
-              for layer in [*modules, model.policy.action_net] if isinstance(layer, nn.Linear)]
+              for layer in modules if isinstance(layer, nn.Linear)]
+    out_layer = {'weight': action_modules[0].weight.detach().cpu().tolist(),
+                 'bias': action_modules[0].bias.detach().cpu().tolist()}
+    if len(action_modules) == 2:
+        out_layer['activation'] = 'tanh'
+    layers.append(out_layer)
     # Validate actual weights against torch, rather than testing only a mock net.
     import numpy as np
     import torch

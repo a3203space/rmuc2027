@@ -543,6 +543,13 @@ fn tunnel_cards_in_order_give_the_through_or_over_buffs() {
             "{buff}: {:?}",
             m.robots[i].crossing_buffs
         );
+        if buff == "tunnel_through" {
+            assert!(
+                m.robots[i].crossing_cooling_until > m.time(),
+                "crossing_cooling_until not updated: {}",
+                m.robots[i].crossing_cooling_until
+            );
+        }
     }
 }
 

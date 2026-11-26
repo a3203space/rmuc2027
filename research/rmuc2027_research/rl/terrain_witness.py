@@ -66,6 +66,8 @@ TUNNEL_INSIDE_CARD = 1
 # compressing on the ramp without letting a road bump (70 mm) through.
 TERRACE_M = 0.20
 CLIMB_RISE_M = 0.12
+FLOOR_SLOPE_TAN = math.tan(math.radians(1.5))
+CLIMB_MAX_HORIZONTAL_M = 2.5
 
 # Positional report rate is 1 Hz, so a two-sample window is 1 s. A climb's two
 # rises have to land within this window to be one event rather than two bumps.
@@ -94,12 +96,13 @@ class TerrainWitness:
     steps, which would put noise into a network that sees one frame at a time.
     """
 
-    __slots__ = ('_tunnel', '_climb', '_last', '_rises')
+    __slots__ = ('use_prior', '_tunnel', '_climb', '_last', '_rises')
 
-    def __init__(self):
+    def __init__(self, use_prior=True):
+        self.use_prior = bool(use_prior)
         self._tunnel = {}    # slot -> True once the inside card was contacted
         self._climb = {}     # slot -> True once a terrace climb was measured
-        self._last = {}      # slot -> previous height, for the rise measurement
+        self._last = {}      # slot -> (x, y, slope-adjusted z, time)
         self._rises = {}     # slot -> [time, height delta] of pending rises
 
     def observe(self, obs, slot):
@@ -113,8 +116,10 @@ class TerrainWitness:
         """
         seen = {r['slot']: r for r in obs.get('enemies', []) if r['slot'] in (1, 3, 4, 7)}
         self._read_cards(obs, seen)
+        arena_height = float((obs.get('arena') or {}).get('height', 15.0))
+        now = float(obs.get('time', 0.0))
         for s, robot in seen.items():
-            self._read_heights(obs.get('time', 0.0), s, robot)
+            self._read_heights(now, s, robot, arena_height)
 
     def _read_cards(self, obs, seen):
         """An occupied inside card is proof; the ends alone are not.
@@ -134,7 +139,7 @@ class TerrainWitness:
                 if s is not None:
                     self._tunnel[s] = True
 
-    def _read_heights(self, now, slot, robot):
+    def _read_heights(self, now, slot, robot, arena_height=15.0):
         """Two consecutive ~terrace-sized rises away from a tunnel means it climbed.
 
         A single rise is ambiguous: the road bumps are 70 mm and the central
@@ -142,16 +147,24 @@ class TerrainWitness:
         within a short window is what separates "drove up onto the terrace" from
         "went over a bump", and the distance check removes tunnels, whose roof is
         the other way a height can jump by this much.
+
+        Subtracts the static 1.5 degree floor slope along y before comparing z so
+        normal travel across the apron never looks like a terrace step.
         """
         if not robot.get('alive', True):
             return
-        x, y, z = robot['x'], robot['y'], robot.get('z', 0.0)
+        x, y, z = float(robot['x']), float(robot['y']), float(robot.get('z', 0.0))
+        adj_z = z - min(max(0.0, y), max(0.0, float(arena_height) - y)) * FLOOR_SLOPE_TAN
         previous = self._last.get(slot)
-        self._last[slot] = z
+        self._last[slot] = (x, y, adj_z, float(now))
         if previous is None or near_tunnel(x, y):
             self._rises.pop(slot, None)
             return
-        rise = z - previous
+        px, py, pz, pt = previous
+        if (now - pt) > CLIMB_WINDOW_S or math.hypot(x - px, y - py) > CLIMB_MAX_HORIZONTAL_M:
+            self._rises.pop(slot, None)
+            return
+        rise = adj_z - pz
         if rise < CLIMB_RISE_M:
             return
         pending = [t for t, _ in self._rises.get(slot, []) if now - t <= CLIMB_WINDOW_S]
@@ -161,18 +174,13 @@ class TerrainWitness:
         self._rises[slot] = [(t, 0.0) for t in pending]
 
     def bits(self, slot, robot=None):
-        """(tunnel, climb, omni) for one slot: witnessed where seen, else prior.
+        """(tunnel, climb, omni) for one slot: witnessed where seen, else prior when enabled.
 
         `robot` is the enemy's own public observation dict, which is what the
-        design-table prior needs. Omitting it means "no observation to lean on",
-        which yields the pure prior - the same three numbers an exported
-        submission computes, since a self-contained policy has no witness and no
-        choice but to read the table.
-
-        Omni never has evidence to override: nothing in a position track says
-        whether a robot can strafe. The prior is the only honest answer there.
+        design-table prior needs when `use_prior=True`. With `use_prior=False`
+        (the honest radar-only path), only actually witnessed feats raise bits.
         """
-        prior = capability_bits(robot) if robot is not None else [0.0, 0.0, 0.0]
+        prior = capability_bits(robot) if (self.use_prior and robot is not None) else [0.0, 0.0, 0.0]
         if self._tunnel.get(slot):
             prior[0] = 1.0
         if self._climb.get(slot):

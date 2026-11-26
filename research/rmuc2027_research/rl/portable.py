@@ -10,8 +10,8 @@ try:
 except ImportError:
     from rmuc2027_core import sdk as _sdk
 
-OBS_VERSION = 2
-OBS_SIZE = 131
+OBS_VERSION = 3
+OBS_SIZE = 145
 SLOTS = (1, 3, 4, 6, 7)
 # Slot 6 carries the aerial system, which parks in a hangar and never drives:
 # the rulebook only ever marks the four ground robots, so it gets no capability
@@ -63,23 +63,17 @@ def own_robot(obs, slot=7):
 
 
 def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control_scale=None):
-    """131 bounded features, with blue coordinates rotated into the red frame.
+    """145 bounded features, with blue coordinates rotated into the red frame.
 
     self 18 + four allies * 7 + five visible enemy slots * 11 (8 + 3 movement
     traits) + public match 6 + four public control positions * 4 + controller
-    memory 8.
+    memory 8 + v3 tactical state 14 (sentry supply grant due 1 + enhanced posture
+    budgets 3 + crossing cooling/defense remaining 2 + own/enemy outpost hp 2 +
+    central card occupancy 4 + own fortress active 1 + team 17mm cap left 1).
 
-    `witness` is an optional `terrain_witness.TerrainWitness`. When present, the
-    three trailing entries of each enemy slot report what that opponent was
-    *seen* doing (drove through a tunnel, climbed the terrace, neither), falling
-    back to the design table for any bit it was not seen doing. That is the
-    honest version of the question: the radar only reports coordinates, so the
-    ability has to be inferred from behaviour, and an inference that has not been
-    made yet costs the prior rather than a fabricated "no".
-
-    Exported submissions pass no witness at all and read the design table
-    throughout. The two agree on every slot with no evidence, which is what keeps
-    the trained policy and the shipped one looking at the same numbers.
+    `witness` is an optional `terrain_witness.TerrainWitness`. Exported
+    submissions embed `TerrainWitness(use_prior=False)` as well, so training
+    and deployment read aligned observations.
 
     `control_scale` is the divisor for the two `control` features; None means
     `CONTROL_SCALE`. It is threaded through as an argument rather than read from
@@ -143,6 +137,42 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control
     values += list(xy(*goal)) if goal else [0.0, 0.0]
     values += [float(state.get('mode', 'policy') == mode) for mode in MODES]
     values += [(obs['time']-state.get('goal_time', obs['time']))/rl_seconds]
+    # OBS v3 (+14): tactical awareness missing from the 131-dim layout.
+    grants_due = (
+        max(0, int(obs['time'] // 60.0) - int(me.get('supply_grants_taken', 0) or 0)) / 3.0
+        if me.get('role') == 'sentry'
+        else 0.0
+    )
+    enhanced_times = me.get('posture_enhanced_time') or (0.0, 0.0, 0.0)
+    posture_budget = [
+        max(0.0, (15.0 - float(enhanced_times[i])) / 15.0) if i < len(enhanced_times) else 1.0
+        for i in range(3)
+    ]
+    cooling_rem = max(0.0, float(me.get('crossing_cooling_until') or 0.0) - float(obs['time'])) / 120.0
+    defense_rem = max(0.0, float(me.get('crossing_defense_until') or 0.0) - float(obs['time'])) / 30.0
+    outposts = obs.get('outposts') or {}
+    outpost_hp = [
+        _ratio(outposts[k]['hp'], outposts[k].get('max_hp', 1)) if k in outposts else 0.0
+        for k in (team, other)
+    ]
+    zones = obs.get('zones') or {}
+    ally_ids = {r.get('id') for r in obs.get('robots', ()) if r.get('slot') != slot and r.get('id')}
+    friend_ids = {r.get('id') for r in obs.get('robots', ()) if r.get('id')}
+    enemy_prefix = f'{other}-'
+    own_central_occ = (zones.get(f'{team}_central') or {}).get('occupants') or ()
+    other_central_occ = (zones.get(f'{other}_central') or {}).get('occupants') or ()
+    ally_on_own_central = float(any(rid in ally_ids for rid in own_central_occ))
+    enemy_on_own_central = float(any(str(rid).startswith(enemy_prefix) for rid in own_central_occ))
+    ally_on_other_central = float(any(rid in friend_ids for rid in other_central_occ))
+    enemy_on_other_central = float(any(str(rid).startswith(enemy_prefix) for rid in other_central_occ))
+    positions = obs.get('positions') or {}
+    own_fortress_active = float((positions.get(f'{team}_outpost') or {}).get('controller') != team)
+    cap_left = max(0.0, 1.0 - float(obs['teams'][team].get('purchased_17', 0)) / 1000.0)
+    values += [
+        grants_due, *posture_budget, cooling_rem, defense_rem,
+        *outpost_hp, ally_on_own_central, enemy_on_own_central,
+        ally_on_other_central, enemy_on_other_central, own_fortress_active, cap_left,
+    ]
     if len(values) != OBS_SIZE or not all(math.isfinite(v) for v in values):
         raise ValueError('Non-finite or incompatible actor observation')
     return [max(-1.0, min(1.0, float(v))) for v in values]
@@ -244,9 +274,24 @@ def select_goal(obs, state, action, navigator, config):
     proposed = [(clipped[0]+1)*w/2, (clipped[1]+1)*h/2]
     if obs['team'] == 'blue':
         proposed = [w-proposed[0], h-proposed[1]]
-    goal = navigator.resolve_goal(own_robot(obs, config['slot']), proposed, obs['arena'])
+    robot = own_robot(obs, config['slot'])
+    folded = robot.get('transform_progress', 0) >= 0.99
+    candidate = navigator.resolve_goal(robot, proposed, obs['arena'])
+    prev_goal = state.get('goal')
+    if (
+        prev_goal is not None
+        and candidate is not None
+        and state.get('mode', 'policy') == 'policy'
+        and bool(state.get('_goal_folded', False)) == folded
+        and math.hypot(candidate[0] - prev_goal[0], candidate[1] - prev_goal[1]) <= GOAL_HYSTERESIS_M
+    ):
+        goal = list(prev_goal)
+    else:
+        goal = candidate
+        if prev_goal is None or goal is None or math.hypot(goal[0] - prev_goal[0], goal[1] - prev_goal[1]) > 1e-6:
+            state['goal_settled'] = False
     state.update(goal=goal, goal_time=obs['time'], supplied_action=list(action),
-                 clipped_action=clipped, proposed_goal=proposed)
+                 clipped_action=clipped, proposed_goal=proposed, _goal_folded=folded)
 
 
 def held_fire_safe(robot, seconds):
@@ -287,9 +332,125 @@ def fixed_opening(obs, state, config, baseline):
 
 
 GOAL_STOP_RADIUS_M = 0.30
+GOAL_RESUME_RADIUS_M = 0.48
+GOAL_HYSTERESIS_M = 0.55
 MOVE_POSTURE_DISTANCE_M = 3.5
 POSTURE_INDEX = {"attack": 0, "defense": 1, "move": 2}
 ENHANCED_BUDGET_S = 14.9
+
+
+def _segment_box_clear_3d(ax, ay, az, bx, by, bz, wall):
+    """Return True when the 3D segment (a -> b) misses the static wall slab."""
+    rx, ry, rw, rh = wall['x'], wall['y'], wall['w'], wall['h']
+    cx, cy = rx + rw * 0.5, ry + rh * 0.5
+    rot = float(wall.get('rotation', 0.0) or 0.0)
+    c, s = math.cos(rot), math.sin(rot)
+    dx, dy, dz = bx - ax, by - ay, bz - az
+    ox, oy = ax - cx, ay - cy
+    lx = cx + ox * c + oy * s
+    ly = cy - ox * s + oy * c
+    ldx = dx * c + dy * s
+    ldy = -dx * s + dy * c
+    lo, hi = 0.0, 1.0
+    z0 = float(wall.get('bottom', 0.0) or 0.0)
+    z1 = z0 + float(wall.get('height', 10.0) or 10.0)
+    for pos, d, a, b in ((lx, ldx, rx, rx + rw), (ly, ldy, ry, ry + rh), (az, dz, z0, z1)):
+        if abs(d) < 1e-12:
+            if pos < a or pos > b:
+                return True
+        else:
+            t0, t1 = (a - pos) / d, (b - pos) / d
+            if t0 > t1:
+                t0, t1 = t1, t0
+            lo = max(lo, t0)
+            hi = min(hi, t1)
+            if lo > hi:
+                return True
+    return False
+
+
+def _structure_los_clear(obs, eye, target_pt):
+    ax, ay, az = eye
+    bx, by, bz = target_pt
+    for wall in (obs.get('arena') or {}).get('obstacles', ()):
+        if not _segment_box_clear_3d(ax, ay, az, bx, by, bz, wall):
+            return False
+    return True
+
+
+def _structure_aim_point(robot, struct, visible_faces=None):
+    plates = struct.get('armor_plates') or ()
+    if visible_faces is not None:
+        plates = [p for p in plates if p.get('face') in visible_faces]
+    if plates:
+        eye_z = float(robot.get('z', 0.0)) + float(robot.get('muzzle_height_m', 0.45)) + 0.08
+        best = None
+        for p in plates:
+            center = p['center']
+            normal = p['normal']
+            diff = (robot['x'] - center[0], robot['y'] - center[1], eye_z - center[2])
+            dist = max(1e-3, math.sqrt(sum(v * v for v in diff)))
+            score = sum(a * b for a, b in zip(normal, diff)) / dist
+            if best is None or score > best[0]:
+                best = (score, center)
+        if best is not None and best[0] > 0.0:
+            return tuple(best[1]), dict(struct, armor_plates=[p for p in plates if tuple(p['center']) == tuple(best[1])])
+    return (struct['x'], struct['y'], float(struct.get('z', 0.0)) + 0.45), struct
+
+
+def _visible_structure_target(obs, robot, ctx, reach=10.0):
+    eye = (
+        robot['x'],
+        robot['y'],
+        float(robot.get('z', 0.0)) + float(robot.get('muzzle_height_m', 0.45)) + 0.08,
+    )
+    vision_slot = (obs.get('vision') or {}).get(str(robot['slot']), {})
+    vision_range = min(reach, float(vision_slot.get('range_m', reach)))
+    has_outpost_vision = 'vision' in obs and str(robot['slot']) in obs['vision'] and 'outposts' in vision_slot
+
+    outpost = ctx.hostile_outpost()
+    if outpost:
+        dist = math.hypot(outpost['x'] - robot['x'], outpost['y'] - robot['y'])
+        visible_faces = (vision_slot.get('outposts') or {}).get(outpost['site'])
+        if dist <= vision_range and (not has_outpost_vision or visible_faces):
+            aim_pt, refined = _structure_aim_point(robot, outpost, set(visible_faces) if visible_faces else None)
+            if _sdk.ballistic_reachable(robot, refined) and _structure_los_clear(obs, eye, aim_pt):
+                return refined
+
+    if ctx.enemy_base_vulnerable():
+        base = dict(obs['bases'][ctx.enemy], kind='base')
+        dist = math.hypot(base['x'] - robot['x'], base['y'] - robot['y'])
+        if dist <= vision_range:
+            aim_pt, refined = _structure_aim_point(robot, base)
+            if _sdk.ballistic_reachable(robot, refined) and _structure_los_clear(obs, eye, aim_pt):
+                return refined
+    return None
+
+
+def _select_weapon_shot(obs, robot, ctx, baseline, reach=10.0):
+    try:
+        shot = baseline.weapon(robot, ctx, reach=reach, structures=False, drones_too=True)
+    except TypeError:
+        target = baseline.enemy_target(robot, ctx, reach) if hasattr(baseline, 'enemy_target') else None
+        if target is None and robot['role'] != 'heavy' and hasattr(baseline, 'drone_target'):
+            target = baseline.drone_target(robot, ctx)
+        shot = {} if target is None else None
+        if target is not None:
+            aim = _sdk.aim_at(robot, target)
+            heavy = robot['role'] == 'heavy'
+            aligned = abs((aim - robot['aim'] + math.pi) % math.tau - math.pi) < (0.08 if heavy else 0.14)
+            fire = aligned and _sdk.can_fire(robot) and (heavy or robot['heat'] + 20 <= robot['max_heat'])
+            shot = {'aim': aim, 'pitch': _sdk.aim_pitch(robot, target), 'fire': fire}
+    if shot:
+        return shot
+    struct = _visible_structure_target(obs, robot, ctx, reach=reach)
+    if struct is None:
+        return {}
+    aim = _sdk.aim_at(robot, struct)
+    heavy = robot['role'] == 'heavy'
+    aligned = abs((aim - robot['aim'] + math.pi) % math.tau - math.pi) < (0.08 if heavy else 0.14)
+    fire = aligned and _sdk.can_fire(robot) and (heavy or robot['heat'] + 20 <= robot['max_heat'])
+    return {'aim': aim, 'pitch': _sdk.aim_pitch(robot, struct), 'fire': fire}
 
 
 def execute_goal(obs, state, navigator, config, baseline):
@@ -309,20 +470,35 @@ def execute_goal(obs, state, navigator, config, baseline):
             for r in obs['robots']
         )
         can_retreat = covered or ctx.controls(f"{obs['team']}_outpost", full=True)
+    due_grants = int(obs['time'] // 60.0)
+    taken_grants = int(robot.get('supply_grants_taken', 0) or 0)
+    free_grant_due = (
+        robot['role'] == 'sentry'
+        and int(robot.get('ammo', 0)) == 0
+        and not robot.get('pending_ammo')
+        and due_grants > taken_grants
+    )
     recovering = bool(
         robot.get('weak', False)
-        or (can_retreat and (hp < config['recover_enter'] or (was_recovering and hp < config['recover_exit'])))
+        or (can_retreat and (
+            hp < config['recover_enter']
+            or (was_recovering and hp < config['recover_exit'])
+            or free_grant_due
+        ))
     )
     state['recovering'] = recovering
     if not robot['alive'] or robot.get('red_card'):
         mode, goal = 'dead', None
         state['recovering'] = False
+        state['goal_settled'] = False
         state.pop('navigation', None)
         fields.update(baseline.revive_fields(robot, ctx))
     elif robot.get('tipped'):
         mode, goal = 'tipped', None
+        state['goal_settled'] = False
     elif recovering:
         mode = 'recover'
+        state['goal_settled'] = False
         # The rule module chooses a recovery destination; use the same legality
         # checks as policy destinations rather than driving into a wall.
         goal = navigator.resolve_goal(robot, ctx.zone(obs['team'], 'supply'), obs['arena'])
@@ -333,12 +509,18 @@ def execute_goal(obs, state, navigator, config, baseline):
     in_manoeuvre = any(nav_state.get(k, {}).get('phase', 'approach') != 'approach' for k in ('entry', 'tunnel'))
     gap = math.hypot(robot['x'] - goal[0], robot['y'] - goal[1]) if goal is not None else 0.0
     if goal is None:
+        state['goal_settled'] = False
         fields['move'] = (0.0, 0.0)
-    elif gap <= GOAL_STOP_RADIUS_M and not in_manoeuvre:
+    elif not in_manoeuvre and mode != 'recover' and (
+        gap <= GOAL_STOP_RADIUS_M
+        or (state.get('goal_settled') and gap <= GOAL_RESUME_RADIUS_M)
+    ):
+        state['goal_settled'] = True
         nav_state.pop('teammate_detour', None)
         nav_state.pop('teammate_wait_since', None)
         fields.update(move=(0.0, 0.0), brake=True)
     else:
+        state['goal_settled'] = False
         nav_obs = obs if 'policy_dt' in obs else dict(
             obs, policy_dt=control_dt, navigation_mode=config.get('navigation_mode', 'legacy'))
         fields.update(_sdk.navigate_action(robot, goal, nav_obs, nav_state))
@@ -354,7 +536,7 @@ def execute_goal(obs, state, navigator, config, baseline):
                 fields['move'] = (raw_move[0] * scale, raw_move[1] * scale)
     move = fields['move']
     if robot['alive']:
-        shot = baseline.weapon(robot, ctx, reach=10)
+        shot = _select_weapon_shot(obs, robot, ctx, baseline, reach=10.0)
         fields.update(shot)
         if fields.get('fire') and not held_fire_safe(robot, control_dt):
             fields['fire'] = False
@@ -364,9 +546,16 @@ def execute_goal(obs, state, navigator, config, baseline):
         if robot['role'] == 'sentry':
             moving = math.hypot(*move) > 0.05
             threatened = obs['time'] - robot.get('last_damage_time', -99.0) < 2.0
-            if recovering or (hp < 0.5 and threatened):
+            has_ammo = int(robot.get('ammo', 0)) > 0
+            combat_ready = has_ammo and bool(shot)
+            live_duel = has_ammo and any(
+                e['alive'] and not e.get('invulnerable')
+                and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
+                for e in obs.get('enemies', ())
+            )
+            if recovering or (hp < 0.55 and threatened):
                 wanted = 'defense'
-            elif shot and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
+            elif combat_ready and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
                 wanted = 'attack'
             elif moving and gap > MOVE_POSTURE_DISTANCE_M:
                 wanted = 'move'
@@ -378,8 +567,8 @@ def execute_goal(obs, state, navigator, config, baseline):
             heat_ratio = _ratio(robot.get('heat', 0.0), robot.get('max_heat', 260.0))
             want_enhanced = bool(
                 budget_ok and (
-                    (wanted == 'defense' and hp < 0.35 and threatened)
-                    or (wanted == 'attack' and bool(shot) and heat_ratio >= 0.75)
+                    (wanted == 'defense' and hp < 0.50 and threatened)
+                    or (wanted == 'attack' and live_duel and bool(shot) and heat_ratio >= 0.70)
                 )
             )
             if obs['time'] >= (robot.get('posture_ready_at') or 0.0):
@@ -398,6 +587,7 @@ def mlp_forward(features, layers):
     for index, layer in enumerate(layers):
         values = [sum(a*b for a, b in zip(row, values))+bias
                   for row, bias in zip(layer['weight'], layer['bias'])]
-        if index < len(layers)-1:
+        act_fn = layer.get('activation', 'tanh' if index < len(layers) - 1 else 'linear')
+        if act_fn == 'tanh':
             values = [math.tanh(v) for v in values]
     return values

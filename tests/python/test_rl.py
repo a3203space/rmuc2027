@@ -322,7 +322,8 @@ class EnemyCapabilityTests(unittest.TestCase):
         encoded = encode_observation(self._observation(SLOTS, models),
                                      {'goal': (1.0, 1.0), 'mode': 'policy', 'goal_time': 119.0}, 7, 0.5)
         self.assertEqual(len(encoded), OBS_SIZE)
-        self.assertEqual(OBS_VERSION, 2)
+        self.assertEqual(OBS_VERSION, 3)
+        self.assertEqual(OBS_SIZE, 145)
         self.assertEqual(self._traits(encoded, 1), [0.0, 0.0, 0.0])   # heavy, plain mecanum
         self.assertEqual(self._traits(encoded, 3), [0.0, 1.0, 0.0])   # jump only
         self.assertEqual(self._traits(encoded, 4), [1.0, 0.0, 0.0])   # tunnel only
@@ -506,6 +507,21 @@ class TerrainWitnessTests(unittest.TestCase):
         offset = base + SLOTS.index(4)*11 + 8
         self.assertEqual(watched[offset], 1.0, 'slot 4 inside card not credited')
         self.assertEqual(watched[offset:offset+3], [1.0, 0.0, 0.0])
+
+    def test_slope_travel_does_not_trigger_climb_witness(self):
+        witness = TerrainWitness(use_prior=False)
+        tan_slope = math.tan(math.radians(1.5))
+        for step, y in enumerate((1.0, 3.0, 5.0, 7.0)):
+            z = min(y, 15.0 - y) * tan_slope
+            witness.observe(self._obs(10.0 + step * 0.5, [self._enemy(4, 6.0, y, z=z)]), 7)
+        self.assertEqual(witness.bits(4, self._enemy(4, 6.0, 7.0, model=2731)), [0.0, 0.0, 0.0])
+
+    def test_honest_witness_omits_design_table_prior_and_matches_export(self):
+        witness = TerrainWitness(use_prior=False)
+        enemy = self._enemy(4, 14.92, 13.475, model=2732)
+        self.assertEqual(witness.bits(4, enemy), [0.0, 0.0, 0.0])
+        witness.observe(self._obs(10.0, [enemy], {self.INSIDE: {'occupants': ['blue-4']}}), 7)
+        self.assertEqual(witness.bits(4, enemy), [1.0, 0.0, 0.0])
 
 
 class RewardTermTests(unittest.TestCase):
@@ -1075,6 +1091,190 @@ class ActionStdControlTests(unittest.TestCase):
         body = source[start:source.index('\n    def ', start + 10)]
         self.assertIn('except (OSError, ValueError, KeyError, TypeError)', body)
         self.assertNotIn('raise ', body.split('except')[1].split('with torch.no_grad()')[0])
+
+
+class Stage3FixRegressionTests(unittest.TestCase):
+    """Regressions covering OBS v3, bounded actor, hysteresis, LOS fire gate, ammo/posture."""
+
+    @classmethod
+    def setUpClass(cls):
+        with Match(seed=42, map_name='rmuc2027') as match:
+            cls.observation = match.observation('red', [7])
+        cls.config = {**load_config(), 'learning_control_hz': 2}
+
+    def test_obs_v3_encodes_tactical_awareness_in_tail(self):
+        obs = copy.deepcopy(self.observation)
+        obs['time'] = 185.0
+        robot = next(r for r in obs['robots'] if r['slot'] == 7)
+        robot.update(
+            supply_grants_taken=1,
+            posture_enhanced_time=[7.5, 0.0, 15.0],
+            crossing_cooling_until=245.0,
+            crossing_defense_until=200.0,
+        )
+        obs['outposts']['red'].update(hp=1000.0, max_hp=2000.0)
+        obs['outposts']['blue'].update(hp=500.0, max_hp=2000.0)
+        obs['zones']['red_central']['occupants'] = ['blue-3']
+        obs['zones']['blue_central']['occupants'] = ['red-4']
+        obs['positions']['red_outpost']['controller'] = 'blue'
+        obs['teams']['red']['purchased_17'] = 750
+        encoded = encode_observation(obs, {'goal': (5.0, 5.0), 'mode': 'policy', 'goal_time': 185.0}, 7, 0.5)
+        self.assertEqual(len(encoded), 145)
+        tail = encoded[131:]
+        self.assertAlmostEqual(tail[0], 2.0 / 3.0, places=5)   # 3 due - 1 taken = 2
+        self.assertAlmostEqual(tail[1], 0.5, places=5)         # attack enhanced remaining
+        self.assertAlmostEqual(tail[2], 1.0, places=5)         # defense enhanced remaining
+        self.assertAlmostEqual(tail[3], 0.0, places=5)         # move enhanced remaining
+        self.assertAlmostEqual(tail[4], 60.0 / 120.0, places=5)# crossing cooling remaining
+        self.assertAlmostEqual(tail[5], 15.0 / 30.0, places=5) # crossing defense remaining
+        self.assertAlmostEqual(tail[6], 0.5, places=5)         # own outpost hp ratio
+        self.assertAlmostEqual(tail[7], 0.25, places=5)        # enemy outpost hp ratio
+        self.assertEqual(tail[8:13], [0.0, 1.0, 1.0, 0.0, 1.0])# central occ & own fortress active
+        self.assertAlmostEqual(tail[13], 0.25, places=5)       # team 17mm cap left
+
+    def test_goal_hysteresis_and_arrival_resume_deadband(self):
+        navigator = SdkNavigator(0.25)
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['time'] = 10.0
+            obs['enemies'] = []
+            obs['outposts']['blue']['hp'] = 0
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            state = controller.state
+            select_goal(obs, state, [0.0, 0.0], navigator, self.config)
+            first_goal = list(state['goal'])
+            # Small action perturbation resolving <= GOAL_HYSTERESIS_M keeps locked goal.
+            select_goal(obs, state, [0.015, -0.015], navigator, self.config)
+            self.assertEqual(state['goal'], first_goal)
+            # Large perturbation moves goal cleanly.
+            select_goal(obs, state, [0.5, 0.5], navigator, self.config)
+            self.assertNotEqual(state['goal'], first_goal)
+
+            # Settle within 0.30 m then nudge out to 0.40 m (< 0.48 m resume): stays braked.
+            controller.state['goal'] = [robot['x'] + 0.1, robot['y']]
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7']['move'], [0.0, 0.0])
+            self.assertTrue(actions['7'].get('brake'))
+            robot['x'] = controller.state['goal'][0] - 0.40
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7']['move'], [0.0, 0.0])
+            self.assertTrue(actions['7'].get('brake'))
+        finally:
+            controller.close()
+
+    def test_structure_los_blocks_wall_fire_and_zero_ammo_avoids_attack_and_grants_retreat(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['time'] = 125.0
+            obs['enemies'] = []
+            obs['positions']['red_outpost']['control'] = 'full'
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            # Place sentry behind red wall from blue outpost (>10m and occluded in vision).
+            obs['vision']['7']['outposts'] = {}
+            obs['positions']['blue_outpost']['controller'] = 'red'
+            obs['outposts']['blue']['hp'] = 0.0
+            # Put enemy base 4m away horizontally, but place a blocking wall right in between.
+            obs['bases']['blue']['x'] = robot['x'] + 4.0
+            obs['bases']['blue']['y'] = robot['y']
+            obs['arena'] = copy.deepcopy(obs['arena'])
+            obs['arena']['obstacles'].append({
+                'id': 'test_blocker', 'x': robot['x'] + 1.8, 'y': robot['y'] - 2.0,
+                'w': 0.5, 'h': 4.0, 'bottom': 0.0, 'height': 3.0, 'rotation': 0.0,
+            })
+            controller.state['goal'] = [robot['x'], robot['y']]
+            robot.update(ammo=100, posture='defense', posture_ready_at=0.0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            self.assertFalse(actions['7'].get('fire', False))
+            self.assertNotEqual(actions['7'].get('posture'), 'attack')
+
+            # With an open enemy target, ammo==0 must switch out of 'attack' (both in policy
+            # mode and when triggering free-grant retreat).
+            obs['enemies'] = [{
+                'id': 'blue-3', 'slot': 3, 'role': 'infantry', 'team': 'blue',
+                'x': robot['x'] + 2.0, 'y': robot['y'], 'z': robot.get('z', 0.0),
+                'vx': 0.0, 'vy': 0.0, 'hp': 200.0, 'max_hp': 200.0,
+                'alive': True, 'targetable': True, 'invulnerable': False,
+                'armor_center_z_m': 0.2,
+            }]
+            obs['time'] = 10.0
+            robot.update(ammo=0, posture='attack', posture_ready_at=0.0,
+                         pending_ammo=[], supply_grants_taken=0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'policy')
+            self.assertEqual(actions['7'].get('posture'), 'defense')
+            self.assertFalse(actions['7'].get('fire', False))
+
+            obs['time'] = 125.0
+            robot.update(ammo=0, posture='attack', posture_ready_at=0.0,
+                         pending_ammo=[], supply_grants_taken=0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+            self.assertEqual(actions['7'].get('posture'), 'defense')
+            self.assertFalse(actions['7'].get('fire', False))
+        finally:
+            controller.close()
+
+    def test_mlp_forward_supports_terminal_tanh_and_legacy_linear(self):
+        layers_tanh = [{'weight': [[100.0] * 2, [-100.0] * 2], 'bias': [0.0, 0.0], 'activation': 'tanh'}]
+        out = mlp_forward([1.0, 1.0], layers_tanh)
+        self.assertTrue(all(-1.0 <= v <= 1.0 for v in out))
+        self.assertAlmostEqual(out[0], 1.0, places=6)
+        self.assertAlmostEqual(out[1], -1.0, places=6)
+        layers_linear = [{'weight': [[2.0, 0.0], [0.0, -3.0]], 'bias': [0.5, 0.5]}]
+        self.assertEqual(mlp_forward([1.0, 1.0], layers_linear), [2.5, -2.5])
+
+    @unittest.skipUnless(importlib.util.find_spec('stable_baselines3'), 'Optional SB3/PyTorch unavailable')
+    def test_tanh_policy_exports_with_parity_and_honors_action_std_config(self):
+        import torch
+        from stable_baselines3 import PPO
+        from rmuc2027_research.rl.env import SentryEnv
+        from rmuc2027_research.rl.learning import TanhActorCriticPolicy, TimedPPO, action_std
+        from rmuc2027_research.rl.exporting import export_model
+        from rmuc2027_research.rl.learning import experiment
+
+        config = load_config({
+            'episode_seconds': 1,
+            'sim_backend': 'rapier',
+            'ppo': {'n_steps': 8, 'batch_size': 8, 'action_std': 0.35},
+        })
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = root / 'run'
+            run.mkdir()
+            env = SentryEnv(config)
+            try:
+                model = TimedPPO(
+                    TanhActorCriticPolicy,
+                    env,
+                    n_steps=8,
+                    batch_size=8,
+                    device='cpu',
+                    seed=42,
+                    policy_kwargs={'net_arch': {'pi': [64, 64], 'vf': [64, 64]}, 'log_std_init': math.log(0.35)},
+                )
+                self.assertAlmostEqual(action_std(model), 0.35, places=5)
+                extreme = np.full(env.observation_space.shape, 1e4, dtype=np.float32)
+                pred, _ = model.predict(extreme, deterministic=True)
+                self.assertTrue(np.all(np.abs(pred) <= 1.0))
+                model.save(run / 'model.zip')
+                (run / 'experiment.json').write_text(json.dumps(experiment(config)))
+                reloaded = PPO.load(run / 'model.zip', device='cpu')
+                np.testing.assert_array_equal(reloaded.predict(extreme, deterministic=True)[0], pred)
+            finally:
+                env.close()
+            exported = root / 'exported'
+            metadata = export_model(run / 'model.zip', exported)
+            self.assertLess(metadata['actor_parity_max_error'], 1e-5)
+
+    def test_v3_config_matches_requested_settings(self):
+        cfg = load_config(rl_session.ROOT / 'configs/rl/sentry-pooled-v3.json')
+        self.assertFalse(cfg['drones_enabled'])
+        self.assertTrue(cfg['timed_assembly'])
+        self.assertEqual(cfg['rewards']['death'], 0.0)
+        self.assertEqual(cfg['rewards']['terrain_buff'], 0.0)
+        self.assertAlmostEqual(cfg['ppo']['action_std'], 0.35)
 
 
 if __name__ == '__main__':
