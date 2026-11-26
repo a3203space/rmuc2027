@@ -1147,11 +1147,22 @@ class Stage3FixRegressionTests(unittest.TestCase):
             # Small action perturbation resolving <= GOAL_HYSTERESIS_M keeps locked goal.
             select_goal(obs, state, [0.015, -0.015], navigator, self.config)
             self.assertEqual(state['goal'], first_goal)
+            # Even when resolve_goal snaps > 1.15 m across the central plinth, <= 1.0 m proposed_goal drift stays locked.
+            w, h = obs['arena']['width'], obs['arena']['height']
+            plinth_cand = navigator.resolve_goal(robot, [((0.055 + 1.0) * w) / 2.0, ((0.055 + 1.0) * h) / 2.0], obs['arena'])
+            self.assertGreater(math.hypot(plinth_cand[0] - first_goal[0], plinth_cand[1] - first_goal[1]), 1.15)
+            select_goal(obs, state, [0.055, 0.055], navigator, self.config)
+            self.assertEqual(state['goal'], first_goal)
             # Large perturbation moves goal cleanly.
             select_goal(obs, state, [0.5, 0.5], navigator, self.config)
             self.assertNotEqual(state['goal'], first_goal)
+            # Dead/tipped mode freezes goal even under large action changes.
+            frozen_goal = list(state['goal'])
+            state['mode'] = 'dead'
+            select_goal(obs, state, [-0.5, -0.5], navigator, self.config)
+            self.assertEqual(state['goal'], frozen_goal)
+            state['mode'] = 'policy'
             # ~0.90 m diagonal grid perturbation (> old 0.55 m, <= 1.15 m) stays locked on open apron.
-            w, h = obs['arena']['width'], obs['arena']['height']
             select_goal(obs, state, [2.0 * 5.0 / w - 1.0, 2.0 * 5.0 / h - 1.0], navigator, self.config)
             open_goal = list(state['goal'])
             diag_action = [2.0 * 5.75 / w - 1.0, 2.0 * 5.5 / h - 1.0]
@@ -1312,6 +1323,91 @@ class Stage3FixRegressionTests(unittest.TestCase):
         finally:
             controller.close()
 
+    def test_bumps_lock_heading_dampen_lateral_and_detect_axis_stall(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['enemies'] = []
+            obs['outposts']['blue']['hp'] = 0
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            controller.state['goal'] = [1.5, 13.0]
+            controller.state['mode'] = 'policy'
+
+            # Inside red_road_bumps with skewed heading: locks axis heading & dampens lateral move.
+            obs['time'] = 18.0
+            robot.update(x=7.12, y=13.51, vx=-0.1, vy=0.0, heading=-2.60,
+                         ammo=200, posture='move', posture_ready_at=0.0,
+                         supercap_energy_j=1800.0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            cmd = actions['7']
+            self.assertAlmostEqual(cmd['heading'], math.pi, places=5)
+            self.assertLessEqual(abs(cmd['move'][1]), 0.16 * abs(cmd['move'][0]))
+
+            # Pure lateral y-sliding + twisting heading inside bumps with stalled x progress still unsticks!
+            controller = GoalController(self.config)
+            controller.state['goal'] = [1.5, 13.0]
+            controller.state['mode'] = 'policy'
+            for t, yy, hdg in ((20.0, 13.51, -2.60), (20.5, 13.85, -2.30), (21.0, 13.52, -2.75), (21.5, 13.88, -2.20)):
+                obs['time'] = t
+                robot.update(x=7.12, y=yy, vx=0.0, vy=0.0, heading=hdg,
+                             ammo=200, posture='move', posture_ready_at=0.0,
+                             supercap_energy_j=1800.0, hp=robot['max_hp'])
+                actions, _ = controller.decide(obs)
+            cmd = actions['7']
+            self.assertGreater(cmd['move'][0], 0.5)
+            self.assertAlmostEqual(cmd['heading'], math.pi, places=5)
+            self.assertEqual(cmd.get('power'), 200)
+        finally:
+            controller.close()
+
+    def test_survival_posture_thresholds_and_low_ammo_attack_entry_guard(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['outposts']['blue']['hp'] = 0
+            obs['positions']['red_outpost']['control'] = 'full'
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+
+            # Recovering off-bumps at hp=0.38 (< 0.40) even without recent hit enters defense.
+            obs['enemies'] = []
+            obs['time'] = 50.0
+            controller.state['recovering'] = True
+            controller.state['goal'] = [1.5, 13.0]
+            robot.update(x=10.0, y=5.0, vx=0.0, vy=0.0, ammo=100,
+                         hp=robot['max_hp'] * 0.38, last_damage_time=0.0,
+                         posture='move', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+            self.assertEqual(actions['7'].get('posture'), 'defense')
+
+            # Policy mode under fire at hp=0.60 (< 0.65) switches to defense.
+            obs['time'] = 60.0
+            controller.state['recovering'] = False
+            controller.state['mode'] = 'policy'
+            robot.update(x=10.0, y=5.0, ammo=100, hp=robot['max_hp'] * 0.60,
+                         last_damage_time=59.2, posture='attack', posture_ready_at=0.0)
+            obs['enemies'] = [{
+                'id': 'blue-3', 'slot': 3, 'role': 'infantry', 'team': 'blue',
+                'x': 12.0, 'y': 5.0, 'z': robot.get('z', 0.0),
+                'vx': 0.0, 'vy': 0.0, 'hp': 200.0, 'max_hp': 200.0,
+                'alive': True, 'targetable': True, 'invulnerable': False,
+                'armor_center_z_m': 0.2,
+            }]
+            controller.state['goal'] = [10.0, 5.0]
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7'].get('posture'), 'defense')
+
+            # Parked with < 25 ammo refuses to enter 'attack' from 'defense', whereas ammo=30 enters 'attack'.
+            robot.update(x=10.0, y=5.0, ammo=15, hp=robot['max_hp'],
+                         last_damage_time=0.0, posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertNotEqual(actions['7'].get('posture'), 'attack')
+            robot.update(ammo=30, posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7'].get('posture'), 'attack')
+        finally:
+            controller.close()
+
     def test_mlp_forward_supports_terminal_tanh_and_legacy_linear(self):
         layers_tanh = [{'weight': [[100.0] * 2, [-100.0] * 2], 'bias': [0.0, 0.0], 'activation': 'tanh'}]
         out = mlp_forward([1.0, 1.0], layers_tanh)
@@ -1368,9 +1464,10 @@ class Stage3FixRegressionTests(unittest.TestCase):
         cfg = load_config(rl_session.ROOT / 'configs/rl/sentry-pooled-v3.json')
         self.assertFalse(cfg['drones_enabled'])
         self.assertTrue(cfg['timed_assembly'])
-        self.assertEqual(cfg['rewards']['death'], 0.0)
+        self.assertAlmostEqual(cfg['recover_enter'], 0.35)
+        self.assertAlmostEqual(cfg['rewards']['death'], -0.5)
         self.assertEqual(cfg['rewards']['terrain_buff'], 0.0)
-        self.assertAlmostEqual(cfg['ppo']['action_std'], 0.35)
+        self.assertAlmostEqual(cfg['ppo']['action_std'], 0.48)
 
 
 if __name__ == '__main__':

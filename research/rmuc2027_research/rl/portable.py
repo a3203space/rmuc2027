@@ -276,22 +276,37 @@ def select_goal(obs, state, action, navigator, config):
         proposed = [w-proposed[0], h-proposed[1]]
     robot = own_robot(obs, config['slot'])
     folded = robot.get('transform_progress', 0) >= 0.99
-    candidate = navigator.resolve_goal(robot, proposed, obs['arena'])
     prev_goal = state.get('goal')
-    if (
-        prev_goal is not None
-        and candidate is not None
-        and state.get('mode', 'policy') == 'policy'
-        and bool(state.get('_goal_folded', False)) == folded
-        and math.hypot(candidate[0] - prev_goal[0], candidate[1] - prev_goal[1]) <= GOAL_HYSTERESIS_M
-    ):
+    prev_proposed = state.get('_goal_proposed')
+    mode = state.get('mode', 'policy')
+    same_fold = bool(state.get('_goal_folded', False)) == folded
+    if prev_goal is not None and mode in ('dead', 'tipped') and same_fold:
         goal = list(prev_goal)
+        locked_proposed = list(prev_proposed) if prev_proposed is not None else list(proposed)
     else:
-        goal = candidate
-        if prev_goal is None or goal is None or math.hypot(goal[0] - prev_goal[0], goal[1] - prev_goal[1]) > 1e-6:
-            state['goal_settled'] = False
+        candidate = navigator.resolve_goal(robot, proposed, obs['arena'])
+        if (
+            prev_goal is not None
+            and candidate is not None
+            and same_fold
+            and (
+                math.hypot(candidate[0] - prev_goal[0], candidate[1] - prev_goal[1]) <= GOAL_HYSTERESIS_M
+                or (
+                    prev_proposed is not None
+                    and math.hypot(proposed[0] - prev_proposed[0], proposed[1] - prev_proposed[1]) <= PROPOSED_HYSTERESIS_M
+                )
+            )
+        ):
+            goal = list(prev_goal)
+            locked_proposed = list(prev_proposed) if prev_proposed is not None else list(proposed)
+        else:
+            goal = candidate
+            locked_proposed = list(proposed)
+            if prev_goal is None or goal is None or math.hypot(goal[0] - prev_goal[0], goal[1] - prev_goal[1]) > 1e-6:
+                state['goal_settled'] = False
     state.update(goal=goal, goal_time=obs['time'], supplied_action=list(action),
-                 clipped_action=clipped, proposed_goal=proposed, _goal_folded=folded)
+                 clipped_action=clipped, proposed_goal=proposed,
+                 _goal_folded=folded, _goal_proposed=locked_proposed)
 
 
 def held_fire_safe(robot, seconds):
@@ -334,6 +349,7 @@ def fixed_opening(obs, state, config, baseline):
 GOAL_STOP_RADIUS_M = 0.30
 GOAL_RESUME_RADIUS_M = 0.48
 GOAL_HYSTERESIS_M = 1.15
+PROPOSED_HYSTERESIS_M = 1.0
 MOVE_POSTURE_DISTANCE_M = 3.5
 POSTURE_INDEX = {"attack": 0, "defense": 1, "move": 2}
 ENHANCED_BUDGET_S = 14.9
@@ -341,6 +357,7 @@ REMOTE_BUY_MIN_COINS = 200.0
 TEAM_17MM_BUY_LIMIT = 900
 FREE_GRANT_NEAR_M = 8.0
 RECOVER_COMMIT_M = 8.0
+ATTACK_ENTRY_MIN_AMMO = 25
 
 
 def _segment_box_clear_3d(ax, ay, az, bx, by, bz, wall):
@@ -472,6 +489,14 @@ def _bump_zone_for(robot, arena, margin_x=0.0, margin_y=0.0):
     return None
 
 
+def _bump_axis_heading(robot, bump_zone):
+    """Return the heading aligned with the bump zone's traversal axis closest to current heading."""
+    hdg_wrap = (float(robot.get('heading', 0.0)) + math.pi) % math.tau - math.pi
+    if str(bump_zone.get('axis', 'x')) == 'x':
+        return 0.0 if abs(hdg_wrap) <= math.pi * 0.5 else math.pi
+    return math.pi * 0.5 if hdg_wrap >= 0.0 else -math.pi * 0.5
+
+
 def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
     """Back off and re-align when translational progress stalls while driving."""
     u = state.setdefault('unstick', {'trail': [], 'tries': 0})
@@ -483,17 +508,20 @@ def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
     while len(trail) > 1 and now - trail[0][0] > 1.75:
         trail.pop(0)
     elapsed = now - trail[0][0]
-    moved = math.hypot(float(robot['x']) - trail[0][1], float(robot['y']) - trail[0][2])
+    if on_bumps is not None:
+        axis = str(on_bumps.get('axis', 'x'))
+        moved = abs(float(robot['x']) - trail[0][1]) if axis == 'x' else abs(float(robot['y']) - trail[0][2])
+    else:
+        moved = math.hypot(float(robot['x']) - trail[0][1], float(robot['y']) - trail[0][2])
     turned = abs((float(robot.get('heading', 0.0)) - trail[0][3] + math.pi) % math.tau - math.pi)
     if moved > 0.45:
         u['tries'] = 0
-    if elapsed < 1.35 or moved > 0.12 or turned > 0.15:
+    if elapsed < 1.35 or moved > 0.12 or (on_bumps is None and turned > 0.15):
         return fields
     u['tries'] = int(u.get('tries', 0)) + 1
     dx, dy = fields['move']
     if math.hypot(dx, dy) < 0.05 and goal is not None:
         dx, dy = float(goal[0]) - float(robot['x']), float(goal[1]) - float(robot['y'])
-    hdg_wrap = (float(robot.get('heading', 0.0)) + math.pi) % math.tau - math.pi
     if on_bumps is not None:
         axis = str(on_bumps.get('axis', 'x'))
         if axis == 'x':
@@ -503,7 +531,6 @@ def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
                 ry = 0.18 if float(robot['y']) < mid_y else -0.18
             else:
                 ry = 0.18 if (u['tries'] % 2) else -0.18
-            hold_heading = 0.0 if abs(hdg_wrap) <= math.pi * 0.5 else math.pi
         else:
             ry = -1.0 if dy >= 0.0 else 1.0
             mid_x = float(on_bumps['x']) + 0.5 * float(on_bumps['w'])
@@ -511,10 +538,10 @@ def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
                 rx = 0.18 if float(robot['x']) < mid_x else -0.18
             else:
                 rx = 0.18 if (u['tries'] % 2) else -0.18
-            hold_heading = math.pi * 0.5 if hdg_wrap >= 0.0 else -math.pi * 0.5
+        hold_heading = _bump_axis_heading(robot, on_bumps)
         norm = max(1e-9, math.hypot(rx, ry))
         escape = [0.95 * rx / norm, 0.95 * ry / norm]
-        u.update(escape=escape, until=now + 0.9, heading=hold_heading, bump_boost_until=now + 3.5)
+        u.update(escape=escape, until=now + 1.1, heading=hold_heading, bump_boost_until=now + 3.8)
     else:
         offset = 0.9 if (robot['slot'] + u['tries']) % 2 else -0.9
         angle = math.atan2(dy, dx) + math.pi + offset
@@ -630,6 +657,30 @@ def execute_goal(obs, state, navigator, config, baseline):
     unstick_state = state.get('unstick') or {}
     in_unstick = now < float(unstick_state.get('until', -1.0))
     bump_boost = now < float(unstick_state.get('bump_boost_until', -1.0))
+    if (
+        robot['alive']
+        and not in_manoeuvre
+        and not in_unstick
+        and not any(fields.get(k) for k in ('jump', 'transform', 'brake'))
+    ):
+        active_bump = on_bumps or (approaching_bumps if bump_boost else None)
+        if active_bump is not None:
+            fields['heading'] = _bump_axis_heading(robot, active_bump)
+            if on_bumps is not None:
+                mx, my = fields['move']
+                orig_mag = math.hypot(mx, my)
+                if orig_mag > 0.2:
+                    if str(on_bumps.get('axis', 'x')) == 'x':
+                        if abs(mx) > 0.1:
+                            lim = 0.15 * abs(mx)
+                            my = max(-lim, min(lim, my))
+                    else:
+                        if abs(my) > 0.1:
+                            lim = 0.15 * abs(my)
+                            mx = max(-lim, min(lim, mx))
+                    new_mag = math.hypot(mx, my)
+                    if new_mag > 1e-9:
+                        fields['move'] = (mx * orig_mag / new_mag, my * orig_mag / new_mag)
     speed = math.hypot(float(robot.get('vx', 0.0) or 0.0), float(robot.get('vy', 0.0) or 0.0))
     cmd_mag = math.hypot(*fields['move'])
     supercap_ok = ('supercap_energy_j' not in robot) or float(robot.get('supercap_energy_j', 0.0) or 0.0) > 150.0
@@ -665,7 +716,8 @@ def execute_goal(obs, state, navigator, config, baseline):
             moving = math.hypot(*move) > 0.05
             threatened = obs['time'] - robot.get('last_damage_time', -99.0) < 2.0
             has_ammo = int(robot.get('ammo', 0)) > 0
-            combat_ready = has_ammo and bool(shot)
+            attack_ammo_ok = int(robot.get('ammo', 0)) >= (1 if robot.get('posture') == 'attack' else ATTACK_ENTRY_MIN_AMMO)
+            combat_ready = attack_ammo_ok and bool(shot)
             live_duel = has_ammo and any(
                 e['alive'] and not e.get('invulnerable')
                 and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
@@ -680,8 +732,8 @@ def execute_goal(obs, state, navigator, config, baseline):
             if traverse_bumps:
                 wanted = 'move'
             elif recovering:
-                wanted = 'defense' if ((hp < 0.35 and threatened) or gap <= 3.0) else 'move'
-            elif hp < 0.55 and threatened:
+                wanted = 'defense' if (hp < 0.40 or gap <= 3.0) else 'move'
+            elif hp < 0.65 and threatened:
                 wanted = 'defense'
             elif combat_ready and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
                 wanted = 'attack'
@@ -695,7 +747,7 @@ def execute_goal(obs, state, navigator, config, baseline):
             heat_ratio = _ratio(robot.get('heat', 0.0), robot.get('max_heat', 260.0))
             want_enhanced = bool(
                 budget_ok and (
-                    (wanted == 'defense' and hp < 0.50 and threatened)
+                    (wanted == 'defense' and hp < 0.55 and threatened)
                     or (wanted == 'attack' and live_duel and bool(shot) and heat_ratio >= 0.70)
                 )
             )

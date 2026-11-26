@@ -7,7 +7,7 @@
   "episode_seconds": 420,
   "rl_seconds": 0.5,
   "grid_m": 0.25,
-  "recover_enter": 0.25,
+  "recover_enter": 0.35,
   "recover_exit": 0.8,
   "friendly": "examples/claude_opus55_xhigh_2027_squad",
   "opponent": "examples/claude_opus55_xhigh_2027_hold",
@@ -48,7 +48,7 @@
     "control": 0.01,
     "outcome": 10.0,
     "capture_seconds": 0.005,
-    "death": 0.0,
+    "death": -0.5,
     "terrain_buff": 0.0,
     "position_control": 0.01
   },
@@ -60,7 +60,7 @@
     "gae_lambda": 0.95,
     "gamma": 0.998,
     "ent_coef": 0.004,
-    "action_std": 0.35
+    "action_std": 0.48
   },
   "sim_backend": "warp_kinematic",
   "sim_device": "cuda:0",
