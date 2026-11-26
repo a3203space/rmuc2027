@@ -138,18 +138,19 @@ def recommend_envs(results,min_realtime=5.):
     return max(eligible,key=lambda r:r['rl_steps_per_second'])['num_envs'] if eligible else None
 
 
-def benchmark(config, counts, steps, output, action_pattern='constant-zero', profile=False,min_realtime=5.):
+def benchmark(config, counts, steps, output, action_pattern='constant-zero', profile=False,min_realtime=5.,sim_shards=1):
     from .learning import vector_env
     import numpy as np
     output = Path(output)
     if not math.isfinite(min_realtime) or min_realtime<=0:raise ValueError('min realtime factor must be positive and finite')
+    if sim_shards < 1:raise ValueError('sim-shards must be positive')
     output = fresh_directory(output, 'benchmark')
     manifest=provenance(config)
     write_json(output/'experiment.json',manifest)
     results = []
     for count in counts:
         started = time.perf_counter()
-        vec = vector_env(config, count)
+        vec = vector_env(config, count) if sim_shards == 1 else vector_env(config, count, shards=sim_shards)
         try:
             vec.reset()
             initialization = time.perf_counter()-started
@@ -161,6 +162,8 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
             preparation=None
             if hasattr(vec,'envs'):
                 preparation=[getattr(env.session.controller.navigator,'preparation_seconds',0.) for env in vec.envs]
+            elif hasattr(vec,'warmup_preparation_seconds'):
+                preparation=vec.warmup_preparation_seconds()
             if hasattr(vec, 'physics'):
                 vec.physics.reset_metrics()
             profiler=None
@@ -184,7 +187,7 @@ def benchmark(config, counts, steps, output, action_pattern='constant-zero', pro
             descendants = []
             if hasattr(vec, 'processes'):
                 descendants = [p.pid for p in vec.processes]
-            record = {'num_envs': count, 'steps_per_env': steps,
+            record = {'num_envs': count, 'sim_shards': getattr(vec, 'num_shards', 1), 'steps_per_env': steps,
                 'action_pattern':action_pattern,'ppo_included':False,'profiled':profile,
                 'initialization_seconds': initialization, 'warmup_seconds': warmup_seconds, 'sampling_seconds': elapsed,
                 'per_env_simulated_seconds':simulated.tolist(),
@@ -242,9 +245,13 @@ def main():
             p.add_argument('--init-from', type=Path,
                 help='PPO checkpoint whose weights seed a new experiment (counters reset)')
             p.add_argument('--num-envs', type=int, default=1)
+            p.add_argument('--sim-shards', type=int, default=1,
+                help='Split warp_kinematic environments across N spawned Python shard processes to bypass the GIL')
             p.add_argument('--device', choices=('cpu', 'cuda'), default='cpu')
         else:
             p.add_argument('--num-envs', type=int, nargs='+', default=[1, 2, 4])
+            p.add_argument('--sim-shards', type=int, default=1,
+                help='Split warp_kinematic environments across N spawned Python shard processes to bypass the GIL')
             p.add_argument('--steps', type=int, default=128)
             p.add_argument('--action-pattern',choices=('constant-zero','uniform-random'),default='constant-zero')
             p.add_argument('--profile',action='store_true',help='Record main-process timings; adds measurement overhead')
@@ -298,7 +305,7 @@ def main():
             steps = args.additional_steps if args.additional_steps is not None else args.total_steps
             check_steps(config, args.num_envs, steps)
             train(config, args.run_dir, steps, args.num_envs, args.device, args.resume,
-                  args.wall_seconds, args.init_from)
+                  args.wall_seconds, args.init_from, sim_shards=args.sim_shards)
         elif args.command == 'evaluate':
             from .learning import evaluate
             evaluate(args.model, args.run_dir, args.seeds, args.sides, args.duration, args.device, args.backend)
@@ -311,7 +318,7 @@ def main():
         elif args.command == 'benchmark':
             if args.steps < 1:
                 raise ValueError('steps must be positive')
-            benchmark(config, args.num_envs, args.steps, args.run_dir,args.action_pattern,args.profile,args.min_realtime_factor)
+            benchmark(config, args.num_envs, args.steps, args.run_dir,args.action_pattern,args.profile,args.min_realtime_factor,sim_shards=args.sim_shards)
     except ImportError as exc:
         parser.exit(2, f'RL dependency unavailable: {exc}. Install with uv pip install --python research/.venv/bin/python --torch-backend cpu -r research/requirements-rl.txt -e packages/core -e research\n')
     except KeyboardInterrupt:

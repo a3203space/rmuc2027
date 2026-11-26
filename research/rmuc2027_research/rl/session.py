@@ -8,7 +8,7 @@ import random
 import time
 from types import SimpleNamespace
 
-from rmuc2027_core.engine import DT, binary_path
+from rmuc2027_core.engine import DT, binary_path, decode_response_json
 from rmuc2027_core.paths import ROOT
 from ..strategies.battle import Battle
 from rmuc2027_core.policy import EncodedObservation, Policy
@@ -298,7 +298,7 @@ class GoalController:
         select_goal(obs, self.state, action, self.navigator, self.config)
 
     def decide(self, observation):
-        obs = json.loads(observation.payload) if isinstance(observation, EncodedObservation) else observation
+        obs = decode_response_json(observation.payload) if isinstance(observation, EncodedObservation) else observation
         self.calls += 1
         opening = fixed_opening(obs, self.state, self.config, self.baseline)
         if opening is not None:

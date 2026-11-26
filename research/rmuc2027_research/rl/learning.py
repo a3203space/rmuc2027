@@ -35,16 +35,23 @@ def device_name(requested):
     return requested
 
 
-def vector_env(config, count):
+def vector_env(config, count, shards=1):
     if count < 1:
         raise ValueError('num-envs must be positive')
+    if shards < 1:
+        raise ValueError('sim-shards must be positive')
     factories = [partial(make_env, config) for _ in range(count)]
     if config.get('sim_backend', 'rapier') == 'mjwarp':
         from .mjwarp.vector import WarpVecEnv
         vec = WarpVecEnv(factories)
     elif config.get('sim_backend') == 'warp_kinematic' and count>1:
-        from .warp_kinematic.vector import WarpVecEnv
-        vec = WarpVecEnv(factories)
+        effective_shards = min(shards, count)
+        if effective_shards > 1:
+            from .warp_kinematic.vector import ShardedWarpVecEnv
+            vec = ShardedWarpVecEnv(factories, shards=effective_shards)
+        else:
+            from .warp_kinematic.vector import WarpVecEnv
+            vec = WarpVecEnv(factories)
     else:
         vec = DummyVecEnv(factories) if count == 1 or config.get('slot') == 1 else SubprocVecEnv(factories, start_method='spawn')
     vec.seed(config['seed'])
@@ -325,9 +332,11 @@ def experiment(config):
             ('torch', 'gymnasium', 'stable-baselines3', 'numpy')}}
 
 
-def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_seconds=None, init_from=None):
+def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_seconds=None, init_from=None, sim_shards=1):
     if resume and init_from:
         raise ValueError('--resume and --init-from are mutually exclusive')
+    if sim_shards < 1:
+        raise ValueError('sim-shards must be positive')
     if wall_seconds is not None and (not math.isfinite(wall_seconds) or wall_seconds <= 0):
         raise ValueError('wall-seconds must be finite and positive')
     check_action_std(config)
@@ -366,7 +375,7 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
     runtime_config = dict(config)
     if wall_seconds is not None:
         runtime_config['_training_deadline'] = time.monotonic()+wall_seconds
-    vec = vector_env(runtime_config, num_envs)
+    vec = vector_env(runtime_config, num_envs) if sim_shards == 1 else vector_env(runtime_config, num_envs, shards=sim_shards)
     callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None,
                              detailed=config.get('action_trace', False),backup_seconds=config.get('github_backup_seconds',300.))
     # Everything expensive that is not a rollout: spawning the operators,
@@ -455,7 +464,7 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
             'reload_prediction_equal': True, 'optimizer_reloaded': optimizer_restored,
             'actor_updated': delta > 0, 'requested_wall_seconds': wall_seconds,
             'stop_reason': 'wall_time_limit' if callback.timed_out else 'step_limit',
-            'num_envs': num_envs, 'device': str(model.device),
+            'num_envs': num_envs, 'sim_shards': getattr(vec, 'num_shards', 1), 'device': str(model.device),
             'wall_seconds': time.perf_counter()-started, 'sampling_seconds': callback.sampling_seconds,
             'optimization_seconds': model.optimization_seconds,
             'rl_steps_per_second': (model.num_timesteps-previous_steps)/max(callback.sampling_seconds, 1e-9),

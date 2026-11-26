@@ -4,6 +4,10 @@ from collections import deque
 from collections.abc import Sequence
 import hashlib
 import json
+try:
+    import orjson as _orjson
+except ImportError:
+    _orjson = None
 import os
 from pathlib import Path
 import queue
@@ -237,7 +241,13 @@ class Policy:
         raw = self.lines.get(timeout=remaining)
         controlled, has_messages = self.pending_response
         self.pending_response = None
-        response = json.loads(raw, parse_constant=lambda s: (_ for _ in ()).throw(ValueError("non-finite JSON")))
+        if _orjson is not None:
+            try:
+                response = _orjson.loads(raw)
+            except ValueError as exc:
+                raise ValueError("non-finite JSON" if b"NaN" in raw or b"Infinity" in raw else str(exc)) from exc
+        else:
+            response = json.loads(raw, parse_constant=lambda s: (_ for _ in ()).throw(ValueError("non-finite JSON")))
         if response.get("error"):
             raise ValueError(response["error"])
         self.navigation_trace = response.get("navigation_trace", {})

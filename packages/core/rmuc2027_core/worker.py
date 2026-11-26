@@ -7,6 +7,10 @@ import os
 import random
 import sys
 import traceback
+try:
+    import orjson as _orjson
+except ImportError:
+    _orjson = None
 
 # Sandbox budgets. This file runs alone inside the policy container; the host imports the
 # same values for its submission checks and container limits.
@@ -41,9 +45,10 @@ def main():
     except BaseException:
         traceback.print_exc(file=sys.stderr)
         return
-    for line in sys.stdin:
+    stdin = getattr(sys.stdin, "buffer", sys.stdin)
+    for line in stdin:
         try:
-            observation = json.loads(line)
+            observation = _orjson.loads(line) if _orjson is not None else json.loads(line)
             with contextlib.redirect_stdout(sys.stderr):
                 result = strategy.act(observation, state)
             if not isinstance(result, (tuple, list)) or len(result) != 2:
