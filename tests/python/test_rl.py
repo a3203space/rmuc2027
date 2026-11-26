@@ -1150,6 +1150,16 @@ class Stage3FixRegressionTests(unittest.TestCase):
             # Large perturbation moves goal cleanly.
             select_goal(obs, state, [0.5, 0.5], navigator, self.config)
             self.assertNotEqual(state['goal'], first_goal)
+            # ~0.90 m diagonal grid perturbation (> old 0.55 m, <= 1.15 m) stays locked on open apron.
+            w, h = obs['arena']['width'], obs['arena']['height']
+            select_goal(obs, state, [2.0 * 5.0 / w - 1.0, 2.0 * 5.0 / h - 1.0], navigator, self.config)
+            open_goal = list(state['goal'])
+            diag_action = [2.0 * 5.75 / w - 1.0, 2.0 * 5.5 / h - 1.0]
+            diag_cand = navigator.resolve_goal(robot, [5.75, 5.5], obs['arena'])
+            self.assertGreater(math.hypot(diag_cand[0] - open_goal[0], diag_cand[1] - open_goal[1]), 0.55)
+            self.assertLessEqual(math.hypot(diag_cand[0] - open_goal[0], diag_cand[1] - open_goal[1]), 1.15)
+            select_goal(obs, state, diag_action, navigator, self.config)
+            self.assertEqual(state['goal'], open_goal)
 
             # Settle within 0.30 m then nudge out to 0.40 m (< 0.48 m resume): stays braked.
             controller.state['goal'] = [robot['x'] + 0.1, robot['y']]
@@ -1211,8 +1221,94 @@ class Stage3FixRegressionTests(unittest.TestCase):
                          pending_ammo=[], supply_grants_taken=0, hp=robot['max_hp'])
             actions, _ = controller.decide(obs)
             self.assertEqual(controller.state['mode'], 'recover')
-            self.assertEqual(actions['7'].get('posture'), 'defense')
+            self.assertEqual(actions['7'].get('posture'), 'move')
             self.assertFalse(actions['7'].get('fire', False))
+        finally:
+            controller.close()
+
+    def test_bump_approach_keeps_move_posture_and_unstick_escapes_at_2hz(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['enemies'] = []
+            obs['outposts']['blue']['hp'] = 0
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            controller.state['goal'] = [13.0, 7.25]
+            controller.state['mode'] = 'policy'
+
+            # Approaching red_road_bumps keeps 'move' even if bump alignment briefly softens move.
+            obs['time'] = 10.0
+            robot.update(x=4.65, y=14.0, vx=0.1, vy=0.0, heading=0.0,
+                         ammo=200, posture='defense', posture_ready_at=0.0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7'].get('posture'), 'move')
+
+            # Wedged inside red_road_bumps for 1.5 s at 2 Hz triggers backoff + supercap burst.
+            for t in (15.0, 15.5, 16.0, 16.5):
+                obs['time'] = t
+                robot.update(x=5.70, y=14.23, vx=0.0, vy=0.0, heading=0.0,
+                             ammo=200, posture='move', posture_ready_at=0.0,
+                             supercap_energy_j=1800.0, hp=robot['max_hp'])
+                actions, _ = controller.decide(obs)
+            cmd = actions['7']
+            self.assertLess(cmd['move'][0], -0.5)
+            self.assertIn('heading', cmd)
+            self.assertAlmostEqual(cmd['heading'], 0.0, places=5)
+            self.assertEqual(cmd.get('power'), 200)
+            self.assertNotIn(cmd.get('posture'), ('defense', 'attack'))
+        finally:
+            controller.close()
+
+    def test_free_grant_prefers_remote_buy_far_from_supply_and_commits_halfway_retreat(self):
+        controller = GoalController(self.config)
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['enemies'] = []
+            obs['outposts']['blue']['hp'] = 0
+            robot = next(r for r in obs['robots'] if r['slot'] == 7)
+            controller.state['goal'] = [14.0, 7.5]
+
+            # Far from supply (>8 m) with enough coins & cap left: stay on policy and buy remotely.
+            obs['time'] = 125.0
+            obs['teams']['red']['resources'] = 300
+            obs['teams']['red']['purchased_17'] = 200
+            robot.update(x=14.0, y=7.5, ammo=0, pending_ammo=[], supply_grants_taken=0,
+                         last_shot_time=0.0, last_damage_time=0.0, posture='defense',
+                         posture_ready_at=0.0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'policy')
+            self.assertEqual(actions['7'].get('buy_ammo'), {'amount': 100, 'remote': True})
+
+            # At team purchase cap (>=900), zero ammo triggers free-grant retreat in 'move' posture.
+            obs['time'] = 125.5
+            obs['teams']['red']['purchased_17'] = 950
+            robot.update(x=14.0, y=7.5, ammo=0, pending_ammo=[], supply_grants_taken=0,
+                         last_shot_time=0.0, last_damage_time=0.0, posture='defense',
+                         posture_ready_at=0.0, hp=robot['max_hp'])
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+            self.assertEqual(actions['7'].get('posture'), 'move')
+
+            # Already recovering within 8 m of supply stays committed even if outpost degrades & central uncovered.
+            obs['time'] = 135.0
+            obs['positions']['red_outpost']['control'] = 'temporary'
+            for r in obs['robots']:
+                if r['slot'] != 7:
+                    r.update(x=2.0, y=2.0)
+            robot.update(x=5.8, y=10.5, ammo=0, pending_ammo=[], supply_grants_taken=0,
+                         hp=robot['max_hp'] * 0.6, posture='move', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+
+            # Off bumps during critical low-HP threatened recovery still triggers enhanced defense.
+            obs['time'] = 140.0
+            obs['positions']['red_outpost']['control'] = 'full'
+            robot.update(x=10.0, y=5.0, ammo=100, hp=robot['max_hp'] * 0.25,
+                         last_damage_time=139.5, posture='move', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+            self.assertEqual(actions['7'].get('posture'), 'defense')
+            self.assertTrue(actions['7'].get('posture_enhanced'))
         finally:
             controller.close()
 

@@ -333,10 +333,14 @@ def fixed_opening(obs, state, config, baseline):
 
 GOAL_STOP_RADIUS_M = 0.30
 GOAL_RESUME_RADIUS_M = 0.48
-GOAL_HYSTERESIS_M = 0.55
+GOAL_HYSTERESIS_M = 1.15
 MOVE_POSTURE_DISTANCE_M = 3.5
 POSTURE_INDEX = {"attack": 0, "defense": 1, "move": 2}
 ENHANCED_BUDGET_S = 14.9
+REMOTE_BUY_MIN_COINS = 200.0
+TEAM_17MM_BUY_LIMIT = 900
+FREE_GRANT_NEAR_M = 8.0
+RECOVER_COMMIT_M = 8.0
 
 
 def _segment_box_clear_3d(ax, ay, az, bx, by, bz, wall):
@@ -453,6 +457,73 @@ def _select_weapon_shot(obs, robot, ctx, baseline, reach=10.0):
     return {'aim': aim, 'pitch': _sdk.aim_pitch(robot, struct), 'fire': fire}
 
 
+def _bump_zone_for(robot, arena, margin_x=0.0, margin_y=0.0):
+    """Return the matching speed-bump zone if `robot` is within its expanded bounds."""
+    rx, ry = float(robot['x']), float(robot['y'])
+    for terrain in (arena or {}).get('terrain') or ():
+        if terrain.get('kind') != 'bumps':
+            continue
+        x0 = float(terrain['x']) - margin_x
+        y0 = float(terrain['y']) - margin_y
+        x1 = float(terrain['x']) + float(terrain['w']) + margin_x
+        y1 = float(terrain['y']) + float(terrain['h']) + margin_y
+        if x0 <= rx <= x1 and y0 <= ry <= y1:
+            return terrain
+    return None
+
+
+def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
+    """Back off and re-align when translational progress stalls while driving."""
+    u = state.setdefault('unstick', {'trail': [], 'tries': 0})
+    now = float(obs['time'])
+    if now < float(u.get('until', -1.0)):
+        return {'move': list(u['escape']), 'heading': u['heading']}
+    trail = u['trail']
+    trail.append([now, float(robot['x']), float(robot['y']), float(robot.get('heading', 0.0))])
+    while len(trail) > 1 and now - trail[0][0] > 1.75:
+        trail.pop(0)
+    elapsed = now - trail[0][0]
+    moved = math.hypot(float(robot['x']) - trail[0][1], float(robot['y']) - trail[0][2])
+    turned = abs((float(robot.get('heading', 0.0)) - trail[0][3] + math.pi) % math.tau - math.pi)
+    if moved > 0.45:
+        u['tries'] = 0
+    if elapsed < 1.35 or moved > 0.12 or turned > 0.15:
+        return fields
+    u['tries'] = int(u.get('tries', 0)) + 1
+    dx, dy = fields['move']
+    if math.hypot(dx, dy) < 0.05 and goal is not None:
+        dx, dy = float(goal[0]) - float(robot['x']), float(goal[1]) - float(robot['y'])
+    hdg_wrap = (float(robot.get('heading', 0.0)) + math.pi) % math.tau - math.pi
+    if on_bumps is not None:
+        axis = str(on_bumps.get('axis', 'x'))
+        if axis == 'x':
+            rx = -1.0 if dx >= 0.0 else 1.0
+            mid_y = float(on_bumps['y']) + 0.5 * float(on_bumps['h'])
+            if abs(float(robot['y']) - mid_y) > 0.35:
+                ry = 0.18 if float(robot['y']) < mid_y else -0.18
+            else:
+                ry = 0.18 if (u['tries'] % 2) else -0.18
+            hold_heading = 0.0 if abs(hdg_wrap) <= math.pi * 0.5 else math.pi
+        else:
+            ry = -1.0 if dy >= 0.0 else 1.0
+            mid_x = float(on_bumps['x']) + 0.5 * float(on_bumps['w'])
+            if abs(float(robot['x']) - mid_x) > 0.35:
+                rx = 0.18 if float(robot['x']) < mid_x else -0.18
+            else:
+                rx = 0.18 if (u['tries'] % 2) else -0.18
+            hold_heading = math.pi * 0.5 if hdg_wrap >= 0.0 else -math.pi * 0.5
+        norm = max(1e-9, math.hypot(rx, ry))
+        escape = [0.95 * rx / norm, 0.95 * ry / norm]
+        u.update(escape=escape, until=now + 0.9, heading=hold_heading, bump_boost_until=now + 3.5)
+    else:
+        offset = 0.9 if (robot['slot'] + u['tries']) % 2 else -0.9
+        angle = math.atan2(dy, dx) + math.pi + offset
+        escape = [0.75 * math.cos(angle), 0.75 * math.sin(angle)]
+        u.update(escape=escape, until=now + 0.75, heading=float(robot.get('heading', 0.0)))
+    trail.clear()
+    return {'move': list(u['escape']), 'heading': u['heading']}
+
+
 def execute_goal(obs, state, navigator, config, baseline):
     """Movement arbitration; weapon and resource operations remain rule modules."""
     robot = own_robot(obs, config['slot'])
@@ -461,6 +532,11 @@ def execute_goal(obs, state, navigator, config, baseline):
     goal = state.get('goal')
     hp = _ratio(robot['hp'], robot['max_hp'])
     was_recovering = bool(state.get('recovering', False))
+    supply = ctx.zone(obs['team'], 'supply')
+    dist_to_supply = math.hypot(robot['x'] - supply[0], robot['y'] - supply[1])
+    team_state = (obs.get('teams') or {}).get(obs['team'], {})
+    coins = float(team_state.get('resources', 0.0) or 0.0)
+    purchased_17 = int(team_state.get('purchased_17', 0) or 0)
     can_retreat = True
     if robot['role'] == 'sentry':
         central = ctx.zone(obs['team'], 'central')
@@ -469,14 +545,20 @@ def execute_goal(obs, state, navigator, config, baseline):
             and math.hypot(r['x'] - central[0], r['y'] - central[1]) < 0.8
             for r in obs['robots']
         )
-        can_retreat = covered or ctx.controls(f"{obs['team']}_outpost", full=True)
+        can_retreat = (
+            covered
+            or ctx.controls(f"{obs['team']}_outpost", full=True)
+            or (was_recovering and dist_to_supply <= RECOVER_COMMIT_M)
+        )
     due_grants = int(obs['time'] // 60.0)
     taken_grants = int(robot.get('supply_grants_taken', 0) or 0)
+    can_afford_remote = (purchased_17 <= TEAM_17MM_BUY_LIMIT) and (coins >= REMOTE_BUY_MIN_COINS)
     free_grant_due = (
         robot['role'] == 'sentry'
         and int(robot.get('ammo', 0)) == 0
         and not robot.get('pending_ammo')
         and due_grants > taken_grants
+        and (not can_afford_remote or dist_to_supply <= FREE_GRANT_NEAR_M)
     )
     recovering = bool(
         robot.get('weak', False)
@@ -492,24 +574,29 @@ def execute_goal(obs, state, navigator, config, baseline):
         state['recovering'] = False
         state['goal_settled'] = False
         state.pop('navigation', None)
+        state.pop('unstick', None)
         fields.update(baseline.revive_fields(robot, ctx))
     elif robot.get('tipped'):
         mode, goal = 'tipped', None
         state['goal_settled'] = False
+        state.pop('unstick', None)
     elif recovering:
         mode = 'recover'
         state['goal_settled'] = False
         # The rule module chooses a recovery destination; use the same legality
         # checks as policy destinations rather than driving into a wall.
-        goal = navigator.resolve_goal(robot, ctx.zone(obs['team'], 'supply'), obs['arena'])
+        goal = navigator.resolve_goal(robot, supply, obs['arena'])
     else:
         mode = 'policy' if goal is not None else 'unreachable'
     control_dt = 1.0 / max(1.0, float(config.get('learning_control_hz', 10)))
     nav_state = state.setdefault('navigation', {})
     in_manoeuvre = any(nav_state.get(k, {}).get('phase', 'approach') != 'approach' for k in ('entry', 'tunnel'))
     gap = math.hypot(robot['x'] - goal[0], robot['y'] - goal[1]) if goal is not None else 0.0
+    on_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=0.35, margin_y=0.25)
+    approaching_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=1.5, margin_y=0.5)
     if goal is None:
         state['goal_settled'] = False
+        state.pop('unstick', None)
         fields['move'] = (0.0, 0.0)
     elif not in_manoeuvre and mode != 'recover' and (
         gap <= GOAL_STOP_RADIUS_M
@@ -518,6 +605,7 @@ def execute_goal(obs, state, navigator, config, baseline):
         state['goal_settled'] = True
         nav_state.pop('teammate_detour', None)
         nav_state.pop('teammate_wait_since', None)
+        state.pop('unstick', None)
         fields.update(move=(0.0, 0.0), brake=True)
     else:
         state['goal_settled'] = False
@@ -534,13 +622,43 @@ def execute_goal(obs, state, navigator, config, baseline):
             if mag > 1e-6:
                 scale = min(1.0, gap / max(step_travel, 1e-6))
                 fields['move'] = (raw_move[0] * scale, raw_move[1] * scale)
+        if not in_manoeuvre and gap > GOAL_RESUME_RADIUS_M and not any(fields.get(k) for k in ('jump', 'transform', 'brake')):
+            fields = _unstick_fields(robot, fields, goal, obs, state, on_bumps)
+        elif 'unstick' in state:
+            state['unstick']['trail'].clear()
+    now = float(obs['time'])
+    unstick_state = state.get('unstick') or {}
+    in_unstick = now < float(unstick_state.get('until', -1.0))
+    bump_boost = now < float(unstick_state.get('bump_boost_until', -1.0))
+    speed = math.hypot(float(robot.get('vx', 0.0) or 0.0), float(robot.get('vy', 0.0) or 0.0))
+    cmd_mag = math.hypot(*fields['move'])
+    supercap_ok = ('supercap_energy_j' not in robot) or float(robot.get('supercap_energy_j', 0.0) or 0.0) > 150.0
+    if (
+        robot['alive']
+        and not nav_state.get('limited')
+        and not any(fields.get(k) for k in ('jump', 'transform', 'brake'))
+        and cmd_mag > 0.2
+        and supercap_ok
+        and (
+            speed < 0.35
+            or in_unstick
+            or ((approaching_bumps is not None or bump_boost) and speed < 1.8)
+        )
+    ):
+        fields['power'] = 200
     move = fields['move']
     if robot['alive']:
         shot = _select_weapon_shot(obs, robot, ctx, baseline, reach=10.0)
         fields.update(shot)
         if fields.get('fire') and not held_fire_safe(robot, control_dt):
             fields['fire'] = False
-        if not (mode == 'recover' and gap > 1.0):
+        skip_ammo_buy = (
+            mode == 'recover'
+            and robot['role'] == 'sentry'
+            and due_grants > taken_grants
+            and gap <= 4.5
+        )
+        if not skip_ammo_buy:
             fields.update(baseline.ammo_fields(robot, ctx, 8, 20, 10, 100) if robot['role'] == 'heavy'
                           else baseline.ammo_fields(robot, ctx, 40, 100, 100, 50))
         if robot['role'] == 'sentry':
@@ -553,7 +671,17 @@ def execute_goal(obs, state, navigator, config, baseline):
                 and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
                 for e in obs.get('enemies', ())
             )
-            if recovering or (hp < 0.55 and threatened):
+            traverse_bumps = (
+                (on_bumps is not None or approaching_bumps is not None or in_unstick or bump_boost)
+                and goal is not None
+                and not state.get('goal_settled')
+                and gap > GOAL_RESUME_RADIUS_M
+            )
+            if traverse_bumps:
+                wanted = 'move'
+            elif recovering:
+                wanted = 'defense' if ((hp < 0.35 and threatened) or gap <= 3.0) else 'move'
+            elif hp < 0.55 and threatened:
                 wanted = 'defense'
             elif combat_ready and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
                 wanted = 'attack'
