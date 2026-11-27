@@ -117,6 +117,7 @@ class Policy:
         self._static_seeded = False
         self.logs, self.lines, self.calls, self.errors = deque(maxlen=32), queue.Queue(maxsize=2), 0, 0
         self.pending_response, self.consecutive_timeouts = None, 0
+        self.navigation_trace, self.goal_trace = {}, {}
         self.name, self.temp = "rmuc-" + uuid.uuid4().hex[:16], tempfile.TemporaryDirectory(prefix="rmuc-policy-")
         stage = Path(self.temp.name)
         stage.chmod(0o755)
@@ -272,6 +273,7 @@ class Policy:
         if response.get("error"):
             raise ValueError(response["error"])
         self.navigation_trace = response.get("navigation_trace", {})
+        self.goal_trace = response.get("goal_trace", {})
         actions = response.get("actions")
         if not isinstance(actions, dict):
             raise ValueError("Invalid action object")

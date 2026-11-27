@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, Future
 from pathlib import Path
-import json, time, threading, hashlib
+import json, math, time, threading, hashlib
 from rmuc2027_core.engine import Match, POLICY_INTERVAL, DT, SLOT_IDS, RULES_PROFILE, STATIC_FRAME_KEYS, decode_response_json
 from rmuc2027_core.policy import FrameLog, Policy, EncodedObservation, POLICY_TIMEOUT_LIMIT
 from rmuc2027_core.referee import validate_referee
@@ -10,8 +10,34 @@ from rmuc2027_core import seasons as season_rules
 from .decks import prepare_decks
 from .profiles import load_profile
 
+_RL_TRACE_MODES = frozenset({"policy", "dead", "recover", "tipped", "unreachable"})
+
+
+def _valid_xy(value):
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        x, y = value
+        if (not isinstance(x, bool) and not isinstance(y, bool)
+                and isinstance(x, (int, float)) and isinstance(y, (int, float))
+                and math.isfinite(x) and math.isfinite(y)):
+            return [round(float(x), 3), round(float(y), 3)]
+    return None
+
+
+def _rl_learned_slots(source):
+    if source is None:
+        return set()
+    meta_path = Path(source) / "rl-metadata.json"
+    if not meta_path.is_file():
+        return set()
+    try:
+        data = json.loads(meta_path.read_text(encoding="utf-8"))
+        return {int(s) for s in data.get("learned_slots", [])}
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return set()
+
+
 class Battle:
-    def __init__(self, red, blue, seed=42, duration=420, map_name=None, sandbox="docker", timeout=0.2, deadline=None, stop_event=None, decks=None, team_lineup=None, practice_lineup=False, free_team_strategies=None, battle_settings=None, controller_overrides=None, record_replay=True, physics_backend="rapier", sim_device="cuda:0", fixed_policy_hz=10, learning_control_hz=10, navigation_mode="legacy", side_lineups=None):
+    def __init__(self, red, blue, seed=42, duration=420, map_name=None, sandbox="docker", timeout=0.2, deadline=None, stop_event=None, decks=None, team_lineup=None, practice_lineup=False, free_team_strategies=None, battle_settings=None, controller_overrides=None, record_replay=True, physics_backend="rapier", sim_device="cuda:0", fixed_policy_hz=10, learning_control_hz=10, navigation_mode="legacy", side_lineups=None, goal_trace=False):
         # Overrides implement Policy.decide/close and replace single-slot entries.
         # They receive exactly the same slot-scoped observation as that entry.
         if side_lineups is not None and (team_lineup is not None or decks is not None):
@@ -29,6 +55,10 @@ class Battle:
         self.timed_assembly = bool((battle_settings or {}).get("timed_assembly", False))
         self.assembly_states = {}
         self.motion_trace = False
+        self.goal_trace = bool(goal_trace)
+        self.rl_sentry_slots = {}
+        self.rl_sentry_trace = {}
+        self._rl_trace_last_sec = {}
         self.navigation_mode = navigation_mode
         self.navigation_states = {}
         self.navigation_observations = {}
@@ -129,6 +159,9 @@ class Battle:
                         self.policies.append((team,None if slot is None else [slot],policy))
                     continue
                 manifest, entries = load_submission(source)
+                learned = _rl_learned_slots(source)
+                if learned:
+                    self.rl_sentry_slots[team] = learned
                 if manifest.get("api_version") != 3 or manifest.get("rules_profile") != rules_profile:
                     raise ValueError(f"This submission does not use the {season} rules; create and submit a {season} strategy workspace")
                 if manifest["mode"] not in ("team", "squad", "distributed"):
@@ -212,6 +245,13 @@ class Battle:
                     self.navigation_observations[id(policy)] = dict(value, navigation_mode=self.navigation_mode, policy_dt=self.policy_interval(policy)*DT)
                 additions.update(navigation_mode=self.navigation_mode,policy_dt=self.policy_interval(policy)*DT)
                 if self.motion_trace:additions['motion_trace']=True
+            if self.goal_trace and not self.motion_trace:
+                sentry_slots = {
+                    r['slot'] for r in self._latest_frame['robots']
+                    if r['team'] == team and r['role'] == 'sentry'
+                }
+                if slots is not None and any(s in sentry_slots for s in slots):
+                    additions['goal_trace'] = True
             inboxes = {slot: self.communication.inboxes[team][slot] for slot in ids}
             messages = [message for inbox in inboxes.values() for message in inbox]
             # Append both keys last, in the order `observation` adds them.
@@ -305,11 +345,54 @@ class Battle:
             self.actions.append({**commands, "communication": communications} if communications else commands)
         frame = self.match.step(commands)
         frame["events"].extend(failures)
+        if self.goal_trace:
+            self._record_rl_sentry_trace(frame)
         # Reuse the engine's encoding unless policy errors were added to the events.
         if self.record_replay:
             self.frames.append(frame, None if failures else self.match.raw_frame)
         self._latest_frame = frame
         return frame
+
+    def _record_rl_sentry_trace(self, frame):
+        now = float(frame["time"])
+        sec = int(now + 1e-9)
+        robots = {(r["team"], r["slot"]): r for r in frame["robots"]}
+        for team, slots, policy in self.policies:
+            if not slots or len(slots) != 1:
+                continue
+            slot = slots[0]
+            robot = robots.get((team, slot))
+            if robot is None or robot.get("role") != "sentry":
+                continue
+            trace = getattr(policy, "goal_trace", None) or getattr(policy, "navigation_trace", None) or {}
+            is_rl = slot in self.rl_sentry_slots.get(team, ()) or (
+                isinstance(trace, dict)
+                and trace.get("mode") in _RL_TRACE_MODES
+                and ("goal" in trace or "executed_goal" in trace)
+            )
+            if not is_rl:
+                continue
+            self.rl_sentry_slots.setdefault(team, set()).add(slot)
+            rid = robot["id"]
+            if sec <= self._rl_trace_last_sec.get(rid, -1):
+                continue
+            self._rl_trace_last_sec[rid] = sec
+            exec_goal = _valid_xy(trace.get("executed_goal")) if isinstance(trace, dict) else None
+            pol_goal = _valid_xy(trace.get("goal")) if isinstance(trace, dict) else None
+            mode = trace.get("mode") if isinstance(trace, dict) and isinstance(trace.get("mode"), str) else None
+            self.rl_sentry_trace.setdefault(rid, []).append({
+                "t": round(now, 2),
+                "tick": int(frame["tick"]),
+                "x": round(float(robot["x"]), 3),
+                "y": round(float(robot["y"]), 3),
+                "alive": bool(robot["alive"]),
+                "goal": exec_goal or pol_goal,
+                "policy_goal": pol_goal,
+                "mode": mode,
+            })
+
+    def rl_sentry_trace_snapshot(self):
+        return {rid: list(samples) for rid, samples in self.rl_sentry_trace.items()}
 
     def run(self):
         while self.match.status != "finished":
@@ -323,8 +406,12 @@ class Battle:
     def replay(self):
         if not self.record_replay:
             raise RuntimeError("Replay recording was disabled")
-        return {"format": "rmuc-replay-v4", "metadata": self.metadata, "static":self.frames.static,"frames": [json.loads(raw) for raw in self.frames.encoded()],
-                "actions": self.actions, "diagnostics": self.diagnostics, "result": self.result()}
+        data = {"format": "rmuc-replay-v4", "metadata": self.metadata, "static": self.frames.static, "frames": [json.loads(raw) for raw in self.frames.encoded()],
+                "actions": self.actions, "diagnostics": self.diagnostics}
+        if self.rl_sentry_trace:
+            data["rl_sentry_trace"] = self.rl_sentry_trace_snapshot()
+        data["result"] = self.result()
+        return data
 
     def save(self, path):
         if not self.record_replay:
@@ -345,6 +432,9 @@ class Battle:
             stream.write(encode(self.actions))
             stream.write(b',"diagnostics":')
             stream.write(encode(self.diagnostics))
+            if self.rl_sentry_trace:
+                stream.write(b',"rl_sentry_trace":')
+                stream.write(encode(self.rl_sentry_trace_snapshot()))
             stream.write(b',"result":')
             stream.write(encode(self.result()))
             stream.write(b"}")

@@ -1814,10 +1814,44 @@ impl Engine {
                 .map(|d| json!({"id":d.id,"x":d.x,"y":d.y,"z":d.z,"vx":d.vx,"vy":d.vy,"vz":d.vz,"state":d.state}))
                 .collect()
         };
+        // RMUC 2027 Rulebook 5.7.4 Radar Info-Wave (信息波):
+        // Parsed directly from the official RF transmitter at the radar base,
+        // completely independent of any robot's camera line-of-sight or FOV.
+        // Exposes enemy ground robots' position, HP, ammo, buffs, and armor hits,
+        // without optical-only exterior pose, velocity, chassis model, or weapon heat.
+        let radar: Vec<Value> = self
+            .robots
+            .iter()
+            .filter(|r| r.team != team && r.role != "aerial")
+            .map(|r| {
+                json!({
+                    "id": r.id,
+                    "slot": r.slot,
+                    "team": r.team,
+                    "role": r.role,
+                    "x": r.x,
+                    "y": r.y,
+                    "hp": r.hp,
+                    "max_hp": r.max_hp,
+                    "alive": r.alive,
+                    "ammo": r.ammo,
+                    "invulnerable": r.invulnerable,
+                    "attack_multiplier": r.attack_multiplier,
+                    "defense_buff": r.defense_buff,
+                    "vulnerability": r.vulnerability,
+                    "cooling_multiplier": r.cooling_multiplier,
+                    "cooling_bonus": r.cooling_bonus,
+                    "posture": r.posture,
+                    "posture_enhanced": r.posture_enhanced,
+                    "crossing_buffs": r.crossing_buffs,
+                    "armor_hit_times": r.armor_hit_times
+                })
+            })
+            .collect();
         let mut observation = json!({"api_version":3,"seed":self.seed,"tick":self.tick,"time":self.time(),"dt":DT,"policy_dt":0.1,
             "remaining":(self.duration-self.time()).max(0.0),"team":team,
             "controlled_ids":friends.iter().filter(|r|slots.map(|s|s.contains(&r.slot)).unwrap_or(true)).map(|r|r.slot.to_string()).collect::<Vec<_>>(),
-            "robots":friends,"robot_models":observed_models,"enemies":enemies,"bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.observed_runes(team,&observers),"assemblies":self.assembly_snapshots(),"roster":self.roster(),"teams":self.observed_teams(team),"zones":self.zones,
+            "robots":friends,"robot_models":observed_models,"enemies":enemies,"radar":radar,"bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.observed_runes(team,&observers),"assemblies":self.assembly_snapshots(),"roster":self.roster(),"teams":self.observed_teams(team),"zones":self.zones,
             "projectiles":bullets,"vision":vision,"referee":self.referee_telemetry(team)});
         if include_static {
             observation["specs"] = json!(self.specs);

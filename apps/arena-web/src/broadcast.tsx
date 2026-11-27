@@ -1,6 +1,6 @@
 import {strategyDisplayName,strategyName} from './strategyIdentity';
 import {useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
-import type {Frame,MatchEvent,Metadata,Robot,TeamId} from './types';
+import type {Frame,MatchEvent,Metadata,RlSentrySample,RlSentryTrace,Robot,TeamId} from './types';
 import {MODE_LABELS,baseProtected,frameSeason,outpostHolder} from './types';
 import {TEAM_LABEL,TEAMS,other,robotName,type MatchStats} from './matchStats';
 import {clock} from './media';
@@ -95,13 +95,56 @@ function Tickers({frame,team}:{frame:Frame;team:TeamId}){
   return <div className={`bc-tickers ${team}`}>{rows.map((r,i)=><div key={i} className="bc-ticker"><span className="bc-ticker-icon">{r.icon}</span><span>{r.text}</span><b>{Math.ceil(r.time)}s</b></div>)}</div>;
 }
 
-function MiniMap({frame,selected}:{frame:Frame;selected:string}){
+function MiniMap({frame,selected,rlSentryTrace}:{frame:Frame;selected:string;rlSentryTrace?:RlSentryTrace}){
   const a=frame.arena,W=420,H=225,x=(v:number)=>v/a.width*W,y=(v:number)=>v/a.height*H;
+  const rlOverlays=Object.entries(rlSentryTrace||{}).map(([robotId,samples])=>{
+    const team:TeamId=robotId.startsWith('blue-')?'blue':'red';
+    const past=samples.filter(s=>s.t<=frame.time+1e-6);
+    const segments:RlSentrySample[][]=[];
+    let current:RlSentrySample[]=[];
+    for(const s of past){
+      if(!s.alive){if(current.length)segments.push(current);current=[];continue;}
+      const prev=current[current.length-1];
+      if(prev&&Math.hypot(s.x-prev.x,s.y-prev.y)>6.0){segments.push(current);current=[s];}
+      else current.push(s);
+    }
+    if(current.length)segments.push(current);
+    const latest=past[past.length-1]||null;
+    const bot=frame.robots.find(r=>r.id===robotId);
+    return {robotId,team,past,segments,latest,bot};
+  }).filter(o=>o.past.length>0);
   return <svg className="bc-minimap" viewBox={`0 0 ${W} ${H}`} aria-label="战术小地图"><rect width={W} height={H} fill="#0d1218"/>
     {a.terrain.filter(t=>t.elevation>0).map((t,i)=>t.polygon?<polygon key={i} points={t.polygon.map(([px,py])=>`${x(px)},${y(py)}`).join(' ')} fill="#3a4350" stroke="#56606d" strokeWidth=".6"/>:<rect key={i} x={x(t.x)} y={y(t.y)} width={x(t.w)} height={y(t.h)} fill="#3a4350"/>)}
     {a.obstacles.map((w,i)=><rect key={i} x={x(w.x)} y={y(w.y)} width={Math.max(1,x(w.w))} height={Math.max(1,y(w.h))} fill="#77818c" transform={`rotate(${(w.rotation||0)*180/Math.PI} ${x(w.x+w.w/2)} ${y(w.y+w.h/2)})`}/>)}
     {TEAMS.map(t=>{const b=frame.bases[t],o=frame.outposts?.[t];return <g key={t}><polygon points={[0,1,2,3,4,5].map(k=>`${x(b.x)+11*Math.cos(k*Math.PI/3)},${y(b.y)+11*Math.sin(k*Math.PI/3)}`).join(' ')} className={`mm-base ${t}`}/>{o&&<rect x={x(o.x)-4} y={y(o.y)-4} width="8" height="8" className={`mm-outpost ${outpostHolder(frame,t)} ${o.hp<=0?'down':''}`}/>}</g>;})}
+    {rlOverlays.map(({robotId,team,past,segments,latest,bot})=>{
+      const isAlive=bot?bot.alive:!!latest?.alive;
+      const goal=isAlive&&latest?.alive?latest.goal:null;
+      const policyGoal=isAlive&&latest?.alive?latest.policy_goal:null;
+      const isRecover=latest?.mode==='recover';
+      const showPolicyGhost=!!(isRecover&&goal&&policyGoal&&Math.hypot(goal[0]-policyGoal[0],goal[1]-policyGoal[1])>0.3);
+      return <g key={`rl-${robotId}`} className={`mm-rl ${team}`}>
+        {segments.map((seg,idx)=>seg.length>=2&&<polyline key={idx} className={`mm-rl-path ${team}`} points={seg.map(p=>`${x(p.x).toFixed(1)},${y(p.y).toFixed(1)}`).join(' ')}/>)}
+        {past.filter(p=>p.alive).map((p,idx)=><circle key={`${p.tick}-${idx}`} className={`mm-rl-dot ${team}`} cx={x(p.x)} cy={y(p.y)} r="1.7"/>)}
+        {goal&&<>
+          <line className={`mm-rl-link ${team} ${isRecover?'recover':''}`} x1={x(bot?.x??latest!.x)} y1={y(bot?.y??latest!.y)} x2={x(goal[0])} y2={y(goal[1])}/>
+          {showPolicyGhost&&<circle className={`mm-rl-policy-ghost ${team}`} cx={x(policyGoal![0])} cy={y(policyGoal![1])} r="4.5"/>}
+          <g className={`mm-rl-goal ${team} ${isRecover?'recover':''}`} transform={`translate(${x(goal[0])},${y(goal[1])})`}>
+            <circle r="6" className="mm-rl-goal-ring"/>
+            <circle r="2.1" className="mm-rl-goal-core"/>
+            <line x1="-9.5" y1="0" x2="-4" y2="0"/><line x1="4" y1="0" x2="9.5" y2="0"/>
+            <line x1="0" y1="-9.5" x2="0" y2="-4"/><line x1="0" y1="4" x2="0" y2="9.5"/>
+          </g>
+        </>}
+      </g>;
+    })}
     {frame.robots.filter(r=>r.alive||r.role==='aerial').map(r=><g key={r.id} transform={`translate(${x(r.x)},${y(r.y)})`} className={`mm-bot ${r.team} ${r.id===selected?'sel':''}`}><circle r={r.id===selected?9:7.5}/><text y="3.6" textAnchor="middle">{r.slot}</text></g>)}
+    {rlOverlays.length>0&&<g className="mm-rl-legend" transform="translate(7,7)">
+      <rect width="140" height="17" rx="3"/>
+      <circle cx="9" cy="8.5" r="3" className="mm-rl-legend-goal"/>
+      <line x1="16" y1="8.5" x2="28" y2="8.5" className="mm-rl-legend-path"/>
+      <text x="33" y="11.8">RL哨兵 1Hz 目标/路径</text>
+    </g>}
   </svg>;
 }
 
@@ -113,7 +156,7 @@ function ToastIcon({kind}:{kind?:Callout['icon']}){
 }
 
 // ---------------------------------------------------------------- HUD
-export function BroadcastHud({frame,metadata,stats,director,images,selected,onSelect,round}:{frame:Frame;metadata:Metadata|null;stats:MatchStats;director:BroadcastDirector;images:Record<string,string>;selected:string;onSelect:(id:string)=>void;round:string}){
+export function BroadcastHud({frame,metadata,stats,director,images,selected,onSelect,round,rlSentryTrace}:{frame:Frame;metadata:Metadata|null;stats:MatchStats;director:BroadcastDirector;images:Record<string,string>;selected:string;onSelect:(id:string)=>void;round:string;rlSentryTrace?:RlSentryTrace}){
   const now=performance.now(),[,tick]=useState(0);
   useEffect(()=>{const id=window.setInterval(()=>tick(n=>n+1),500);return()=>window.clearInterval(id);},[]);
   const damage=(t:TeamId)=>Math.floor((frame.teams[t] as {attack_damage?:number}).attack_damage??frame.teams[t].score),share=damage('red')+damage('blue')>0?damage('red')/(damage('red')+damage('blue'))*100:50;
@@ -154,7 +197,7 @@ export function BroadcastHud({frame,metadata,stats,director,images,selected,onSe
       <span className={`bc-kill-bot ${killer?.team||other(k.team)}`}>{image(killer)&&<img src={image(killer)} alt=""/>}<em>{killer?.slot??'?'}</em></span><b>摧毁</b>
       <span className={`bc-kill-bot ${victim?.team||other(k.team)}`}>{image(victim)&&<img src={image(victim)} alt=""/>}<em>{victim?.slot??'?'}</em></span></div>;})}</div>
     {toast&&<div key={toast.key} className={`bc-toast ${toast.team}`}><span className="bc-toast-icon"><ToastIcon kind={toast.icon}/></span><div><strong>{toast.title}</strong><div className="bc-chips">{toast.chips?.map(c=><span key={c}>{c}</span>)}</div></div></div>}
-    <div className="bc-mini"><MiniMap frame={frame} selected={selected}/></div>
+    <div className="bc-mini"><MiniMap frame={frame} selected={selected} rlSentryTrace={rlSentryTrace}/></div>
     <div className="bc-plate"><span>对抗赛 · 策略联赛</span><b>ROBOMASTER {season}</b></div>
   </Stage>;
 }

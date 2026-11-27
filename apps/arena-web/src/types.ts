@@ -9,8 +9,10 @@ export interface Metadata {battle_settings?:Record<string,number>;save_mp4?:bool
   // Uploaded robot appearances, keyed by hardware model number.
   skins?:Record<TeamId,Record<string,RobotSkin>>}
 export interface Prematch {stage:'self_check'|'countdown';remaining:number;duration:number}
-export interface ServerState {frame:Frame;revision:number;paused:boolean;speed:number;error:string|null;metadata:Metadata|null;sandbox:string;match_id:string|null;events:MatchEvent[];busy:boolean;prematch?:Prematch|null;strategy_version?:string|null}
-export interface Replay {format:'rmuc-replay-v1'|'rmuc-replay-v2'|'rmuc-replay-v3'|'rmuc-replay-v4';static?:Partial<Frame>;metadata:Metadata;frames:Frame[];actions:unknown[];diagnostics:unknown[];result:{winner:TeamId|null;reason:string;time:number;digest:string;policy_errors:number}}
+export interface RlSentrySample {t:number;tick:number;x:number;y:number;alive:boolean;goal:[number,number]|null;policy_goal?:[number,number]|null;mode?:string|null}
+export type RlSentryTrace = Record<string,RlSentrySample[]>;
+export interface ServerState {frame:Frame;revision:number;paused:boolean;speed:number;error:string|null;metadata:Metadata|null;sandbox:string;match_id:string|null;events:MatchEvent[];rl_sentry_trace?:RlSentryTrace;busy:boolean;prematch?:Prematch|null;strategy_version?:string|null}
+export interface Replay {format:'rmuc-replay-v1'|'rmuc-replay-v2'|'rmuc-replay-v3'|'rmuc-replay-v4';static?:Partial<Frame>;metadata:Metadata;frames:Frame[];actions:unknown[];diagnostics:unknown[];rl_sentry_trace?:RlSentryTrace;result:{winner:TeamId|null;reason:string;time:number;digest:string;policy_errors:number}}
 export interface CatalogEntry{name:string;version:string;mode:ControlMode;season?:Season;robot?:number;model_name?:string;role?:Role;preset?:{id:'balanced'|'assault'|'guard';name:string;description:string};team_lineup?:TeamLineup;agent?:AgentInfo;display_name?:string}
 // Display sidecars of a submission (rmuc_arena/showcase.py): the upload questionnaire and the agent-written showcase.json.
 export type Tactic='balanced'|'assault'|'siege'|'guard'|'economy';

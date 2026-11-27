@@ -322,7 +322,7 @@ class EnemyCapabilityTests(unittest.TestCase):
         encoded = encode_observation(self._observation(SLOTS, models),
                                      {'goal': (1.0, 1.0), 'mode': 'policy', 'goal_time': 119.0}, 7, 0.5)
         self.assertEqual(len(encoded), OBS_SIZE)
-        self.assertEqual(OBS_VERSION, 4)
+        self.assertEqual(OBS_VERSION, 5)
         self.assertEqual(OBS_SIZE, 162)
         self.assertEqual(self._traits(encoded, 1), [0.0, 0.0, 0.0])   # heavy, plain mecanum
         self.assertEqual(self._traits(encoded, 3), [0.0, 1.0, 0.0])   # jump only
@@ -1711,6 +1711,14 @@ class Stage3FixRegressionTests(unittest.TestCase):
         red['zones']['blue_fortress']['occupants'] = ['red-4']
         red['zones']['red_central']['occupants'] = ['red-3', 'blue-7']
         red['robots'][-1].update(buffer_energy_j=42.0, supercap_energy_j=1200.0, posture_ready_at=152.0)
+        # Include an occluded enemy present only via radar station (not in optical obs['enemies']).
+        red['enemies'] = [e for e in red['enemies'] if e['slot'] != 3]
+        red['radar'] = [
+            {'id': 'blue-3', 'slot': 3, 'team': 'blue', 'role': 'infantry',
+             'x': 0.80, 'y': 8.12, 'hp': 150.0, 'max_hp': 200.0, 'alive': True, 'invulnerable': False},
+            {'id': 'blue-7', 'slot': 7, 'team': 'blue', 'role': 'sentry',
+             'x': 20.5, 'y': 6.0, 'hp': 320.0, 'max_hp': 400.0, 'alive': True, 'invulnerable': True},
+        ]
 
         def swap_id(rid):
             if rid.startswith('red-'):
@@ -1724,15 +1732,17 @@ class Stage3FixRegressionTests(unittest.TestCase):
 
         blue = copy.deepcopy(red)
         blue['team'] = 'blue'
-        for group in ('robots', 'enemies'):
+        for group in ('robots', 'enemies', 'radar'):
             for r in blue[group]:
                 r['team'] = swap_team(r.get('team'))
                 if 'id' in r:
                     r['id'] = swap_id(r['id'])
                 r['x'] = w - r['x']
                 r['y'] = h - r['y']
-                r['vx'] = -r.get('vx', 0.0)
-                r['vy'] = -r.get('vy', 0.0)
+                if 'vx' in r:
+                    r['vx'] = -r.get('vx', 0.0)
+                if 'vy' in r:
+                    r['vy'] = -r.get('vy', 0.0)
                 if 'heading' in r:
                     r['heading'] = r['heading'] + math.pi
         blue['teams'] = {'red': copy.deepcopy(red['teams']['blue']), 'blue': copy.deepcopy(red['teams']['red'])}
@@ -1959,11 +1969,102 @@ class Stage3FixRegressionTests(unittest.TestCase):
             self.assertAlmostEqual(cfg['recover_enter'], 0.42)
             self.assertAlmostEqual(cfg['recover_exit'], 0.75)
             self.assertAlmostEqual(cfg['rewards']['death'], -1.5)
-            self.assertAlmostEqual(cfg['rewards']['base_defense_progress'], 0.06)
+            self.assertAlmostEqual(cfg['rewards']['base_defense_progress'], 0.15)
         with ArenaSession({**cfg_r, 'episode_seconds': 1.0, 'training_summary': True}) as session:
             session.reset(42)
             _, _, _, _, info = session.step([0.0, 0.0])
             self.assertIn('base_defense_progress', info['reward_terms'])
+
+    def test_radar_station_blind_spot_coordinates_in_obs_v5(self):
+        # 1. Real Rust Match observation exposes all 4 enemy ground robots via the RMUC 2027 5.7.4
+        #    radar info-wave (obs['radar']), completely independent of camera LOS, while keeping
+        #    obs['enemies'] strictly optical camera LOS.
+        with Match(42, 30, 'rmuc2027') as match:
+            obs_r = match.observation('red', [7])
+            self.assertIn('radar', obs_r)
+            radar_slots = {r['slot'] for r in obs_r['radar']}
+            self.assertEqual(radar_slots, {1, 3, 4, 7})
+            self.assertNotIn(6, radar_slots)
+            optical_ground = [e for e in obs_r['enemies'] if e['slot'] in GROUND_SLOTS]
+            self.assertEqual(optical_ground, [])
+            for entry in obs_r['radar']:
+                self.assertEqual(entry['team'], 'blue')
+                self.assertTrue(entry['alive'])
+                self.assertGreater(entry['hp'], 0.0)
+                self.assertGreaterEqual(entry['max_hp'], entry['hp'])
+                self.assertIn('ammo', entry)
+                self.assertIn('invulnerable', entry)
+                for optical_only in ('vx', 'vy', 'z', 'model_slot', 'chassis_type', 'heading', 'aim', 'heat'):
+                    self.assertNotIn(optical_only, entry)
+            vec = encode_observation(obs_r, {}, 7, 0.5)
+            self.assertEqual(len(vec), OBS_SIZE)
+            # Enemy ground slots are encoded with presence=1.0, exact radar (x, y), HP ratio, alive
+            # and invulnerable completely independently of camera visibility.
+            w, h = obs_r['arena']['width'], obs_r['arena']['height']
+            by_slot = {r['slot']: r for r in obs_r['radar']}
+            for s in GROUND_SLOTS:
+                off = 18 + 4 * 7 + SLOTS.index(s) * 11
+                r = by_slot[s]
+                self.assertEqual(vec[off], 1.0)
+                self.assertAlmostEqual(vec[off + 1], 2 * r['x'] / w - 1, places=5)
+                self.assertAlmostEqual(vec[off + 2], 2 * r['y'] / h - 1, places=5)
+                self.assertEqual(vec[off + 3:off + 5], [0.0, 0.0])  # vx, vy only when optically tracked
+                self.assertAlmostEqual(vec[off + 5], r['hp'] / r['max_hp'], places=5)
+                self.assertEqual(vec[off + 6], 1.0)
+                self.assertEqual(vec[off + 7], float(r['invulnerable']))
+                self.assertEqual(vec[off + 8:off + 11], [0.0, 0.0, 0.0])  # no prior leak
+            # When aerial slot 6 is removed from optical enemies, it stays all zeros (never in radar).
+            obs_no_air = copy.deepcopy(obs_r)
+            obs_no_air['enemies'] = [e for e in obs_no_air['enemies'] if e['slot'] != 6]
+            vec_no_air = encode_observation(obs_no_air, {}, 7, 0.5)
+            off6 = 18 + 4 * 7 + SLOTS.index(6) * 11
+            self.assertEqual(vec_no_air[off6:off6 + 11], [0.0] * 11)
+
+        # 2. Radar info-wave supplies full position/HP/alive/invulnerable regardless of camera LOS;
+        #    optical LOS adds velocity + witness bits; latched witness persists when occluded;
+        #    dead ground enemy keeps alive=0.0, hp=0.0; aerial radar entry is ignored.
+        obs = copy.deepcopy(self.observation)
+        obs['enemies'] = [{
+            'id': 'blue-3', 'slot': 3, 'team': 'blue', 'role': 'infantry', 'model_slot': 2731,
+            'x': 12.0, 'y': 7.5, 'vx': 2.0, 'vy': -1.0, 'hp': 150.0, 'max_hp': 200.0,
+            'alive': True, 'invulnerable': False,
+        }]
+        obs['radar'] = [
+            {'id': 'blue-3', 'slot': 3, 'team': 'blue', 'role': 'infantry',
+             'x': 12.0, 'y': 7.5, 'hp': 150.0, 'max_hp': 200.0, 'alive': True, 'invulnerable': False},
+            {'id': 'blue-4', 'slot': 4, 'team': 'blue', 'role': 'infantry',
+             'x': 0.80, 'y': 8.12, 'hp': 120.0, 'max_hp': 200.0, 'alive': True, 'invulnerable': True},
+            {'id': 'blue-1', 'slot': 1, 'team': 'blue', 'role': 'heavy',
+             'x': 20.0, 'y': 7.5, 'hp': 0.0, 'max_hp': 400.0, 'alive': False, 'invulnerable': False},
+            {'id': 'blue-6', 'slot': 6, 'team': 'blue', 'role': 'aerial',
+             'x': 25.0, 'y': 1.0, 'hp': 0.0, 'max_hp': 0.0, 'alive': True, 'invulnerable': False},
+        ]
+        witness = TerrainWitness(use_prior=False)
+        witness._tunnel[4] = True
+        encoded = encode_observation(obs, {}, 7, 0.5, witness=witness)
+        off3 = 18 + 4 * 7 + SLOTS.index(3) * 11
+        off4 = 18 + 4 * 7 + SLOTS.index(4) * 11
+        off1 = 18 + 4 * 7 + SLOTS.index(1) * 11
+        off6 = 18 + 4 * 7 + SLOTS.index(6) * 11
+        self.assertEqual(encoded[off3], 1.0)
+        self.assertAlmostEqual(encoded[off3 + 3], 0.2, places=5)   # optical vx/10
+        self.assertAlmostEqual(encoded[off3 + 4], -0.1, places=5)  # optical vy/10
+        self.assertAlmostEqual(encoded[off3 + 5], 0.75, places=5)  # HP ratio
+        # Occluded slot 4 gets exact radar coordinates, HP=0.6, alive=1.0, invulnerable=1.0, presence=1.0!
+        self.assertEqual(encoded[off4], 1.0)
+        self.assertAlmostEqual(encoded[off4 + 1], 2 * 0.80 / 28.0 - 1, places=5)
+        self.assertAlmostEqual(encoded[off4 + 2], 2 * 8.12 / 15.0 - 1, places=5)
+        self.assertEqual(encoded[off4 + 3:off4 + 5], [0.0, 0.0])
+        self.assertAlmostEqual(encoded[off4 + 5], 0.6, places=5)
+        self.assertEqual(encoded[off4 + 6], 1.0)
+        self.assertEqual(encoded[off4 + 7], 1.0)
+        self.assertEqual(encoded[off4 + 8:off4 + 11], [1.0, 0.0, 0.0])  # latched witness preserved
+        # Dead ground slot 1 reports alive=0.0, hp=0.0 at its position.
+        self.assertEqual(encoded[off1], 1.0)
+        self.assertEqual(encoded[off1 + 5], 0.0)
+        self.assertEqual(encoded[off1 + 6], 0.0)
+        # Aerial slot 6 radar entry ignored.
+        self.assertEqual(encoded[off6:off6 + 11], [0.0] * 11)
 
 
 if __name__ == '__main__':

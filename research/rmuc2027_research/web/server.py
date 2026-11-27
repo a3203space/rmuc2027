@@ -263,6 +263,7 @@ class ArenaService:
             return {"frame": self.frame, "revision": self.revision, "paused": self.paused,
                     "speed": self.speed, "error": self.error, "metadata": self.metadata, "sandbox": self.sandbox,
                     "match_id": self.match_id, "events": events,
+                    "rl_sentry_trace": self.battle.rl_sentry_trace_snapshot() if self.battle else {},
                     "busy": self.busy, "prematch": copy.copy(self.prematch), "strategy_version": strategy_version}
 
     def resolve_season(self, args):
@@ -354,7 +355,7 @@ class ArenaService:
 
     def _run(self, match_id, red, blue, args, decks=None, free_team_strategies=None, skins=None):
         try:
-            with Battle(red,blue,args.seed,args.duration,args.map,self.sandbox,decks=decks,team_lineup=args.team_lineup,free_team_strategies=free_team_strategies,battle_settings=args.battle_settings) as battle:
+            with Battle(red,blue,args.seed,args.duration,args.map,self.sandbox,decks=decks,team_lineup=args.team_lineup,free_team_strategies=free_team_strategies,battle_settings=args.battle_settings,goal_trace=True) as battle:
                 battle.metadata["match_id"] = match_id
                 battle.metadata["save_mp4"] = args.save_mp4
                 if skins and any(skins.values()):

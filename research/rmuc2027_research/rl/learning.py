@@ -613,8 +613,10 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
             model = TimedPPO.load(init_from, env=vec, device=device, custom_objects=init_custom)
             prev_exp_path = Path(init_from).parent / 'experiment.json'
             if prev_exp_path.is_file():
-                prev_rewards = json.loads(prev_exp_path.read_text()).get('config', {}).get('rewards')
-                if prev_rewards is not None and prev_rewards != config['rewards']:
+                prev_exp = json.loads(prev_exp_path.read_text())
+                prev_rewards = prev_exp.get('config', {}).get('rewards')
+                obs_changed = prev_exp.get('obs_version') != OBS_VERSION
+                if (prev_rewards is not None and prev_rewards != config['rewards']) or obs_changed:
                     for module in model.policy.mlp_extractor.value_net.modules():
                         if isinstance(module, nn.Linear):
                             nn.init.orthogonal_(module.weight, gain=math.sqrt(2.0))

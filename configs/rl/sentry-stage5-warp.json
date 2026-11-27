@@ -51,7 +51,7 @@
     "death": -1.5,
     "terrain_buff": 0.0,
     "position_control": 0.03,
-    "base_defense_progress": 0.06
+    "base_defense_progress": 0.15
   },
   "ppo": {
     "n_steps": 512,
@@ -60,7 +60,7 @@
     "learning_rate": 0.0002,
     "gae_lambda": 0.95,
     "gamma": 0.998,
-    "ent_coef": 0.002,
+    "ent_coef": 0.004,
     "action_std": 0.28
   },
   "sim_backend": "warp_kinematic",

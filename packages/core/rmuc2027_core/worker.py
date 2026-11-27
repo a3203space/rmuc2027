@@ -87,6 +87,20 @@ def main():
                 diagnostic = navigation(new_state)
                 if len(json.dumps(diagnostic)) <= 8192:
                     response = json.dumps({'actions': actions, 'navigation_trace': diagnostic}, allow_nan=False)
+            elif observation.get('goal_trace') and isinstance(new_state, dict):
+                goal_info = {
+                    key: new_state[key]
+                    for key in ('goal', 'executed_goal', 'mode')
+                    if key in new_state
+                }
+                if goal_info:
+                    encoded = json.dumps(
+                        {'actions': actions, 'goal_trace': goal_info},
+                        allow_nan=False,
+                        separators=(",", ":"),
+                    )
+                    if len(encoded.encode()) <= ACTIONS_LIMIT:
+                        response = encoded
             state = new_state
             output.write(response + "\n")
             output.flush()

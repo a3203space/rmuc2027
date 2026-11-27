@@ -92,6 +92,21 @@
 .mm-outpost{stroke:#fff;stroke-width:1}.mm-outpost.red{fill:var(--r)}.mm-outpost.blue{fill:var(--b)}.mm-outpost.down{fill:#3b4048}
 .mm-bot circle{stroke:#fff;stroke-width:1.2}.mm-bot.red circle{fill:var(--r)}.mm-bot.blue circle{fill:var(--b)}.mm-bot.sel circle{stroke:var(--gold);stroke-width:2.4}
 .mm-bot text{font:700 10px var(--num);fill:#fff}
+.mm-rl-path{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.82}
+.mm-rl-path.red{stroke:#ffb347}.mm-rl-path.blue{stroke:#38e8ff}
+.mm-rl-dot.red{fill:#ffd180;opacity:.75}.mm-rl-dot.blue{fill:#8cf4ff;opacity:.75}
+.mm-rl-link{stroke-width:1.4;stroke-dasharray:4 3;opacity:.88}
+.mm-rl-link.red{stroke:#ffcf56}.mm-rl-link.blue{stroke:#56f0ff}.mm-rl-link.recover{stroke:#4ade80}
+.mm-rl-goal line,.mm-rl-goal-ring{fill:none;stroke-width:1.6}
+.mm-rl-goal.red line,.mm-rl-goal.red .mm-rl-goal-ring{stroke:#ffd166}.mm-rl-goal.red .mm-rl-goal-core{fill:#ffd166}
+.mm-rl-goal.blue line,.mm-rl-goal.blue .mm-rl-goal-ring{stroke:#38e8ff}.mm-rl-goal.blue .mm-rl-goal-core{fill:#38e8ff}
+.mm-rl-goal.recover line,.mm-rl-goal.recover .mm-rl-goal-ring{stroke:#4ade80}.mm-rl-goal.recover .mm-rl-goal-core{fill:#4ade80}
+.mm-rl-policy-ghost{fill:none;stroke-width:1.1;stroke-dasharray:2.5 2;opacity:.65}
+.mm-rl-policy-ghost.red{stroke:#ffd166}.mm-rl-policy-ghost.blue{stroke:#38e8ff}
+.mm-rl-legend rect{fill:rgba(8,12,18,.82);stroke:rgba(255,255,255,.18);stroke-width:.8}
+.mm-rl-legend-goal{fill:none;stroke:#ffd166;stroke-width:1.5}
+.mm-rl-legend-path{stroke:#ffb347;stroke-width:1.8;stroke-linecap:round}
+.mm-rl-legend text{font:600 9.5px "PingFang SC",system-ui;fill:#dce6ee}
 .bc-plate{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:440px;height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:linear-gradient(180deg,rgba(40,48,58,.92),rgba(10,13,18,.95));clip-path:polygon(9% 0,91% 0,100% 100%,0 100%);border-top:2px solid rgba(255,255,255,.25)}
 .bc-plate span{font-size:22px;font-weight:700;letter-spacing:2px}.bc-plate b{font-size:30px;font-style:italic;letter-spacing:5px}
 .compact .bc-cards,.compact .bc-outpost{display:none}.compact .bc-team-main{width:360px}.compact .bc-side.red{right:calc(50% + 152px)}.compact .bc-side.blue{left:calc(50% + 152px)}

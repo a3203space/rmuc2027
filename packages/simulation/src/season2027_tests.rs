@@ -894,3 +894,58 @@ fn operator_ammo_purchase_deducts_money_and_remote_delivery_arrives_once() {
     for _ in 0..4 { m.step(&json!({})); }
     assert_eq!(m.robots[i].ammo, 110);
 }
+
+#[test]
+fn radar_station_reports_occluded_ground_enemies_without_optical_leaks() {
+    let mut m = match_();
+    let red7 = robot(&m, "red-7");
+    let blue3 = robot(&m, "blue-3");
+    let blue4 = robot(&m, "blue-4");
+    // Place red-7 far away facing opposite direction so blue-3 behind red_base is completely occluded.
+    place(&mut m, red7, 18.0, 12.0);
+    m.robots[red7].heading = 0.0;
+    m.robots[red7].aim = 0.0;
+    place(&mut m, blue3, 0.80, 8.12);
+    m.robots[blue3].hp = 140.0;
+    m.robots[blue3].ammo = 88;
+    m.robots[blue3].invulnerable = true;
+    // Mark blue-4 dead: radar info-wave still reports its state (hp=0, alive=false), independent of camera.
+    m.robots[blue4].alive = false;
+    m.robots[blue4].hp = 0.0;
+
+    let obs = m.observation_without_arena("red", Some(&[7]));
+    let enemies = obs["enemies"].as_array().unwrap();
+    assert!(
+        !enemies.iter().any(|e| e["id"] == "blue-3"),
+        "Occluded blue-3 must stay absent from optical obs.enemies"
+    );
+    let radar = obs["radar"].as_array().unwrap();
+    assert_eq!(radar.len(), 4, "Radar info-wave reports all 4 enemy ground robots regardless of camera LOS");
+    let b3 = radar
+        .iter()
+        .find(|e| e["id"] == "blue-3")
+        .expect("Radar info-wave must report occluded enemy blue-3");
+    assert!((b3["x"].as_f64().unwrap() - 0.80).abs() < 1e-6);
+    assert!((b3["y"].as_f64().unwrap() - 8.12).abs() < 1e-6);
+    assert_eq!(b3["slot"].as_u64(), Some(3));
+    assert_eq!(b3["alive"].as_bool(), Some(true));
+    assert!((b3["hp"].as_f64().unwrap() - 140.0).abs() < 1e-6);
+    assert_eq!(b3["ammo"].as_u64(), Some(88));
+    assert_eq!(b3["invulnerable"].as_bool(), Some(true));
+    let b4 = radar.iter().find(|e| e["id"] == "blue-4").unwrap();
+    assert_eq!(b4["alive"].as_bool(), Some(false));
+    assert!((b4["hp"].as_f64().unwrap() - 0.0).abs() < 1e-6);
+    // Must not leak optical-only or private fields (velocity, z, chassis model, gimbal, heat).
+    for forbidden in ["vx", "vy", "z", "model_slot", "chassis_type", "heading", "aim", "pitch", "heat"] {
+        assert!(b3.get(forbidden).is_none(), "Radar info-wave must not expose {forbidden}");
+    }
+    // Aerial hangar (slot 6) and own-team robots are excluded.
+    assert!(!radar.iter().any(|e| e["slot"] == 6));
+    assert!(radar.iter().all(|e| e["team"] == "blue"));
+    // Even if observer red-7 is dead (zero optical cameras), radar info-wave still delivers enemy positions.
+    m.robots[red7].alive = false;
+    m.robots[red7].hp = 0.0;
+    let dead_obs = m.observation_without_arena("red", Some(&[7]));
+    assert!(dead_obs["enemies"].as_array().unwrap().is_empty());
+    assert_eq!(dead_obs["radar"].as_array().unwrap().len(), 4);
+}

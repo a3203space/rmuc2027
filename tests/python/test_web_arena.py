@@ -228,6 +228,23 @@ class WebArenaTests(unittest.TestCase):
         settings=self.app.state.arena.metadata['battle_settings']
         self.assertTrue(settings['timed_assembly'])
         self.assertFalse(settings['drones_enabled'])
+        # Verify 1 Hz RL sentry target point & past path trace in live state and saved replay,
+        # without breaking bit-exact verify_replay.
+        state=self.app.state.arena.state()
+        trace=state.get('rl_sentry_trace',{})
+        self.assertEqual(set(trace.keys()),{'red-7','blue-7'})
+        for rid in ('red-7','blue-7'):
+            samples=trace[rid]
+            self.assertGreaterEqual(len(samples),2)
+            self.assertEqual([int(s['t']+1e-9) for s in samples],list(range(len(samples))))
+            self.assertIsInstance(samples[0]['goal'],list)
+            self.assertEqual(len(samples[0]['goal']),2)
+        record=self.client.get('/api/matches').json()[0]
+        replay_path=self.root/'store'/'replays'/f"{record['id']}.json"
+        replay_data=json.loads(replay_path.read_text(encoding='utf-8'))
+        self.assertEqual(set(replay_data.get('rl_sentry_trace',{}).keys()),{'red-7','blue-7'})
+        from rmuc2027_core.replay import verify_replay
+        self.assertEqual(verify_replay(replay_path)['verified_ticks'],len(replay_data['actions']))
         response=self.client.post('/api/start',json={'red':'rl-web-test','blue':'rl-web-test',
             'duration':1,'battle_settings':{'timed_assembly':False}})
         self.assertEqual(response.status_code,409,response.text)

@@ -10,7 +10,7 @@ try:
 except ImportError:
     from rmuc2027_core import sdk as _sdk
 
-OBS_VERSION = 4
+OBS_VERSION = 5
 OBS_SIZE = 162
 SLOTS = (1, 3, 4, 6, 7)
 # Slot 6 carries the aerial system, which parks in a hangar and never drives:
@@ -65,14 +65,17 @@ def own_robot(obs, slot=7):
 def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control_scale=None):
     """162 bounded features, with blue coordinates rotated into the red frame.
 
-    self 18 + four allies * 7 + five visible enemy slots * 11 (8 + 3 movement
-    traits) + public match 6 + four public control positions * 4 + controller
+    self 18 + four allies * 7 + five enemy slots * 11 (presence 1.0 + 7
+    motion/status + 3 movement traits; enemy ground position/HP/alive/invulnerable
+    come from the RMUC 2027 5.7.4 radar info-wave `obs['radar']` independently of
+    camera LOS, while optical `obs['enemies']` adds velocity & visual witness bits)
+    + public match 6 + four public control positions * 4 + controller
     memory 8 + v3 tactical state 14 (sentry supply grant due 1 + enhanced posture
     budgets 3 + crossing cooling/defense remaining 2 + own/enemy outpost hp 2 +
     central card occupancy 4 + own fortress active 1 + team 17mm cap left 1) +
     v4 public arena/status 17 (supercap ratio 1 + posture cooldown ratio 1 +
     six remaining control zone occupancies * 2 + attack damage diff 1 +
-    control diff 1 + own alive ground HP 1).
+    control diff 1 + own alive ground HP 1). OBS v5 keeps OBS_SIZE = 162.
 
     `witness` is an optional `terrain_witness.TerrainWitness`. Exported
     submissions embed `TerrainWitness(use_prior=False)` as well, so training
@@ -116,14 +119,44 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control
         r = friends.get(s)
         values += motion(r) + [float(r['alive']), float(r.get('weak', False))] if r else [0.0]*7
     enemies = {r['slot']: r for r in obs['enemies']}
+    radar = {
+        r['slot']: r for r in (obs.get('radar') or ())
+        if r.get('slot') in GROUND_SLOTS
+    }
     for s in SLOTS:
-        r = enemies.get(s)
-        if r is None:
+        vis = enemies.get(s)
+        rad = radar.get(s) if s in GROUND_SLOTS else None
+        if vis is None and rad is None:
             values += [0.0] * 11
             continue
-        values += [1.0, *motion(r), float(r['alive']), float(r.get('invulnerable', False))]
+        # RMUC 2027 Rulebook 5.7.4 Radar Info-Wave (信息波): enemy ground
+        # coordinates, HP, alive, and invulnerable are decoded from radar RF
+        # independently of camera visibility; optical LOS adds (vx, vy) and
+        # visual terrain-witness evidence.
+        src = rad if rad is not None else vis
+        vx = (vis.get('vx', 0.0) if vis is not None else 0.0) * sign / 10
+        vy = (vis.get('vy', 0.0) if vis is not None else 0.0) * sign / 10
+        hp_ratio = _ratio(src.get('hp', 0.0), src.get('max_hp', 1.0)) if 'hp' in src else (
+            _ratio(vis['hp'], vis['max_hp']) if vis is not None else 0.0
+        )
+        alive_flag = float(src['alive']) if 'alive' in src else (
+            float(vis.get('alive', True)) if vis is not None else 1.0
+        )
+        invuln = float(src.get('invulnerable', vis.get('invulnerable', False) if vis is not None else False))
+        values += [
+            1.0,
+            *xy(src['x'], src['y']),
+            vx,
+            vy,
+            hp_ratio,
+            alive_flag,
+            invuln,
+        ]
         if s in GROUND_SLOTS:
-            values += witness.bits(s, r) if witness is not None else capability_bits(r)
+            if vis is not None:
+                values += witness.bits(s, vis) if witness is not None else capability_bits(vis)
+            else:
+                values += witness.bits(s, None) if witness is not None else [0.0, 0.0, 0.0]
         else:
             values += [0.0, 0.0, 0.0]
     values += [obs['remaining']/420,
