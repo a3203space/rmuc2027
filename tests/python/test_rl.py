@@ -1843,6 +1843,128 @@ class Stage3FixRegressionTests(unittest.TestCase):
             self.assertAlmostEqual(loaded.ent_coef, 0.002, places=6)
             self.assertAlmostEqual(loaded.lr_schedule(1.0), 1e-4, places=7)
 
+    def test_stage5_unstick_compass_recover_bump_lane_heavy_threshold_and_base_defense_shaping(self):
+        from rmuc2027_research.rl import portable
+        from rmuc2027_research.rl.session import ArenaSession, base_defense_progress_delta
+
+        # 1. Off-bumps _unstick_fields sweeps 8 distinct directions with 0.95 magnitude and aligned heading.
+        state = {}
+        robot = {'slot': 7, 'x': 16.85, 'y': 10.60, 'heading': -2.02}
+        angles = set()
+        t = 100.0
+        for _ in range(8):
+            for step in range(4):
+                out = portable._unstick_fields(
+                    robot, {'move': (-0.43, -0.41)}, [16.0, 8.25], {'time': t}, state, on_bumps=None
+                )
+                t += 0.5
+            self.assertAlmostEqual(math.hypot(*out['move']), 0.95, places=4)
+            angles.add(round(math.atan2(out['move'][1], out['move'][0]), 2))
+            t += 1.0  # let 0.9s escape expire before next stall trigger
+        self.assertEqual(len(angles), 8)
+
+        # 2. _recover_nav_goal inside road bumps lane aims along centerline (4.70, 13.95) for Red & mirrored for Blue.
+        arena = {'layout_revision': 'chapter4-2027-v1', 'width': 28.0, 'height': 15.0}
+        self.assertEqual(
+            portable._recover_nav_goal({'team': 'red', 'x': 6.20, 'y': 13.20}, [1.5, 13.0], {'arena': arena}),
+            [4.70, 13.95],
+        )
+        blue_wp = portable._recover_nav_goal({'team': 'blue', 'x': 21.80, 'y': 1.80}, [26.5, 2.0], {'arena': arena})
+        self.assertAlmostEqual(blue_wp[0], 23.30, places=5)
+        self.assertAlmostEqual(blue_wp[1], 1.05, places=5)
+
+        # 3. Heavy-near raises recover threshold to 0.52 (hp=0.48 enters recover only when heavy is near),
+        #    and safe_bump_escape allows 'move' on bumps during bump_boost when unthreatened and hp >= 0.25.
+        controller = GoalController(load_config({'recover_enter': 0.42, 'recover_exit': 0.75, 'learning_control_hz': 10}))
+        try:
+            obs = copy.deepcopy(self.observation)
+            obs['time'] = 60.0
+            obs['positions']['red_outpost']['control'] = 'full'
+            obs['outposts']['blue']['hp'] = 0
+            me = next(r for r in obs['robots'] if r['slot'] == 7)
+            controller.state['goal'] = [12.0, 7.5]
+            obs['enemies'] = [{
+                'id': 'blue-3', 'slot': 3, 'role': 'infantry', 'team': 'blue',
+                'x': 15.0, 'y': 7.5, 'z': me.get('z', 0.0), 'vx': 0.0, 'vy': 0.0,
+                'hp': 200.0, 'max_hp': 200.0, 'alive': True, 'targetable': True,
+                'invulnerable': False, 'armor_center_z_m': 0.2,
+            }]
+            me.update(x=12.0, y=7.5, ammo=100, hp=me['max_hp'] * 0.48, posture='defense', posture_ready_at=0.0)
+            controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'policy')
+            obs['enemies'][0].update(id='blue-1', slot=1, role='heavy', hp=600.0, max_hp=600.0)
+            controller.decide(obs)
+            self.assertEqual(controller.state['mode'], 'recover')
+
+            # Safe bump escape on red_road_bumps at hp=0.30 (not threatened, no enemies) during bump_boost -> 'move'.
+            obs['time'] = 80.0
+            obs['enemies'] = []
+            controller.state['recovering'] = True
+            controller.state['last_heavy_near_time'] = -99.0
+            controller.state['unstick'] = {'trail': [], 'tries': 1, 'until': 79.0, 'bump_boost_until': 83.0}
+            me.update(x=6.20, y=13.20, ammo=100, hp=me['max_hp'] * 0.30, last_damage_time=0.0,
+                      posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertEqual(actions['7'].get('posture'), 'move')
+            # Under fire (threatened=True) on bumps stays 'defense'.
+            me.update(last_damage_time=79.5, posture='defense', posture_ready_at=0.0)
+            actions, _ = controller.decide(obs)
+            self.assertNotEqual(actions['7'].get('posture'), 'move')
+        finally:
+            controller.close()
+
+        # 4. Potential-based base_defense_progress_delta: zero-sum, Red/Blue symmetric, gated on policy & threat.
+        red_frame = {
+            'bases': {'red': {'x': 2.411, 'y': 7.5}, 'blue': {'x': 25.589, 'y': 7.5}},
+            'positions': {'red_base': {'controller': 'blue', 'active': ['blue']},
+                          'blue_base': {'controller': 'blue', 'active': []}},
+            'zones': {'red_base': {'occupants': ['blue-7']}, 'red_fortress': {'occupants': []},
+                      'blue_base': {'occupants': []}, 'blue_fortress': {'occupants': []}},
+        }
+        prev_r = {'alive': True, 'weak': False, 'x': 12.411, 'y': 7.5}
+        curr_r = {'alive': True, 'weak': False, 'x': 12.211, 'y': 7.5}
+        d_in = base_defense_progress_delta(prev_r, curr_r, red_frame, red_frame, 'red', 'policy')
+        d_out = base_defense_progress_delta(curr_r, prev_r, red_frame, red_frame, 'red', 'policy')
+        self.assertAlmostEqual(d_in, 0.2, places=6)
+        self.assertAlmostEqual(d_in + d_out, 0.0, places=6)
+        # Non-policy / weak / dead / unthreatened all pay strictly 0.0.
+        self.assertEqual(base_defense_progress_delta(prev_r, curr_r, red_frame, red_frame, 'red', 'recover'), 0.0)
+        self.assertEqual(base_defense_progress_delta(prev_r, {**curr_r, 'weak': True}, red_frame, red_frame, 'red', 'policy'), 0.0)
+        self.assertEqual(base_defense_progress_delta({**prev_r, 'alive': False}, curr_r, red_frame, red_frame, 'red', 'policy'), 0.0)
+        safe_frame = copy.deepcopy(red_frame)
+        safe_frame['positions']['red_base'] = {'controller': 'red', 'active': []}
+        safe_frame['zones']['red_base'] = {'occupants': []}
+        self.assertEqual(base_defense_progress_delta(prev_r, curr_r, safe_frame, safe_frame, 'red', 'policy'), 0.0)
+        # Mirror symmetry for Blue.
+        blue_frame = {
+            'bases': {'red': {'x': 2.411, 'y': 7.5}, 'blue': {'x': 25.589, 'y': 7.5}},
+            'positions': {'blue_base': {'controller': 'red', 'active': ['red']},
+                          'red_base': {'controller': 'red', 'active': []}},
+            'zones': {'blue_base': {'occupants': ['red-7']}, 'blue_fortress': {'occupants': []},
+                      'red_base': {'occupants': []}, 'red_fortress': {'occupants': []}},
+        }
+        d_blue = base_defense_progress_delta(
+            {'alive': True, 'weak': False, 'x': 28.0 - 12.411, 'y': 7.5},
+            {'alive': True, 'weak': False, 'x': 28.0 - 12.211, 'y': 7.5},
+            blue_frame, blue_frame, 'blue', 'policy',
+        )
+        self.assertAlmostEqual(d_blue, d_in, places=6)
+
+        # 5. Stage-5 configs load cleanly and run in ArenaSession with training_summary=True.
+        cfg_w = load_config(rl_session.ROOT / 'configs/rl/sentry-stage5-warp.json')
+        cfg_r = load_config(rl_session.ROOT / 'configs/rl/sentry-stage5-rapier.json')
+        for cfg in (cfg_w, cfg_r):
+            self.assertEqual(cfg['learning_control_hz'], 10)
+            self.assertAlmostEqual(cfg['rl_seconds'], 0.5)
+            self.assertAlmostEqual(cfg['recover_enter'], 0.42)
+            self.assertAlmostEqual(cfg['recover_exit'], 0.75)
+            self.assertAlmostEqual(cfg['rewards']['death'], -1.5)
+            self.assertAlmostEqual(cfg['rewards']['base_defense_progress'], 0.06)
+        with ArenaSession({**cfg_r, 'episode_seconds': 1.0, 'training_summary': True}) as session:
+            session.reset(42)
+            _, _, _, _, info = session.step([0.0, 0.0])
+            self.assertIn('base_defense_progress', info['reward_terms'])
+
 
 if __name__ == '__main__':
     unittest.main()

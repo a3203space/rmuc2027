@@ -14,6 +14,6 @@
   "opponent": "examples/claude_opus55_xhigh_2027_hold",
   "controllers": {"red:7": {"kind": "learning"}},
   "rewards": {"control": 0.01, "outcome": 10.0, "capture_seconds": 0.002, "death": -0.1,
-              "terrain_buff": 0.02, "position_control": 0.005},
+              "terrain_buff": 0.02, "position_control": 0.005, "base_defense_progress": 0.0},
   "ppo": {"n_steps": 64, "batch_size": 64, "n_epochs": 4, "learning_rate": 0.0003, "gamma": 0.998, "gae_lambda": 0.95, "ent_coef": 0.004}
 }

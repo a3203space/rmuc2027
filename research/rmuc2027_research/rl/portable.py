@@ -400,6 +400,7 @@ TEAM_17MM_BUY_LIMIT = 900
 FREE_GRANT_NEAR_M = 8.0
 RECOVER_COMMIT_M = 8.0
 EMERGENCY_RECOVER_HP = 0.25
+HEAVY_RECOVER_ENTER_HP = 0.52
 ATTACK_ENTRY_MIN_AMMO = 45
 LOW_HP_NO_ATTACK = 0.45
 MULTI_ENEMY_NO_ATTACK_HP = 0.55
@@ -590,10 +591,13 @@ def _unstick_fields(robot, fields, goal, obs, state, on_bumps):
         escape = [0.95 * rx / norm, 0.95 * ry / norm]
         u.update(escape=escape, until=now + 1.1, heading=hold_heading, bump_boost_until=now + 3.8)
     else:
-        offset = 0.9 if (robot['slot'] + u['tries']) % 2 else -0.9
+        # Full 360-degree 8-way compass sweep escapes acute rotated-kerb corners
+        # (such as central_blue_kerb_0) instead of oscillating between +/-0.9 rad.
+        compass = (0.0, 0.9, -0.9, 1.6, -1.6, 2.3, -2.3, math.pi)
+        offset = compass[(u['tries'] - 1) % len(compass)]
         angle = math.atan2(dy, dx) + math.pi + offset
-        escape = [0.75 * math.cos(angle), 0.75 * math.sin(angle)]
-        u.update(escape=escape, until=now + 0.75, heading=float(robot.get('heading', 0.0)))
+        escape = [0.95 * math.cos(angle), 0.95 * math.sin(angle)]
+        u.update(escape=escape, until=now + 0.9, heading=(angle + math.pi) % math.tau - math.pi)
     trail.clear()
     return {'move': list(u['escape']), 'heading': u['heading']}
 
@@ -615,6 +619,10 @@ def _recover_nav_goal(robot, goal, obs):
     wp = None
     if 3.9 <= lx <= 5.25 and ly >= 12.25:
         wp = (4.95, 12.05)
+    elif 5.25 < lx <= 7.80 and ly >= 12.90:
+        # Already inside the road bumps lane north of red_road_kerb: drive straight
+        # out along the lane centerline instead of rubbing red_road_kerb at y=12.91.
+        wp = (4.70, 13.95)
     elif 3.9 <= lx < 6.50 and 11.45 <= ly < 12.25:
         wp = (6.65, 11.50)
     elif 6.45 <= lx <= 7.80 and 10.65 <= ly < 12.15:
@@ -639,6 +647,28 @@ def execute_goal(obs, state, navigator, config, baseline):
     team_state = (obs.get('teams') or {}).get(obs['team'], {})
     coins = float(team_state.get('resources', 0.0) or 0.0)
     purchased_17 = int(team_state.get('purchased_17', 0) or 0)
+    now = float(obs['time'])
+    live_combat_enemies = [
+        e for e in obs.get('enemies', ())
+        if e.get('alive') and not e.get('invulnerable') and e.get('role') != 'aerial'
+    ]
+    heavy_near = False
+    if robot['alive'] and robot['role'] == 'sentry':
+        heavy_seen_now = any(
+            e.get('role') == 'heavy'
+            and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= HEAVY_THREAT_RADIUS_M
+            for e in live_combat_enemies
+        )
+        if heavy_seen_now:
+            state['last_heavy_near_time'] = now
+        heavy_near = heavy_seen_now or (
+            0.0 <= now - float(state.get('last_heavy_near_time', -99.0)) <= HEAVY_MEMORY_S
+        )
+    effective_recover_enter = (
+        max(float(config['recover_enter']), HEAVY_RECOVER_ENTER_HP)
+        if (robot['role'] == 'sentry' and heavy_near)
+        else float(config['recover_enter'])
+    )
     can_retreat = True
     emergency_retreat = False
     if robot['role'] == 'sentry':
@@ -661,7 +691,7 @@ def execute_goal(obs, state, navigator, config, baseline):
         # just because the team outpost degraded.
         emergency_retreat = (
             (hp < EMERGENCY_RECOVER_HP and (not holding_central or not def_enh_available))
-            or (hp < config['recover_enter'] and int(robot.get('ammo', 0)) == 0)
+            or (hp < effective_recover_enter and int(robot.get('ammo', 0)) == 0)
         )
     due_grants = int(obs['time'] // 60.0)
     taken_grants = int(robot.get('supply_grants_taken', 0) or 0)
@@ -677,7 +707,7 @@ def execute_goal(obs, state, navigator, config, baseline):
         robot.get('weak', False)
         or emergency_retreat
         or (can_retreat and (
-            hp < config['recover_enter']
+            hp < effective_recover_enter
             or (was_recovering and hp < config['recover_exit'])
             or free_grant_due
         ))
@@ -710,7 +740,8 @@ def execute_goal(obs, state, navigator, config, baseline):
     nav_goal = _recover_nav_goal(robot, goal, obs) if mode == 'recover' else goal
     nav_gap = math.hypot(robot['x'] - nav_goal[0], robot['y'] - nav_goal[1]) if nav_goal is not None else 0.0
     on_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=0.35, margin_y=0.25)
-    if mode == 'recover' and nav_goal != goal:
+    physically_on_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=0.0, margin_y=0.0) is not None
+    if mode == 'recover' and nav_goal != goal and not physically_on_bumps:
         on_bumps = None
     approaching_bumps = _bump_zone_for(robot, obs.get('arena'), margin_x=1.5, margin_y=0.5)
     if goal is None:
@@ -815,24 +846,11 @@ def execute_goal(obs, state, navigator, config, baseline):
             has_ammo = int(robot.get('ammo', 0)) > 0
             attack_ammo_ok = int(robot.get('ammo', 0)) >= (1 if robot.get('posture') == 'attack' else ATTACK_ENTRY_MIN_AMMO)
             combat_ready = attack_ammo_ok and bool(shot)
-            live_combat_enemies = [
-                e for e in obs.get('enemies', ())
-                if e.get('alive') and not e.get('invulnerable') and e.get('role') != 'aerial'
-            ]
-            live_duel = has_ammo and any(
+            enemy_close_10m = any(
                 math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 10.0
                 for e in live_combat_enemies
             )
-            heavy_seen_now = any(
-                e.get('role') == 'heavy'
-                and math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= HEAVY_THREAT_RADIUS_M
-                for e in live_combat_enemies
-            )
-            if heavy_seen_now:
-                state['last_heavy_near_time'] = now
-            heavy_near = heavy_seen_now or (
-                0.0 <= now - float(state.get('last_heavy_near_time', -99.0)) <= HEAVY_MEMORY_S
-            )
+            live_duel = has_ammo and enemy_close_10m
             outnumbered_close = sum(
                 1 for e in live_combat_enemies
                 if math.hypot(e['x'] - robot['x'], e['y'] - robot['y']) <= 6.0
@@ -850,13 +868,24 @@ def execute_goal(obs, state, navigator, config, baseline):
                 or (hp <= MULTI_ENEMY_NO_ATTACK_HP and outnumbered_close)
             )
             safe_for_move = not (threatened or live_duel or combat_unsafe_attack)
+            safe_bump_escape = (
+                physically_on_bumps
+                and bump_boost
+                and hp >= EMERGENCY_RECOVER_HP
+                and not threatened
+                and not enemy_close_10m
+                and not heavy_near
+            )
             if recovering:
-                wanted = (
-                    'defense'
-                    if (hp < 0.45 or gap <= 3.0 or threatened or heavy_near
-                        or outnumbered_close or (hp < 0.65 and live_duel))
-                    else 'move'
-                )
+                if safe_bump_escape:
+                    wanted = 'move'
+                else:
+                    wanted = (
+                        'defense'
+                        if (hp < 0.45 or gap <= 3.0 or threatened or heavy_near
+                            or outnumbered_close or (hp < 0.65 and live_duel))
+                        else 'move'
+                    )
             elif combat_unsafe_attack:
                 wanted = 'defense'
             elif combat_ready:

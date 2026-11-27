@@ -28,7 +28,8 @@ CONTROL_ZONES = (
 # Terms `_step` writes into `terms`, in the order they appear there. Declaring
 # them keeps a config from silently under-paying the rollout.
 REQUIRED_REWARD_TERMS = frozenset({
-    'control', 'outcome', 'capture_seconds', 'death', 'terrain_buff', 'position_control'})
+    'control', 'outcome', 'capture_seconds', 'death', 'terrain_buff',
+    'position_control', 'base_defense_progress'})
 
 
 def result_sign(winner, side):
@@ -464,6 +465,7 @@ class ArenaSession:
         for _ in range(round(cfg['rl_seconds']/DT)):
             before = battle.match._frame
             previous = next(r for r in before['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
+            prev_mine = next((r for r in self.obs['robots'] if r.get('slot') == cfg['slot']), None)
             frame = battle.step()
             robot = next(r for r in frame['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
             # Refresh the scoped observation inside the loop, not just after it:
@@ -472,6 +474,7 @@ class ArenaSession:
             # from before the action. The engine caches the encoding, so this is
             # not measurably slower than stepping alone.
             self.obs = battle.observation(team, [cfg['slot']])
+            curr_mine = next((r for r in self.obs['robots'] if r.get('slot') == cfg['slot']), None)
             dt = frame['time']-before['time']
             sampled_seconds+=dt
             delta = ((frame['teams'][team]['control']-frame['teams'][other]['control'])
@@ -515,17 +518,16 @@ class ArenaSession:
             # so a sentry sitting in attack is indistinguishable from one that
             # just drove through a tunnel.
             if robot['alive'] and not robot.get('weak'):
-                mine = next((r for r in self.obs['robots'] if r.get('slot') == cfg['slot']), None)
-                if mine is not None:
+                if curr_mine is not None:
                     now = float(self.obs.get('time') or frame['time'])
                     defending = (
-                        float(mine.get('crossing_defense_until', 0.0) or 0.0) > now + 1e-9
-                        or float(mine.get('crossing_cooling_until', 0.0) or 0.0) > now + 1e-9
+                        float(curr_mine.get('crossing_defense_until', 0.0) or 0.0) > now + 1e-9
+                        or float(curr_mine.get('crossing_cooling_until', 0.0) or 0.0) > now + 1e-9
                     )
                     if defending:
                         self.metrics['terrain_buff_seconds'] += dt
                         terms['terrain_buff'] += cfg['rewards']['terrain_buff']*dt
-                        for kind in (mine.get('crossing_firsts') or ()):
+                        for kind in (curr_mine.get('crossing_firsts') or ()):
                             self.metrics['terrain_buff_kinds'][kind] = True
             # Control positions where the sentry's occupancy causally advances
             # or protects control. Standing idle on an already full, uncontested
@@ -533,6 +535,13 @@ class ArenaSession:
             if contributes_to_control(robot, before, frame, team):
                 self.metrics['position_control_seconds'] += dt
                 terms['position_control'] += cfg['rewards']['position_control']*dt
+            # Symmetric potential-based shaping toward own_base ONLY while an enemy
+            # holds/contests own_base or own_fortress and the sentry moves under policy.
+            base_def_w = cfg['rewards']['base_defense_progress']
+            if base_def_w and prev_mine is not None and curr_mine is not None:
+                terms['base_defense_progress'] += base_def_w * base_defense_progress_delta(
+                    prev_mine, curr_mine, before, frame, team, mode
+                )
             if frame['status'] == 'finished' or frame['time']+1e-8 >= self._current_episode_seconds:
                 break
         terminated = battle.match.status == 'finished'
@@ -643,3 +652,39 @@ def contributes_to_control(robot, before, frame, team):
                     or other in (pos.get('active') or ())):
                 return True
     return False
+
+
+def _own_base_threatened(frame, team):
+    other = 'blue' if team == 'red' else 'red'
+    pos = (frame.get('positions') or {}).get(f'{team}_base') or {}
+    if pos.get('controller') == other or other in (pos.get('active') or ()):
+        return True
+    zones = frame.get('zones') or {}
+    enemy_prefix = f'{other}-'
+    for zone in (f'{team}_base', f'{team}_fortress'):
+        if any(str(rid).startswith(enemy_prefix) for rid in ((zones.get(zone) or {}).get('occupants') or ())):
+            return True
+    return False
+
+
+def base_defense_progress_delta(previous, robot, before, frame, team, mode):
+    """Zero-sum potential change (meters closer to own_base) while own_base is threatened.
+
+    Active only when alive, non-weak, and in `policy` mode across both ticks so
+    deaths/respawns and low-HP supply retreats cannot farm the signal.
+    """
+    if mode != 'policy':
+        return 0.0
+    if not (previous.get('alive') and robot.get('alive')):
+        return 0.0
+    if previous.get('weak') or robot.get('weak'):
+        return 0.0
+    if not (_own_base_threatened(before, team) and _own_base_threatened(frame, team)):
+        return 0.0
+    base = (frame.get('bases') or {}).get(team)
+    if base is None:
+        return 0.0
+    bx, by = float(base['x']), float(base['y'])
+    d_before = math.hypot(float(previous['x']) - bx, float(previous['y']) - by)
+    d_after = math.hypot(float(robot['x']) - bx, float(robot['y']) - by)
+    return max(-0.5, min(0.5, d_before - d_after))
