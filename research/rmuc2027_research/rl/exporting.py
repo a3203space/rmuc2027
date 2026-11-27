@@ -63,7 +63,8 @@ def act(obs, state):
         _WITNESS_STATE['witness'] = TerrainWitness(use_prior=False)
     _WITNESS_STATE['tick'] = obs['tick']
     # Integer scheduling agrees with the Gym session's exact game-tick count.
-    if 'goal_time' not in state or obs['tick'] - state.get('goal_tick', 0) >= round(_CONFIG['rl_seconds']/.05):
+    if ('goal_time' not in state or obs['tick'] < state.get('goal_tick', 0)
+            or obs['tick'] - state.get('goal_tick', 0) >= round(_CONFIG['rl_seconds']/.05)):
         _WITNESS_STATE['witness'].observe(obs, _CONFIG['slot'])
         features = encode_observation(obs, state, _CONFIG['slot'], _CONFIG['rl_seconds'],
                                       _WITNESS_STATE['witness'], _CONFIG['control_scale'])

@@ -10,8 +10,8 @@ try:
 except ImportError:
     from rmuc2027_core import sdk as _sdk
 
-OBS_VERSION = 3
-OBS_SIZE = 145
+OBS_VERSION = 4
+OBS_SIZE = 162
 SLOTS = (1, 3, 4, 6, 7)
 # Slot 6 carries the aerial system, which parks in a hangar and never drives:
 # the rulebook only ever marks the four ground robots, so it gets no capability
@@ -63,13 +63,16 @@ def own_robot(obs, slot=7):
 
 
 def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control_scale=None):
-    """145 bounded features, with blue coordinates rotated into the red frame.
+    """162 bounded features, with blue coordinates rotated into the red frame.
 
     self 18 + four allies * 7 + five visible enemy slots * 11 (8 + 3 movement
     traits) + public match 6 + four public control positions * 4 + controller
     memory 8 + v3 tactical state 14 (sentry supply grant due 1 + enhanced posture
     budgets 3 + crossing cooling/defense remaining 2 + own/enemy outpost hp 2 +
-    central card occupancy 4 + own fortress active 1 + team 17mm cap left 1).
+    central card occupancy 4 + own fortress active 1 + team 17mm cap left 1) +
+    v4 public arena/status 17 (supercap ratio 1 + posture cooldown ratio 1 +
+    six remaining control zone occupancies * 2 + attack damage diff 1 +
+    control diff 1 + own alive ground HP 1).
 
     `witness` is an optional `terrain_witness.TerrainWitness`. Exported
     submissions embed `TerrainWitness(use_prior=False)` as well, so training
@@ -101,7 +104,7 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control
     heading = me.get('heading', 0) + (math.pi if sign < 0 else 0)
     values = motion(me) + [me.get('ammo', 0)/500,
         _ratio(me.get('heat', 0), me.get('max_heat', 1)),
-        me.get('energy', me.get('buffer_energy_j', 0))/250,
+        (_ratio(me['buffer_energy_j'], 60) if me.get('buffer_energy_j') is not None else me.get('energy', 0)/250),
         float(me['alive']), float(me.get('weak', False)), float(me.get('tipped', False)),
         *[float(me.get('posture') == p) for p in ('move', 'attack', 'defense')],
         _ratio(me.get('respawn_progress', 0), me.get('respawn_required', 1)),
@@ -136,7 +139,7 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control
     goal = state.get('goal')
     values += list(xy(*goal)) if goal else [0.0, 0.0]
     values += [float(state.get('mode', 'policy') == mode) for mode in MODES]
-    values += [(obs['time']-state.get('goal_time', obs['time']))/rl_seconds]
+    values += [max(0.0, float(obs['time'])-float(state.get('goal_time', obs['time'])))/15.0]
     # OBS v3 (+14): tactical awareness missing from the 131-dim layout.
     grants_due = (
         max(0, int(obs['time'] // 60.0) - int(me.get('supply_grants_taken', 0) or 0)) / 3.0
@@ -172,6 +175,36 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control
         grants_due, *posture_budget, cooling_rem, defense_rem,
         *outpost_hp, ally_on_own_central, enemy_on_own_central,
         ally_on_other_central, enemy_on_other_central, own_fortress_active, cap_left,
+    ]
+    # OBS v4 (+17): strictly public, Red/Blue-symmetric resource, zone-card & tiebreaker state.
+    supercap_ratio = _ratio(me.get('supercap_energy_j', 0.0) or 0.0, 1800.0)
+    posture_cd_ratio = max(0.0, float(me.get('posture_ready_at') or 0.0) - float(obs['time'])) / 5.0
+    zone_occ = []
+    for owner, kind in (
+        (team, 'outpost'), (other, 'outpost'),
+        (team, 'base'), (other, 'base'),
+        (team, 'fortress'), (other, 'fortress'),
+    ):
+        occ = (zones.get(f'{owner}_{kind}') or {}).get('occupants') or ()
+        zone_occ.append(float(any(rid in ally_ids for rid in occ)))
+        zone_occ.append(float(any(str(rid).startswith(enemy_prefix) for rid in occ)))
+    attack_damage_diff = (
+        float(obs['teams'][team].get('attack_damage', 0.0) or 0.0)
+        - float(obs['teams'][other].get('attack_damage', 0.0) or 0.0)
+    ) / 4000.0
+    control_diff = (
+        float(obs['teams'][team].get('control', 0.0) or 0.0)
+        - float(obs['teams'][other].get('control', 0.0) or 0.0)
+    ) / control_scale
+    own_ground_hp = sum(
+        float(r.get('hp', 0.0) or 0.0)
+        for r in obs.get('robots', ())
+        if r.get('slot') in GROUND_SLOTS and r.get('alive')
+    ) / 1800.0
+    values += [
+        supercap_ratio, posture_cd_ratio,
+        *zone_occ,
+        attack_damage_diff, control_diff, own_ground_hp,
     ]
     if len(values) != OBS_SIZE or not all(math.isfinite(v) for v in values):
         raise ValueError('Non-finite or incompatible actor observation')
@@ -280,7 +313,8 @@ def select_goal(obs, state, action, navigator, config):
     prev_proposed = state.get('_goal_proposed')
     mode = state.get('mode', 'policy')
     same_fold = bool(state.get('_goal_folded', False)) == folded
-    if prev_goal is not None and mode in ('dead', 'tipped') and same_fold:
+    locked = prev_goal is not None and mode in ('dead', 'tipped', 'recover') and same_fold
+    if locked:
         goal = list(prev_goal)
         locked_proposed = list(prev_proposed) if prev_proposed is not None else list(proposed)
     else:
@@ -302,7 +336,15 @@ def select_goal(obs, state, action, navigator, config):
             locked_proposed = list(proposed)
             if prev_goal is None or goal is None or math.hypot(goal[0] - prev_goal[0], goal[1] - prev_goal[1]) > 1e-6:
                 state['goal_settled'] = False
-    state.update(goal=goal, goal_time=obs['time'], supplied_action=list(action),
+    goal_changed = (
+        'goal_time' not in state
+        or prev_goal is None
+        or goal is None
+        or math.hypot(goal[0] - prev_goal[0], goal[1] - prev_goal[1]) > 1e-6
+    )
+    goal_time = obs['time'] if goal_changed else state['goal_time']
+    state.update(goal=goal, goal_time=goal_time, action_accepted=not locked,
+                 supplied_action=list(action),
                  clipped_action=clipped, proposed_goal=proposed,
                  _goal_folded=folded, _goal_proposed=locked_proposed)
 
@@ -692,14 +734,18 @@ def execute_goal(obs, state, navigator, config, baseline):
         raw_move = fields['move']
         step_travel = float(robot.get('speed_reference_mps', 3.0)) * control_dt
         if (nav_goal == goal
-                and gap < step_travel
+                and gap > GOAL_STOP_RADIUS_M
                 and not in_manoeuvre
+                and not nav_state.get('limited')
                 and not any(fields.get(k) for k in ('jump', 'transform', 'brake'))
                 and getattr(raw_move, 'heading', None) is None):
             mag = math.hypot(*raw_move)
-            if mag > 1e-6:
-                scale = min(1.0, gap / max(step_travel, 1e-6))
-                fields['move'] = (raw_move[0] * scale, raw_move[1] * scale)
+            if mag > 0.05:
+                cap_mag = min(1.0, gap / max(step_travel, 1e-6))
+                target_mag = max(0.25, min(mag, cap_mag))
+                if abs(target_mag - mag) > 1e-6:
+                    scale = target_mag / mag
+                    fields['move'] = (raw_move[0] * scale, raw_move[1] * scale)
         if not in_manoeuvre and gap > GOAL_RESUME_RADIUS_M and not any(fields.get(k) for k in ('jump', 'transform', 'brake')):
             fields = _unstick_fields(robot, fields, nav_goal, obs, state, on_bumps)
         elif 'unstick' in state:
@@ -797,22 +843,27 @@ def execute_goal(obs, state, navigator, config, baseline):
                 and not state.get('goal_settled')
                 and gap > GOAL_RESUME_RADIUS_M
             )
-            bump_emergency_def = hp < 0.35
             combat_unsafe_attack = (
                 hp < LOW_HP_NO_ATTACK
                 or (hp < 0.65 and threatened)
                 or heavy_near
                 or (hp <= MULTI_ENEMY_NO_ATTACK_HP and outnumbered_close)
             )
-            if traverse_bumps and not bump_emergency_def:
-                wanted = 'move'
-            elif recovering:
-                wanted = 'defense' if (hp < 0.40 or gap <= 3.0 or threatened) else 'move'
+            safe_for_move = not (threatened or live_duel or combat_unsafe_attack)
+            if recovering:
+                wanted = (
+                    'defense'
+                    if (hp < 0.45 or gap <= 3.0 or threatened or heavy_near
+                        or outnumbered_close or (hp < 0.65 and live_duel))
+                    else 'move'
+                )
             elif combat_unsafe_attack:
                 wanted = 'defense'
-            elif combat_ready and not (moving and gap > MOVE_POSTURE_DISTANCE_M):
+            elif combat_ready:
                 wanted = 'attack'
-            elif moving and gap > MOVE_POSTURE_DISTANCE_M:
+            elif traverse_bumps and safe_for_move:
+                wanted = 'move'
+            elif moving and gap > MOVE_POSTURE_DISTANCE_M and safe_for_move:
                 wanted = 'move'
             else:
                 wanted = 'defense'

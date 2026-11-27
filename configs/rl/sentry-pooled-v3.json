@@ -53,19 +53,19 @@
     "position_control": 0.03
   },
   "ppo": {
-    "n_steps": 256,
+    "n_steps": 512,
     "batch_size": 256,
     "n_epochs": 4,
     "learning_rate": 0.0003,
     "gae_lambda": 0.95,
     "gamma": 0.998,
-    "ent_coef": 0.004,
-    "action_std": 0.48
+    "ent_coef": 0.002,
+    "action_std": 0.28
   },
   "sim_backend": "warp_kinematic",
   "sim_device": "cuda:0",
   "policy_timeout_s": 5.0,
-  "learning_control_hz": 2,
+  "learning_control_hz": 10,
   "drones_enabled": false,
   "navigation_mode": "legacy",
   "timed_assembly": true,

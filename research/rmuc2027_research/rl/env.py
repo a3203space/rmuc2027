@@ -3,7 +3,7 @@ import gymnasium as gym
 import numpy as np
 
 from .portable import OBS_SIZE
-from .session import ArenaSession
+from .session import ArenaSession, opponent_schedule
 
 
 def make_env(config):
@@ -17,16 +17,35 @@ class SentryEnv(gym.Env):
 
     def __init__(self, config=None, record_replay=False):
         self.session = ArenaSession(config, record_replay)
+        self._schedule_period = len(opponent_schedule(self.session.config))
+        self._opponent_bag = []
         self.observation_space = gym.spaces.Box(-1, 1, shape=(OBS_SIZE,), dtype=np.float32)
         self.action_space = gym.spaces.Box(-1, 1, shape=(2,), dtype=np.float32)
+
+    def _next_unseeded_match_seed(self):
+        period = self._schedule_period
+        if period <= 1:
+            return int(self.np_random.integers(0, 2**31))
+        if not self._opponent_bag:
+            self._opponent_bag = list(range(period))
+            self.np_random.shuffle(self._opponent_bag)
+        slot = self._opponent_bag.pop()
+        max_base = max(1, (2**31 - 1) // period)
+        base = int(self.np_random.integers(0, max_base))
+        return base * period + slot
 
     def reset(self, *, seed=None, options=None):
         try:
             super().reset(seed=seed)
             if options:
                 raise ValueError('v1 uses immutable environment configuration; reset options must be empty')
-            # Gym owns the RNG: seeded resets reproduce; unseeded resets advance it.
-            match_seed = int(seed) if seed is not None else int(self.np_random.integers(0, 2**31))
+            # Gym owns the RNG: seeded resets reproduce; unseeded resets draw from a
+            # stratified shuffled bag so pool weights stay balanced across long runs.
+            if seed is not None:
+                self._opponent_bag.clear()
+                match_seed = int(seed)
+            else:
+                match_seed = self._next_unseeded_match_seed()
             obs, info = self.session.reset(match_seed)
             return np.asarray(obs, dtype=np.float32), info
         except BaseException:

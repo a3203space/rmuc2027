@@ -62,6 +62,20 @@ class RotationTests(unittest.TestCase):
         self.assertEqual(picks.count(OTHER), 3)
         self.assertEqual(picks.count(THIRD), 2)
         self.assertEqual(opponent_for(config, 7), opponent_for(config, 1))
+        # Smooth interleaving: no long contiguous clumps of the heaviest weight.
+        self.assertFalse(all(p == OTHER for p in picks[1:4]))
+
+    @unittest.skipUnless(_HAVE_SB3, 'stable-baselines3/torch unavailable')
+    def test_unseeded_sentry_env_uses_stratified_bag(self):
+        from rmuc2027_research.rl.env import SentryEnv
+        pool = [BASELINE, OTHER, THIRD]
+        config = load_config({'opponent': BASELINE, 'opponent_pool': pool, 'opponent_pool_weights': [1.0, 3.0, 2.0]})
+        env = SentryEnv(config)
+        env.np_random = np.random.default_rng(123)
+        picks = [opponent_for(config, env._next_unseeded_match_seed()) for _ in range(12)]
+        self.assertEqual(picks.count(BASELINE), 2)
+        self.assertEqual(picks.count(OTHER), 6)
+        self.assertEqual(picks.count(THIRD), 4)
 
 
 class ValidationTests(unittest.TestCase):

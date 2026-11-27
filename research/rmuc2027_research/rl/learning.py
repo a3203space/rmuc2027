@@ -9,15 +9,20 @@ import os
 from pathlib import Path
 import time
 from functools import partial
+from typing import NamedTuple
 
+from gymnasium import spaces
 import numpy as np
 os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')
 import torch
 from torch import nn
+from torch.nn import functional as F
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.buffers import RolloutBuffer
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.distributions import DiagGaussianDistribution
 from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.utils import FloatSchedule, explained_variance
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from .env import SentryEnv, make_env
@@ -40,11 +45,24 @@ def vector_env(config, count, shards=1):
         raise ValueError('num-envs must be positive')
     if shards < 1:
         raise ValueError('sim-shards must be positive')
-    factories = [partial(make_env, config) for _ in range(count)]
-    if config.get('sim_backend', 'rapier') == 'mjwarp':
+    base_config = dict(config)
+    stagger = bool(base_config.pop('_stagger_initial_horizons', False))
+    if (stagger and count > 1 and base_config.get('slot', 7) != 1
+            and base_config.get('episode_seconds') and base_config.get('rl_seconds')):
+        ep_s = float(base_config['episode_seconds'])
+        rl_s = float(base_config['rl_seconds'])
+        ep_steps = max(1, round(ep_s / rl_s))
+        factories = []
+        for i in range(count):
+            h_steps = max(1, round(ep_steps * (i + 1) / count))
+            env_cfg = {**base_config, '_initial_episode_seconds': round(h_steps * rl_s, 6)}
+            factories.append(partial(make_env, env_cfg))
+    else:
+        factories = [partial(make_env, base_config) for _ in range(count)]
+    if base_config.get('sim_backend', 'rapier') == 'mjwarp':
         from .mjwarp.vector import WarpVecEnv
         vec = WarpVecEnv(factories)
-    elif config.get('sim_backend') == 'warp_kinematic' and count>1:
+    elif base_config.get('sim_backend') == 'warp_kinematic' and count>1:
         effective_shards = min(shards, count)
         if effective_shards > 1:
             from .warp_kinematic.vector import ShardedWarpVecEnv
@@ -53,9 +71,86 @@ def vector_env(config, count, shards=1):
             from .warp_kinematic.vector import WarpVecEnv
             vec = WarpVecEnv(factories)
     else:
-        vec = DummyVecEnv(factories) if count == 1 or config.get('slot') == 1 else SubprocVecEnv(factories, start_method='spawn')
-    vec.seed(config['seed'])
+        vec = DummyVecEnv(factories) if count == 1 or base_config.get('slot') == 1 else SubprocVecEnv(factories, start_method='spawn')
+    vec.seed(base_config['seed'])
     return vec
+
+
+class MaskedRolloutBufferSamples(NamedTuple):
+    observations: torch.Tensor
+    actions: torch.Tensor
+    old_values: torch.Tensor
+    old_log_prob: torch.Tensor
+    advantages: torch.Tensor
+    returns: torch.Tensor
+    policy_mask: torch.Tensor
+
+
+class MaskedRolloutBuffer(RolloutBuffer):
+    """RolloutBuffer carrying a per-step policy_mask (1.0=policy, 0.0=takeover)."""
+
+    def reset(self) -> None:
+        self.policy_masks = np.ones((self.buffer_size, self.n_envs), dtype=np.float32)
+        self._pending_mask = None
+        super().reset()
+
+    def set_pending_mask(self, mask) -> None:
+        self._pending_mask = np.asarray(mask, dtype=np.float32).reshape(self.n_envs)
+
+    def add(self, obs, action, reward, episode_start, value, log_prob) -> None:
+        if self._pending_mask is not None:
+            self.policy_masks[self.pos] = self._pending_mask
+            self._pending_mask = None
+        else:
+            self.policy_masks[self.pos] = 1.0
+        super().add(obs, action, reward, episode_start, value, log_prob)
+
+    def get(self, batch_size=None):
+        assert self.full, ""
+        indices = np.random.permutation(self.buffer_size * self.n_envs)
+        if not self.generator_ready:
+            for tensor in (
+                'observations',
+                'actions',
+                'values',
+                'log_probs',
+                'advantages',
+                'returns',
+                'policy_masks',
+            ):
+                self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])
+            self.generator_ready = True
+        if batch_size is None:
+            batch_size = self.buffer_size * self.n_envs
+        start_idx = 0
+        while start_idx < self.buffer_size * self.n_envs:
+            yield self._get_samples(indices[start_idx : start_idx + batch_size])
+            start_idx += batch_size
+
+    def _get_samples(self, batch_inds, env=None):
+        data = (
+            self.observations[batch_inds],
+            self.actions[batch_inds].astype(np.float32, copy=False),
+            self.values[batch_inds].flatten(),
+            self.log_probs[batch_inds].flatten(),
+            self.advantages[batch_inds].flatten(),
+            self.returns[batch_inds].flatten(),
+            self.policy_masks[batch_inds].flatten(),
+        )
+        return MaskedRolloutBufferSamples(*tuple(map(self.to_torch, data)))
+
+
+class _PolicyMaskCallback(BaseCallback):
+    """Forwards ArenaSession's `info['policy_executed']` to MaskedRolloutBuffer."""
+
+    def _on_step(self) -> bool:
+        buf = getattr(self.model, 'rollout_buffer', None)
+        if isinstance(buf, MaskedRolloutBuffer):
+            infos = self.locals.get('infos') or ()
+            mask = [float(bool(info.get('policy_executed', True))) for info in infos]
+            if len(mask) == buf.n_envs:
+                buf.set_pending_mask(mask)
+        return True
 
 
 class TanhActorCriticPolicy(ActorCriticPolicy):
@@ -69,6 +164,20 @@ class TanhActorCriticPolicy(ActorCriticPolicy):
 
 
 class TimedPPO(PPO):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('rollout_buffer_class', MaskedRolloutBuffer)
+        super().__init__(*args, **kwargs)
+
+    def learn(self, *args, callback=None, **kwargs):
+        mask_cb = _PolicyMaskCallback()
+        if callback is None:
+            wrapped = mask_cb
+        elif isinstance(callback, list):
+            wrapped = [mask_cb, *callback]
+        else:
+            wrapped = CallbackList([mask_cb, callback])
+        return super().learn(*args, callback=wrapped, **kwargs)
+
     def apply_learning_rate_control(self):
         """Apply an operator request between complete PPO rollouts only."""
         path = getattr(self, 'learning_rate_control_path', None)
@@ -140,11 +249,113 @@ class TimedPPO(PPO):
             stream.write(json.dumps(event)+'\n')
         print(json.dumps(event), flush=True)
 
+    def _train_masked(self):
+        """PPO update masking Actor PG/entropy/KL over policy_executed steps while training Critic on all steps."""
+        self.policy.set_training_mode(True)
+        self._update_learning_rate(self.policy.optimizer)
+        clip_range = self.clip_range(self._current_progress_remaining)
+        clip_range_vf = self.clip_range_vf(self._current_progress_remaining) if self.clip_range_vf is not None else None
+
+        entropy_losses, pg_losses, value_losses, clip_fractions = [], [], [], []
+        approx_kl_divs = []
+        loss = torch.zeros((), device=self.device)
+        continue_training = True
+        for epoch in range(self.n_epochs):
+            approx_kl_divs = []
+            for rollout_data in self.rollout_buffer.get(self.batch_size):
+                actions = rollout_data.actions
+                if isinstance(self.action_space, spaces.Discrete):
+                    actions = rollout_data.actions.long().flatten()
+
+                values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+                values = values.flatten()
+
+                mask = getattr(rollout_data, 'policy_mask', None)
+                if mask is None:
+                    mask = torch.ones_like(rollout_data.advantages)
+                mask = mask.float()
+                mask_sum = mask.sum()
+                mask_count = float(mask_sum.item())
+
+                advantages = rollout_data.advantages
+                if self.normalize_advantage and mask_count > 1.0:
+                    adv_mean = (advantages * mask).sum() / mask_sum
+                    adv_var = (((advantages - adv_mean) ** 2) * mask).sum() / (mask_sum - 1.0)
+                    advantages = (advantages - adv_mean) / (torch.sqrt(adv_var.clamp_min(0.0)) + 1e-8)
+
+                ratio = torch.exp(log_prob - rollout_data.old_log_prob)
+                if mask_count > 0.0:
+                    policy_loss_1 = advantages * ratio
+                    policy_loss_2 = advantages * torch.clamp(ratio, 1 - clip_range, 1 + clip_range)
+                    policy_loss = -(torch.min(policy_loss_1, policy_loss_2) * mask).sum() / mask_sum
+                    pg_losses.append(policy_loss.item())
+                    clip_fraction = (((torch.abs(ratio - 1) > clip_range).float() * mask).sum() / mask_sum).item()
+                    clip_fractions.append(clip_fraction)
+                    if entropy is None:
+                        entropy_loss = -((-log_prob) * mask).sum() / mask_sum
+                    else:
+                        entropy_loss = -(entropy * mask).sum() / mask_sum
+                    entropy_losses.append(entropy_loss.item())
+                    with torch.no_grad():
+                        log_ratio = log_prob - rollout_data.old_log_prob
+                        approx_kl_div = ((((torch.exp(log_ratio) - 1) - log_ratio) * mask).sum() / mask_sum).cpu().numpy()
+                        approx_kl_divs.append(approx_kl_div)
+                else:
+                    policy_loss = torch.zeros((), device=values.device)
+                    entropy_loss = torch.zeros((), device=values.device)
+                    approx_kl_div = np.array(0.0, dtype=np.float32)
+
+                if clip_range_vf is None:
+                    values_pred = values
+                else:
+                    values_pred = rollout_data.old_values + torch.clamp(
+                        values - rollout_data.old_values, -clip_range_vf, clip_range_vf
+                    )
+                value_loss = F.mse_loss(rollout_data.returns, values_pred)
+                value_losses.append(value_loss.item())
+
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+
+                if mask_count > 0.0 and self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
+                    continue_training = False
+                    if self.verbose >= 1:
+                        print(f'Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}')
+                    break
+
+                self.policy.optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+                self.policy.optimizer.step()
+
+            self._n_updates += 1
+            if not continue_training:
+                break
+
+        explained_var = explained_variance(self.rollout_buffer.values.flatten(), self.rollout_buffer.returns.flatten())
+        mask_frac = (
+            float(np.mean(self.rollout_buffer.policy_masks))
+            if hasattr(self.rollout_buffer, 'policy_masks') else 1.0
+        )
+        self.logger.record('train/entropy_loss', float(np.mean(entropy_losses)) if entropy_losses else 0.0)
+        self.logger.record('train/policy_gradient_loss', float(np.mean(pg_losses)) if pg_losses else 0.0)
+        self.logger.record('train/value_loss', float(np.mean(value_losses)) if value_losses else 0.0)
+        self.logger.record('train/approx_kl', float(np.mean(approx_kl_divs)) if approx_kl_divs else 0.0)
+        self.logger.record('train/clip_fraction', float(np.mean(clip_fractions)) if clip_fractions else 0.0)
+        self.logger.record('train/policy_mask_fraction', mask_frac)
+        self.logger.record('train/loss', float(loss.item()))
+        self.logger.record('train/explained_variance', explained_var)
+        if hasattr(self.policy, 'log_std'):
+            self.logger.record('train/std', torch.exp(self.policy.log_std).mean().item())
+        self.logger.record('train/n_updates', self._n_updates, exclude='tensorboard')
+        self.logger.record('train/clip_range', clip_range)
+        if clip_range_vf is not None:
+            self.logger.record('train/clip_range_vf', clip_range_vf)
+
     def train(self):
         self.apply_learning_rate_control()
         self.apply_action_std_control()
         started = time.perf_counter()
-        super().train()
+        self._train_masked()
         seconds = time.perf_counter()-started
         self.optimization_seconds = getattr(self, 'optimization_seconds', 0.0)+seconds
         path = getattr(self, 'update_log_path', None)
@@ -306,7 +517,7 @@ class TraceCallback(BaseCallback):
             else:
                 self.sampling_seconds_excluding_first += seconds
         if not self.detailed:
-            self.stream.write(json.dumps({"kind":"final", "total_steps":self.num_timesteps, "gradient_epochs":self.model._n_updates, "metrics":self.last_metrics})+"\n")
+            self.stream.write(json.dumps({"kind":"final", "total_steps":self.num_timesteps, "gradient_epochs":self.model._n_updates, "metrics":self.last_metrics}, default=_json_default)+"\n")
         self.stream.close()
 
 
@@ -375,6 +586,8 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
     runtime_config = dict(config)
     if wall_seconds is not None:
         runtime_config['_training_deadline'] = time.monotonic()+wall_seconds
+    if num_envs > 1:
+        runtime_config['_stagger_initial_horizons'] = True
     vec = vector_env(runtime_config, num_envs) if sim_shards == 1 else vector_env(runtime_config, num_envs, shards=sim_shards)
     callback = TraceCallback(output/'actions.jsonl', started+wall_seconds if wall_seconds is not None else None,
                              detailed=config.get('action_trace', False),backup_seconds=config.get('github_backup_seconds',300.))
@@ -390,12 +603,25 @@ def train(config, output, steps, num_envs=1, device='cpu', resume=None, wall_sec
         if resume:
             model = TimedPPO.load(resume, env=vec, device=device)
         elif init_from:
-            # Seed a fresh experiment from existing weights. _setup_learn only
-            # clears num_timesteps/_episode_num when reset_num_timesteps is set,
-            # so the remaining counters are reset here or the logs would start
-            # from the previous run's values. Adam state is kept on purpose:
-            # that is what continuing rather than re-initialising means.
-            model = TimedPPO.load(init_from, env=vec, device=device)
+            # Seed a fresh experiment from existing weights while applying the
+            # new config's PPO hyperparameters (n_steps, batch_size, lr, ent_coef...).
+            # If the reward definition changed vs the source experiment, reset the
+            # Critic and Adam state so stale value scales do not corrupt updates.
+            init_custom = {**_ppo_kwargs(config), 'rollout_buffer_class': MaskedRolloutBuffer}
+            if 'learning_rate' in init_custom:
+                init_custom['lr_schedule'] = FloatSchedule(init_custom['learning_rate'])
+            model = TimedPPO.load(init_from, env=vec, device=device, custom_objects=init_custom)
+            prev_exp_path = Path(init_from).parent / 'experiment.json'
+            if prev_exp_path.is_file():
+                prev_rewards = json.loads(prev_exp_path.read_text()).get('config', {}).get('rewards')
+                if prev_rewards is not None and prev_rewards != config['rewards']:
+                    for module in model.policy.mlp_extractor.value_net.modules():
+                        if isinstance(module, nn.Linear):
+                            nn.init.orthogonal_(module.weight, gain=math.sqrt(2.0))
+                            nn.init.constant_(module.bias, 0.0)
+                    nn.init.orthogonal_(model.policy.value_net.weight, gain=1.0)
+                    nn.init.constant_(model.policy.value_net.bias, 0.0)
+                    model.policy.optimizer.state.clear()
             model.num_timesteps = 0
             model._total_timesteps = 0
             model._num_timesteps_at_start = 0
@@ -564,8 +790,11 @@ def evaluate(model_path, output, seeds, sides, duration=420, device='cpu', backe
                 outcome = result_label(info['winner'], side, terminated)
                 replay = output/f'{seed}-{side}.json'
                 env.session.save_replay(replay)
-                from rmuc2027_core.replay import verify_replay
-                verified = verify_replay(replay)
+                if config['sim_backend'] == 'rapier':
+                    from rmuc2027_core.replay import verify_replay
+                    verified = verify_replay(replay)
+                else:
+                    verified = {'skipped': True, 'backend': config['sim_backend']}
                 record = {**info, 'side': side, 'outcome': outcome, 'terminated': terminated,
                     'truncated': truncated, 'training_reward': total_reward, 'replay': str(replay), 'verified': verified}
                 results.append(record)

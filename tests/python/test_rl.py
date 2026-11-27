@@ -322,8 +322,8 @@ class EnemyCapabilityTests(unittest.TestCase):
         encoded = encode_observation(self._observation(SLOTS, models),
                                      {'goal': (1.0, 1.0), 'mode': 'policy', 'goal_time': 119.0}, 7, 0.5)
         self.assertEqual(len(encoded), OBS_SIZE)
-        self.assertEqual(OBS_VERSION, 3)
-        self.assertEqual(OBS_SIZE, 145)
+        self.assertEqual(OBS_VERSION, 4)
+        self.assertEqual(OBS_SIZE, 162)
         self.assertEqual(self._traits(encoded, 1), [0.0, 0.0, 0.0])   # heavy, plain mecanum
         self.assertEqual(self._traits(encoded, 3), [0.0, 1.0, 0.0])   # jump only
         self.assertEqual(self._traits(encoded, 4), [1.0, 0.0, 0.0])   # tunnel only
@@ -1062,7 +1062,7 @@ class ActionStdControlTests(unittest.TestCase):
         # The model's own train() override, not the module-level train(): both
         # are named `train` and the module-level one comes later in the file.
         start = source.index('\n    def train(self):')
-        body = source[start:source.index('super().train()', start)]
+        body = source[start:source.index('self._train_masked()', start)]
         # Same slot as the learning-rate channel: before the rollout loop
         # starts, so a clamp cannot land halfway through a buffer that is
         # already collecting samples at the old width.
@@ -1119,8 +1119,8 @@ class Stage3FixRegressionTests(unittest.TestCase):
         obs['positions']['red_outpost']['controller'] = 'blue'
         obs['teams']['red']['purchased_17'] = 750
         encoded = encode_observation(obs, {'goal': (5.0, 5.0), 'mode': 'policy', 'goal_time': 185.0}, 7, 0.5)
-        self.assertEqual(len(encoded), 145)
-        tail = encoded[131:]
+        self.assertEqual(len(encoded), 162)
+        tail = encoded[131:145]
         self.assertAlmostEqual(tail[0], 2.0 / 3.0, places=5)   # 3 due - 1 taken = 2
         self.assertAlmostEqual(tail[1], 0.5, places=5)         # attack enhanced remaining
         self.assertAlmostEqual(tail[2], 1.0, places=5)         # defense enhanced remaining
@@ -1573,6 +1573,8 @@ class Stage3FixRegressionTests(unittest.TestCase):
         cfg = load_config(rl_session.ROOT / 'configs/rl/sentry-pooled-v3.json')
         self.assertFalse(cfg['drones_enabled'])
         self.assertTrue(cfg['timed_assembly'])
+        self.assertAlmostEqual(cfg['rl_seconds'], 0.5)
+        self.assertEqual(cfg['learning_control_hz'], 10)
         self.assertAlmostEqual(cfg['recover_enter'], 0.35)
         self.assertAlmostEqual(cfg['rewards']['death'], -0.5)
         self.assertEqual(cfg['rewards']['terrain_buff'], 0.0)
@@ -1582,7 +1584,264 @@ class Stage3FixRegressionTests(unittest.TestCase):
             cfg['opponent_pool_weights'],
             [1.0, 3.0, 1.0, 3.0, 0.5, 0.5, 2.0, 2.0, 2.0, 1.5, 1.0, 0.5],
         )
-        self.assertAlmostEqual(cfg['ppo']['action_std'], 0.48)
+        self.assertEqual(cfg['ppo']['n_steps'], 512)
+        self.assertEqual(cfg['ppo']['batch_size'], 256)
+        self.assertAlmostEqual(cfg['ppo']['ent_coef'], 0.002)
+        self.assertAlmostEqual(cfg['ppo']['action_std'], 0.28)
+
+    def test_stage4_obs_v4_symmetry_buffer_goal_age_and_posture_guards(self):
+        obs = copy.deepcopy(self.observation)
+        obs['time'] = 100.0
+        me = next(r for r in obs['robots'] if r['slot'] == 7)
+        me.update(
+            buffer_energy_j=30.0, energy=0.0,
+            supercap_energy_j=900.0, posture_ready_at=102.5,
+        )
+        obs['zones']['red_base']['occupants'] = ['blue-3']
+        obs['zones']['blue_fortress']['occupants'] = ['red-4']
+        obs['teams']['red']['attack_damage'] = 1200.0
+        obs['teams']['blue']['attack_damage'] = 400.0
+        obs['teams']['red']['control'] = 300.0
+        obs['teams']['blue']['control'] = 100.0
+        encoded = encode_observation(obs, {'goal': (5.0, 5.0), 'mode': 'policy', 'goal_time': 92.5}, 7, 0.5)
+        self.assertEqual(len(encoded), 162)
+        self.assertAlmostEqual(encoded[7], 0.5, places=5)       # buffer_energy_j / 60
+        self.assertAlmostEqual(encoded[130], 7.5 / 15.0, places=5)  # goal_age / 15
+        v4 = encoded[145:]
+        self.assertEqual(len(v4), 17)
+        self.assertAlmostEqual(v4[0], 0.5, places=5)            # supercap / 1800
+        self.assertAlmostEqual(v4[1], 0.5, places=5)            # posture_cd / 5
+        # zone_occ order: own_outpost(2,3), other_outpost(4,5), own_base(6,7),
+        # other_base(8,9), own_fortress(10,11), other_fortress(12,13)
+        self.assertEqual(v4[6:8], [0.0, 1.0])                   # enemy on red_base
+        self.assertEqual(v4[12:14], [1.0, 0.0])                 # ally on blue_fortress
+        self.assertAlmostEqual(v4[14], 800.0 / 4000.0, places=5)# attack_damage_diff
+        self.assertAlmostEqual(v4[15], 200.0 / 1000.0, places=5)# control_diff
+        expected_hp = sum(r['hp'] for r in obs['robots'] if r['slot'] in GROUND_SLOTS and r['alive']) / 1800.0
+        self.assertAlmostEqual(v4[16], min(1.0, expected_hp), places=5)
+
+        # Recover locks goal and preserves goal_time; no quadratic crawl floor; no move posture mid-firefight.
+        navigator = SdkNavigator(0.25)
+        controller = GoalController(load_config({'learning_control_hz': 10, 'rl_seconds': 0.5}))
+        try:
+            obs2 = copy.deepcopy(self.observation)
+            obs2['time'] = 20.0
+            robot = next(r for r in obs2['robots'] if r['slot'] == 7)
+            select_goal(obs2, controller.state, [0.4, 0.2], navigator, controller.config)
+            locked = list(controller.state['goal'])
+            locked_t = controller.state['goal_time']
+            obs2['time'] = 25.0
+            controller.state['mode'] = 'recover'
+            select_goal(obs2, controller.state, [-0.8, -0.8], navigator, controller.config)
+            self.assertEqual(controller.state['goal'], locked)
+            self.assertEqual(controller.state['goal_time'], locked_t)
+
+            # Near goal (gap=0.35m > 0.30m stop radius) at high speed_reference_mps keeps move mag >= 0.25 (no crawl).
+            controller.state['mode'] = 'policy'
+            controller.state['recovering'] = False
+            controller.state['goal_settled'] = False
+            robot.update(x=10.0, y=5.0, vx=0.0, vy=0.0, speed_reference_mps=3.5,
+                         ammo=200, hp=robot['max_hp'], posture='defense', posture_ready_at=0.0)
+            controller.state['goal'] = [10.35, 5.0]
+            obs2['enemies'] = []
+            obs2['outposts']['blue']['hp'] = 0
+            actions, _ = controller.decide(obs2)
+            self.assertGreaterEqual(math.hypot(*actions['7']['move']), 0.25 - 1e-6)
+
+            # Mid-firefight (combat_ready + live_duel) with far goal (>3.5m) or near bumps MUST stay 'attack', never 'move'.
+            obs2['enemies'] = [{
+                'id': 'blue-3', 'slot': 3, 'role': 'infantry', 'team': 'blue',
+                'x': 7.5, 'y': 14.0, 'z': robot.get('z', 0.0),
+                'vx': 0.0, 'vy': 0.0, 'hp': 200.0, 'max_hp': 200.0,
+                'alive': True, 'targetable': True, 'invulnerable': False,
+                'armor_center_z_m': 0.2,
+            }]
+            robot.update(x=4.65, y=14.0, vx=0.1, vy=0.0, heading=0.0, ammo=200,
+                         hp=robot['max_hp'], posture='defense', posture_ready_at=0.0, last_damage_time=0.0)
+            controller.state['goal'] = [13.0, 7.25]
+            actions, _ = controller.decide(obs2)
+            self.assertEqual(actions['7'].get('posture'), 'attack')
+        finally:
+            controller.close()
+
+    @unittest.skipUnless(importlib.util.find_spec('stable_baselines3'), 'Optional SB3/PyTorch unavailable')
+    def test_stage4_policy_mask_freezes_actor_on_masked_rollout_and_trains_critic(self):
+        import gymnasium as gym
+        from rmuc2027_research.rl.learning import TimedPPO, TanhActorCriticPolicy, _actor_parameters
+
+        class MaskedStubEnv(gym.Env):
+            def __init__(self, executed):
+                self.executed = executed
+                self.observation_space = gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32)
+                self.action_space = gym.spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32)
+
+            def reset(self, *, seed=None, options=None):
+                super().reset(seed=seed)
+                return np.zeros(4, dtype=np.float32), {}
+
+            def step(self, action):
+                return np.ones(4, dtype=np.float32), 1.0, False, False, {'policy_executed': self.executed}
+
+        env = MaskedStubEnv(executed=False)
+        model = TimedPPO(
+            TanhActorCriticPolicy, env, n_steps=8, batch_size=8, n_epochs=2,
+            device='cpu', seed=7, ent_coef=0.01,
+        )
+        before_actor = _actor_parameters(model)
+        before_vf = model.policy.value_net.weight.detach().clone()
+        model.learn(total_timesteps=8)
+        after_actor = _actor_parameters(model)
+        after_vf = model.policy.value_net.weight.detach().clone()
+        for name, tensor in before_actor.items():
+            self.assertTrue(np.allclose(tensor.numpy(), after_actor[name].numpy()), f'Actor {name} moved when masked')
+        self.assertFalse(np.allclose(before_vf.numpy(), after_vf.numpy()), 'Critic must still update when masked')
+        self.assertAlmostEqual(model.logger.name_to_value['train/policy_mask_fraction'], 0.0, places=6)
+
+    def test_obs_v4_red_blue_mirror_symmetry(self):
+        red = copy.deepcopy(self.observation)
+        red['time'] = 150.0
+        w, h = red['arena']['width'], red['arena']['height']
+        red['teams']['red']['attack_damage'] = 1400.0
+        red['teams']['blue']['attack_damage'] = 500.0
+        red['teams']['red']['control'] = 320.0
+        red['teams']['blue']['control'] = 110.0
+        red['outposts']['red']['hp'] = 1200.0
+        red['outposts']['blue']['hp'] = 600.0
+        red['zones']['red_base']['occupants'] = ['blue-3']
+        red['zones']['blue_fortress']['occupants'] = ['red-4']
+        red['zones']['red_central']['occupants'] = ['red-3', 'blue-7']
+        red['robots'][-1].update(buffer_energy_j=42.0, supercap_energy_j=1200.0, posture_ready_at=152.0)
+
+        def swap_id(rid):
+            if rid.startswith('red-'):
+                return 'blue-' + rid[4:]
+            if rid.startswith('blue-'):
+                return 'red-' + rid[5:]
+            return rid
+
+        def swap_team(val):
+            return 'blue' if val == 'red' else ('red' if val == 'blue' else val)
+
+        blue = copy.deepcopy(red)
+        blue['team'] = 'blue'
+        for group in ('robots', 'enemies'):
+            for r in blue[group]:
+                r['team'] = swap_team(r.get('team'))
+                if 'id' in r:
+                    r['id'] = swap_id(r['id'])
+                r['x'] = w - r['x']
+                r['y'] = h - r['y']
+                r['vx'] = -r.get('vx', 0.0)
+                r['vy'] = -r.get('vy', 0.0)
+                if 'heading' in r:
+                    r['heading'] = r['heading'] + math.pi
+        blue['teams'] = {'red': copy.deepcopy(red['teams']['blue']), 'blue': copy.deepcopy(red['teams']['red'])}
+        blue['bases'] = {'red': copy.deepcopy(red['bases']['blue']), 'blue': copy.deepcopy(red['bases']['red'])}
+        blue['outposts'] = {'red': copy.deepcopy(red['outposts']['blue']), 'blue': copy.deepcopy(red['outposts']['red'])}
+        blue['positions'] = {}
+        for k, v in red['positions'].items():
+            owner, kind = k.split('_', 1)
+            nv = copy.deepcopy(v)
+            nv['controller'] = swap_team(nv.get('controller'))
+            blue['positions'][f'{swap_team(owner)}_{kind}'] = nv
+        blue['zones'] = {}
+        for k, v in red['zones'].items():
+            nv = copy.deepcopy(v)
+            if 'occupants' in nv:
+                nv['occupants'] = [swap_id(rid) for rid in nv['occupants']]
+            if k.startswith('red_'):
+                blue['zones']['blue_' + k[4:]] = nv
+            elif k.startswith('blue_'):
+                blue['zones']['red_' + k[5:]] = nv
+            else:
+                blue['zones'][k] = nv
+
+        red_vec = encode_observation(red, {'goal': (6.0, 4.0), 'mode': 'policy', 'goal_time': 142.5}, 7, 0.5)
+        blue_vec = encode_observation(blue, {'goal': (w - 6.0, h - 4.0), 'mode': 'policy', 'goal_time': 142.5}, 7, 0.5)
+        self.assertEqual(len(red_vec), 162)
+        for i, (a, b) in enumerate(zip(red_vec, blue_vec)):
+            self.assertAlmostEqual(a, b, places=5, msg=f'OBS v4 symmetry mismatch at index {i}: {a} vs {b}')
+
+    def test_staggered_initial_episode_seconds_and_policy_executed_flag(self):
+        from rmuc2027_research.rl.session import ArenaSession
+        cfg = {**self.config, 'episode_seconds': 2.0, 'rl_seconds': 0.5, '_initial_episode_seconds': 1.0}
+        with ArenaSession(cfg) as session:
+            self.assertNotIn('_initial_episode_seconds', session.config)
+            session.reset(42)
+            self.assertNotIn('_initial_episode_seconds', session.battle.metadata['rl']['config'])
+            _, _, term1, trunc1, info1 = session.step([0.0, 0.0])
+            self.assertFalse(term1 or trunc1)
+            self.assertTrue(info1['policy_executed'])
+            _, _, term2, trunc2, info2 = session.step([0.0, 0.0])
+            self.assertFalse(term2)
+            self.assertTrue(trunc2)
+            self.assertAlmostEqual(info2['time'], 1.0, places=5)
+            # Episode 1 runs full episode_seconds (2.0s), not 1.0s.
+            session.reset(42)
+            for step_idx in range(4):
+                _, _, term, trunc, info = session.step([0.0, 0.0])
+                if step_idx < 3:
+                    self.assertFalse(term or trunc)
+                else:
+                    self.assertTrue(trunc)
+                    self.assertAlmostEqual(info['time'], 2.0, places=5)
+
+    @unittest.skipUnless(importlib.util.find_spec('stable_baselines3'), 'Optional SB3/PyTorch unavailable')
+    def test_init_from_applies_new_ppo_hyperparams_and_masked_cuda_determinism(self):
+        import gymnasium as gym
+        import torch
+        from rmuc2027_research.rl import learning
+        from rmuc2027_research.rl.learning import TimedPPO, TanhActorCriticPolicy, MaskedRolloutBuffer
+
+        # Verify MaskedRolloutBuffer + deterministic CUDA path when GPU is present.
+        class MixedMaskEnv(gym.Env):
+            def __init__(self):
+                self.i = 0
+                self.observation_space = gym.spaces.Box(-1.0, 1.0, shape=(6,), dtype=np.float32)
+                self.action_space = gym.spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32)
+
+            def reset(self, *, seed=None, options=None):
+                super().reset(seed=seed)
+                self.i = 0
+                return np.zeros(6, dtype=np.float32), {}
+
+            def step(self, action):
+                self.i += 1
+                return np.full(6, 0.1 * self.i, dtype=np.float32), 0.5, False, False, {'policy_executed': (self.i % 2 == 1)}
+
+        dev = 'cuda' if torch.cuda.is_available() else 'cpu'
+        prev_det = torch.are_deterministic_algorithms_enabled()
+        torch.use_deterministic_algorithms(True)
+        try:
+            env = MixedMaskEnv()
+            model = TimedPPO(TanhActorCriticPolicy, env, n_steps=8, batch_size=4, n_epochs=2, device=dev, seed=11)
+            self.assertIsInstance(model.rollout_buffer, MaskedRolloutBuffer)
+            model.learn(total_timesteps=8)
+            self.assertAlmostEqual(model.logger.name_to_value['train/policy_mask_fraction'], 0.5, places=5)
+            self.assertTrue(math.isfinite(model.logger.name_to_value['train/loss']))
+        finally:
+            torch.use_deterministic_algorithms(prev_det)
+
+        # Verify --init-from applies updated n_steps / ent_coef / learning_rate and resets Critic on reward change.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            src = root / 'src'
+            dst = root / 'dst'
+            cfg_src = load_config({
+                'episode_seconds': 2.0, 'rl_seconds': 0.5, 'sim_backend': 'rapier',
+                'ppo': {'n_steps': 8, 'batch_size': 8, 'n_epochs': 1, 'ent_coef': 0.01, 'learning_rate': 3e-4, 'action_std': 0.3},
+            })
+            learning.train(cfg_src, src, steps=8, num_envs=1, device='cpu')
+            cfg_dst = load_config({
+                'episode_seconds': 2.0, 'rl_seconds': 0.5, 'sim_backend': 'rapier',
+                'rewards': {**cfg_src['rewards'], 'death': -2.0},
+                'ppo': {'n_steps': 16, 'batch_size': 8, 'n_epochs': 1, 'ent_coef': 0.002, 'learning_rate': 1e-4, 'action_std': 0.3},
+            })
+            learning.train(cfg_dst, dst, steps=16, num_envs=1, device='cpu', init_from=src / 'model.zip')
+            loaded = TimedPPO.load(dst / 'model.zip', device='cpu')
+            self.assertEqual(loaded.n_steps, 16)
+            self.assertAlmostEqual(loaded.ent_coef, 0.002, places=6)
+            self.assertAlmostEqual(loaded.lr_schedule(1.0), 1e-4, places=7)
 
 
 if __name__ == '__main__':

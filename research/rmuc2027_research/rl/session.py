@@ -169,6 +169,35 @@ def resource(path):
     return ROOT/path
 
 
+def opponent_schedule(config):
+    """Deterministic periodic opponent schedule with exact weighted counts and smooth interleaving."""
+    pool = config.get('opponent_pool') or ()
+    if not pool:
+        return (config['opponent'],)
+    weights = config.get('opponent_pool_weights')
+    if not weights:
+        return tuple(pool)
+    counts = [max(1, round(float(w) * 100)) for w in weights]
+    divisor = math.gcd(*counts)
+    counts = [c // divisor for c in counts]
+    total = sum(counts)
+    # Smooth weighted round-robin (exact counts, maximally even spacing),
+    # rotated so index 0 is always pool[0] (baseline contract).
+    current = [0] * len(pool)
+    raw = []
+    for _ in range(total):
+        best_i = 0
+        for i, c in enumerate(counts):
+            current[i] += c
+            if current[i] > current[best_i]:
+                best_i = i
+        current[best_i] -= total
+        raw.append(pool[best_i])
+    anchor = config.get('opponent') if config.get('opponent') in raw else pool[0]
+    first_baseline = raw.index(anchor)
+    return tuple(raw[first_baseline:] + raw[:first_baseline])
+
+
 def opponent_for(config, seed):
     """Per-episode opponent: a pure function of the match seed.
 
@@ -178,21 +207,8 @@ def opponent_for(config, seed):
     by VecEnv.reset(), so the choice stays reproducible from the seed recorded
     in episodes.jsonl.
     """
-    pool = config.get('opponent_pool') or ()
-    if not pool:
-        return config['opponent']
-    weights = config.get('opponent_pool_weights')
-    if weights:
-        counts = [max(1, round(float(w) * 100)) for w in weights]
-        divisor = math.gcd(*counts)
-        counts = [c // divisor for c in counts]
-        slot = int(seed) % sum(counts)
-        running = 0
-        for item, count in zip(pool, counts):
-            running += count
-            if slot < running:
-                return item
-    return pool[int(seed) % len(pool)]
+    schedule = opponent_schedule(config)
+    return schedule[int(seed) % len(schedule)]
 
 
 def baseline_module(config):
@@ -330,6 +346,9 @@ class ArenaSession:
     def __init__(self, config=None, record_replay=False):
         self.config = load_config(config)
         self.deadline = self.config.pop('_training_deadline', None)
+        self._initial_episode_seconds = self.config.pop('_initial_episode_seconds', None)
+        self._episode_count = 0
+        self._current_episode_seconds = float(self.config['episode_seconds'])
         self.record_replay = record_replay
         self.rng = random.Random(self.config['seed'])
         self.active_opponent = None
@@ -343,6 +362,10 @@ class ArenaSession:
             self.rng.seed(int(seed))
         self.seed = int(seed) if seed is not None else self.rng.randrange(2**31)
         cfg = self.config
+        if self._episode_count == 0 and self._initial_episode_seconds is not None:
+            self._current_episode_seconds = float(self._initial_episode_seconds)
+        else:
+            self._current_episode_seconds = float(cfg['episode_seconds'])
         # Resolve before any Battle exists: a construction failure then cannot
         # leave the previous episode's opponent in place for the except branch.
         self.active_opponent = opponent_for(cfg, self.seed)
@@ -393,7 +416,7 @@ class ArenaSession:
                         'simulation_seconds':self.battle.match.time, 'wall_seconds':now-opening_started,
                         'launcher':own_robot(self.obs, cfg['slot']).get('launcher'), 'learning_samples':0}), flush=True)
                     last_opening_report = now
-                if self.battle.match.status == 'finished' or self.battle.match.time >= cfg['episode_seconds']:
+                if self.battle.match.status == 'finished' or self.battle.match.time >= self._current_episode_seconds:
                     raise RuntimeError('Heavy opening ended before launcher installation; no RL samples collected')
                 self.battle.step()
                 if self.battle.diagnostics:
@@ -408,6 +431,7 @@ class ArenaSession:
                 'terrain_buff_seconds': 0.0, 'position_control_seconds': 0.0,
                 'terrain_buff_kinds': {}}
             self.reward_totals = dict.fromkeys(cfg['rewards'], 0.0)
+            self._episode_count += 1
             self.done = False
             return self.features(), self.info({})
         except BaseException:
@@ -436,6 +460,7 @@ class ArenaSession:
         team, other = cfg['team'], 'blue' if cfg['team'] == 'red' else 'red'
         terms = dict.fromkeys(cfg['rewards'], 0.0)
         sampled_seconds=0.0
+        policy_ticks=0
         for _ in range(round(cfg['rl_seconds']/DT)):
             before = battle.match._frame
             previous = next(r for r in before['robots'] if r['team'] == team and r['slot'] == cfg['slot'])
@@ -459,7 +484,9 @@ class ArenaSession:
             self.metrics['alive_seconds'] += dt*robot['alive']
             self.metrics['weak_seconds'] += dt*bool(robot.get('weak'))
             mode = self.controller.state.get('mode', 'policy')
-            if mode != 'policy':
+            if mode == 'policy':
+                policy_ticks += 1
+            else:
                 self.metrics['takeover_seconds'][mode] += dt
             occupying = robot['alive'] and not robot.get('weak') and any(
                 robot['id'] in frame['zones'][zone].get('occupants', [])
@@ -506,10 +533,10 @@ class ArenaSession:
             if contributes_to_control(robot, before, frame, team):
                 self.metrics['position_control_seconds'] += dt
                 terms['position_control'] += cfg['rewards']['position_control']*dt
-            if frame['status'] == 'finished' or frame['time']+1e-8 >= cfg['episode_seconds']:
+            if frame['status'] == 'finished' or frame['time']+1e-8 >= self._current_episode_seconds:
                 break
         terminated = battle.match.status == 'finished'
-        truncated = not terminated and battle.match.time+1e-8 >= cfg['episode_seconds']
+        truncated = not terminated and battle.match.time+1e-8 >= self._current_episode_seconds
         if terminated:
             terms['outcome'] = cfg['rewards']['outcome']*result_sign(battle.match.winner, team)
         self.done = terminated or truncated
@@ -525,6 +552,7 @@ class ArenaSession:
             raise ValueError('Non-finite reward')
         info=self.info(terms)
         info['sampled_simulation_seconds']=sampled_seconds
+        info['policy_executed']=bool(self.controller.state.get('action_accepted', True)) and policy_ticks > 0
         return self.features(), reward, terminated, truncated, info
 
     def info(self, terms):
