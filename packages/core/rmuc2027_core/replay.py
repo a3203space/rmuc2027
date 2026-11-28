@@ -23,7 +23,7 @@ def verify_replay(path):
     def canonical(frame):
         return {**frame, "events": [event for event in frame["events"] if event["type"] != "policy_error"]}
 
-    with Match(meta["seed"], meta["duration"], meta["map"], **options) as match:
+    with Match(meta["seed"], meta["duration"], meta["map"], strict_lineup=False, **options) as match:
         if meta.get("engine_hash") != match.snapshot().get("engine_hash"):
             raise ValueError("Replay was recorded with a different Rust engine build")
         if not replay["actions"] and replay["result"]["reason"] == "stopped":

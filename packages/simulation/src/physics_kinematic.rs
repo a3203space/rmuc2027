@@ -49,11 +49,11 @@ impl PhysicsWorld {
         use std::io::{BufRead, Write};
         let entries: Vec<Value> = robots.iter().zip(actions).enumerate().map(|(i,(r,a))| {
             let on_humps=arena.terrain.iter().any(|t|t.kind=="bumps" && r.x>t.x && r.x<t.x+t.w && r.y>t.y && r.y<t.y+t.h);
-            let disabled=!r.alive || now<r.power_cutoff_until || r.battery_remaining_wh<=0.0 || r.deployed;
+            let disabled=!r.alive || now<r.power_cutoff_until || now<r.penalty_power_cutoff_until || r.battery_remaining_wh<=0.0 || r.deployed;
             json!({"id":r.id,"model":r.model_slot,"team":r.team,"role":r.role,
                 "pos":[r.x,r.y,r.z],"velocity":[r.vx,r.vy,r.vz],"heading":r.heading,
                 "folded":r.transform_progress,"grounded":r.grounded,
-                "enabled":r.alive && now>=r.power_cutoff_until && r.battery_remaining_wh>0.0 && !r.deployed,
+                "enabled":r.alive && now>=r.power_cutoff_until && now>=r.penalty_power_cutoff_until && r.battery_remaining_wh>0.0 && !r.deployed,
                 "alive":r.alive,"radius":r.radius,"power_limit":r.power_limit,
                 "motor_budget":drive_motor_budget(r,a,&self.designs[i],on_humps,disabled),
                 "fly_pass":r.fly_pass,
@@ -74,7 +74,7 @@ impl PhysicsWorld {
         let value=serde_json::from_str(&line).expect("kinematic frame JSON");
         let mut frame=MotionFrame::parse(value,sequence,&robots.iter().map(|r|r.id.clone()).collect::<Vec<_>>())
             .expect("invalid kinematic frame");
-        frame.passive_at_start=robots.iter().map(|r|!r.alive || now<r.power_cutoff_until || r.battery_remaining_wh<=0.0).collect();
+        frame.passive_at_start=robots.iter().map(|r|!r.alive || now<r.power_cutoff_until || now<r.penalty_power_cutoff_until || r.battery_remaining_wh<=0.0).collect();
         frame
     }
 
@@ -84,7 +84,7 @@ impl PhysicsWorld {
             let d=&self.designs[i];let h=self.handles[i];let a=&actions[i];
             // A death or power cutoff caused by an earlier combat sample wins
             // over all remaining predicted poses in this frame.
-            r.powered=r.alive && now>=r.power_cutoff_until && r.battery_remaining_wh>0.0;
+            r.powered=r.alive && now>=r.power_cutoff_until && now>=r.penalty_power_cutoff_until && r.battery_remaining_wh>0.0;
             let previous_heading=r.heading;
             let previous_speed=r.vx.hypot(r.vy);
             if r.powered && !r.deployed && r.role!="aerial" {

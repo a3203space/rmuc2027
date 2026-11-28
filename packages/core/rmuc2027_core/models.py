@@ -70,3 +70,55 @@ def lineup_season(lineup):
 def mirrored_lineups(lineup,season=None):
     value=normalize_team_lineup(lineup,season)
     return {team:[{'slot':int(s),'model':value[s]} for s in value] for team in ('red','blue')}
+
+
+OFFICIAL_ROLE_CAPS_2027 = {'heavy': 1, 'infantry': 2, 'sentry': 1, 'aerial': 1}
+OFFICIAL_MIN_GROUND_2027 = 3
+OFFICIAL_MAX_TEAM_SIZE_2027 = 5
+
+
+def validate_official_lineups(lineups, season=season_rules.DEFAULT_SEASON):
+    """Validate RMUC 2027 Table 3-1 & R35 roster composition for official matches.
+
+    Each team must field at least 3 ground robots, at most 5 robots total,
+    with per-role caps: heavy <= 1, infantry <= 2, sentry <= 1, aerial <= 1,
+    unique positive slot IDs, and models legal for the target season.
+    """
+    if not isinstance(lineups, dict) or set(lineups) != {'red', 'blue'}:
+        raise ValueError('Lineups require red and blue')
+    models = robot_models()
+    for team in ('red', 'blue'):
+        entries = lineups[team]
+        if not isinstance(entries, list) or not entries:
+            raise ValueError(f'{team} lineup must be a non-empty list')
+        if len(entries) > OFFICIAL_MAX_TEAM_SIZE_2027:
+            raise ValueError(f'{team} lineup exceeds RMUC 2027 max {OFFICIAL_MAX_TEAM_SIZE_2027} entities')
+        seen_slots = set()
+        counts = {'heavy': 0, 'infantry': 0, 'sentry': 0, 'aerial': 0}
+        ground = 0
+        for item in entries:
+            if not isinstance(item, dict) or 'slot' not in item or 'model' not in item:
+                raise ValueError(f'{team} lineup entries require slot and model')
+            slot, model = item['slot'], item['model']
+            if isinstance(slot, bool) or not isinstance(slot, int) or slot <= 0 or slot in seen_slots:
+                raise ValueError(f'{team} lineup requires unique positive integer slots')
+            seen_slots.add(slot)
+            if isinstance(model, bool) or not isinstance(model, int) or str(model) not in models:
+                raise ValueError(f'Unknown robot model {model} for {team} slot {slot}')
+            if not season_rules.legal(model, season):
+                raise ValueError(f'Model {model} does not pass the {season} construction rules')
+            role = models[str(model)]['role']
+            if role not in OFFICIAL_ROLE_CAPS_2027:
+                raise ValueError(f'Unsupported role {role} in RMUC {season}')
+            counts[role] += 1
+            if counts[role] > OFFICIAL_ROLE_CAPS_2027[role]:
+                raise ValueError(
+                    f'{team} lineup exceeds RMUC 2027 cap for {role} (max {OFFICIAL_ROLE_CAPS_2027[role]})'
+                )
+            if role != 'aerial':
+                ground += 1
+        if ground < OFFICIAL_MIN_GROUND_2027:
+            raise ValueError(
+                f'{team} lineup violates R35: requires at least {OFFICIAL_MIN_GROUND_2027} ground robots (got {ground})'
+            )
+    return lineups

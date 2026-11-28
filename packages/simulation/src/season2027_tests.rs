@@ -909,9 +909,22 @@ fn radar_station_reports_occluded_ground_enemies_without_optical_leaks() {
     m.robots[blue3].hp = 140.0;
     m.robots[blue3].ammo = 88;
     m.robots[blue3].invulnerable = true;
-    // Mark blue-4 dead: radar info-wave still reports its state (hp=0, alive=false), independent of camera.
+    m.robots[blue3].weak = true;
+    // Put blue-4 dead: radar info-wave reports hp=0, alive=false, primary_state=1.
     m.robots[blue4].alive = false;
     m.robots[blue4].hp = 0.0;
+    // Set blue economy and fortress reserve ammo to verify 0x0A03 / 0x0A04 fields.
+    m.teams.get_mut("blue").unwrap().resources = 450.0;
+    m.teams.get_mut("blue").unwrap().total_resources = 1100.0;
+    m.teams.get_mut("blue").unwrap().fortress_ammo = 100;
+    m.positions.get_mut("blue_outpost").unwrap().controller = "red".into();
+    let blue1 = robot(&m, "blue-1");
+    let bf = zone_center(&m, "blue_fortress");
+    place(&mut m, blue1, bf[0], bf[1]);
+    m.robots[blue1].ammo = 5;
+    m.update_buffs_2027();
+    m.robots[blue3].invulnerable = true;
+    m.robots[blue3].weak = true;
 
     let obs = m.observation_without_arena("red", Some(&[7]));
     let enemies = obs["enemies"].as_array().unwrap();
@@ -932,13 +945,34 @@ fn radar_station_reports_occluded_ground_enemies_without_optical_leaks() {
     assert!((b3["hp"].as_f64().unwrap() - 140.0).abs() < 1e-6);
     assert_eq!(b3["ammo"].as_u64(), Some(88));
     assert_eq!(b3["invulnerable"].as_bool(), Some(true));
+    assert_eq!(b3["weak"].as_bool(), Some(true));
+    assert_eq!(b3["primary_state"].as_u64(), Some(3));
+    assert_eq!(b3["recovery_buff"].as_u64(), Some(0));
+    // 0x0A03: blue-1 on active own fortress includes fortress reserve ammo (100 / 10 = 10 42mm rounds).
+    let b1 = radar.iter().find(|e| e["id"] == "blue-1").unwrap();
+    assert_eq!(b1["ammo"].as_u64(), Some(5 + 10));
     let b4 = radar.iter().find(|e| e["id"] == "blue-4").unwrap();
     assert_eq!(b4["alive"].as_bool(), Some(false));
     assert!((b4["hp"].as_f64().unwrap() - 0.0).abs() < 1e-6);
-    // Must not leak optical-only or private fields (velocity, z, chassis model, gimbal, heat).
-    for forbidden in ["vx", "vy", "z", "model_slot", "chassis_type", "heading", "aim", "pitch", "heat"] {
+    assert_eq!(b4["primary_state"].as_u64(), Some(1));
+    // Must not leak optical-only, private, or protocol-absent fields.
+    for forbidden in [
+        "vx", "vy", "z", "model_slot", "chassis_type", "heading", "aim", "pitch", "heat",
+        "max_hp", "crossing_buffs", "cooling_multiplier",
+    ] {
         assert!(b3.get(forbidden).is_none(), "Radar info-wave must not expose {forbidden}");
     }
+    // 0x0A04 radar_team: enemy resources, total_resources, position states, and masked zone statuses.
+    let rt = &obs["radar_team"];
+    assert_eq!(rt["team"].as_str(), Some("blue"));
+    assert!((rt["resources"].as_f64().unwrap() - 450.0).abs() < 1e-6);
+    assert!((rt["total_resources"].as_f64().unwrap() - 1100.0).abs() < 1e-6);
+    assert_eq!(rt["zones"]["blue_fortress"].as_str(), Some("enemy"));
+    // blue does not control blue_outpost -> blue_central and blue_outpost masked as "unknown".
+    assert_eq!(rt["zones"]["blue_central"].as_str(), Some("unknown"));
+    assert_eq!(rt["zones"]["blue_outpost"].as_str(), Some("unknown"));
+    assert_eq!(rt["positions"]["blue_outpost"].as_str(), Some("none"));
+    assert_eq!(rt["positions"]["blue_base"].as_str(), Some("full"));
     // Aerial hangar (slot 6) and own-team robots are excluded.
     assert!(!radar.iter().any(|e| e["slot"] == 6));
     assert!(radar.iter().all(|e| e["team"] == "blue"));
@@ -948,4 +982,493 @@ fn radar_station_reports_occluded_ground_enemies_without_optical_leaks() {
     let dead_obs = m.observation_without_arena("red", Some(&[7]));
     assert!(dead_obs["enemies"].as_array().unwrap().is_empty());
     assert_eq!(dead_obs["radar"].as_array().unwrap().len(), 4);
+}
+
+#[test]
+fn armor_hit_cooldowns_are_independent_for_17mm_42mm_and_aerial_impacts() {
+    let mut m = match_();
+    let victim = robot(&m, "blue-3");
+    let heavy = robot(&m, "red-1");
+    m.robots[victim].hp = 400.0;
+    m.robots[victim].max_hp = 400.0;
+    m.robots[victim].defense_buff = 0.0;
+    m.robots[heavy].last_shot_time = 0.0;
+    let hit_x = m.robots[victim].x + 0.25;
+    let hit_y = m.robots[victim].y;
+    let hit_z = m.robots[victim].z + m.robots[victim].armor_center_z_m;
+    let p17 = Projectile {
+        id: 1, source: "red-3".into(), team: "red".into(), role: "infantry".into(),
+        x: hit_x, y: hit_y, z: hit_z, vx: -20.0, vy: 0.0, vz: 0.0,
+        remaining: 10.0, damage: 20.0, radius: 0.0084, deployed: false,
+    };
+    let p42 = Projectile {
+        id: 2, source: "red-1".into(), team: "red".into(), role: "heavy".into(),
+        x: hit_x, y: hit_y, z: hit_z, vx: -15.0, vy: 0.0, vz: 0.0,
+        remaining: 10.0, damage: 200.0, radius: 0.02125, deployed: false,
+    };
+    m.tick = 20; // t = 1.00 s
+    m.robots[heavy].last_shot_time = m.time();
+    m.robot_hit_2027(victim, &p17, hit_x, hit_y, hit_z);
+    assert_eq!(m.robots[victim].hp, 380.0);
+    // 50 ms later (within 42mm's 200ms window relative to the 17mm hit): 42mm MUST register!
+    m.tick = 21; // t = 1.05 s
+    m.robot_hit_2027(victim, &p42, hit_x, hit_y, hit_z);
+    assert_eq!(m.robots[victim].hp, 180.0);
+    // Another 42mm hit 100 ms later (within 42mm's own 200ms window) is suppressed.
+    m.tick = 23; // t = 1.15 s
+    m.robot_hit_2027(victim, &p42, hit_x, hit_y, hit_z);
+    assert_eq!(m.robots[victim].hp, 180.0);
+
+    // Base armor: 17mm hit at t=2.00s must NOT suppress 42mm hit at t=2.05s on the same plate.
+    m.positions.get_mut("blue_outpost").unwrap().controller = "red".into();
+    let plate = Engine::structure_plates_2027(&m.bases["blue"], false)[0].clone();
+    let b17 = Projectile {
+        id: 3, source: "red-3".into(), team: "red".into(), role: "infantry".into(),
+        x: plate.center[0], y: plate.center[1], z: plate.center[2],
+        vx: -20.0 * plate.normal[0], vy: -20.0 * plate.normal[1], vz: -20.0 * plate.normal[2],
+        remaining: 10.0, damage: 20.0, radius: 0.0084, deployed: false,
+    };
+    let b42 = Projectile {
+        id: 4, source: "red-1".into(), team: "red".into(), role: "heavy".into(),
+        x: plate.center[0], y: plate.center[1], z: plate.center[2],
+        vx: -15.0 * plate.normal[0], vy: -15.0 * plate.normal[1], vz: -15.0 * plate.normal[2],
+        remaining: 10.0, damage: 200.0, radius: 0.02125, deployed: false,
+    };
+    m.tick = 40;
+    m.robots[heavy].last_shot_time = m.time();
+    let base_before = m.bases["blue"].hp;
+    m.structure_hit_2027("blue", false, &b17, plate.center[0], plate.center[1], plate.center[2]);
+    assert_eq!(m.bases["blue"].hp, base_before - 20.0);
+    m.tick = 41;
+    m.structure_hit_2027("blue", false, &b42, plate.center[0], plate.center[1], plate.center[2]);
+    assert_eq!(m.bases["blue"].hp, base_before - 220.0);
+}
+
+#[test]
+fn respawn_requires_six_continuous_seconds_alive_before_disengaged() {
+    let mut m = match_();
+    let i = robot(&m, "red-3");
+    // At match start, robots default to disengaged (Table 2-1 p.16).
+    assert!(m.disengaged_2027(i));
+    // Respawn at t = 250 s (more than 6 s after match start, never shot or took damage).
+    m.tick = 5000; // t = 250.0 s
+    m.respawn_2027(i, false);
+    assert!(!m.disengaged_2027(i), "Just-respawned robot must not be immediately disengaged");
+    m.tick = 5119; // t = 255.95 s
+    assert!(!m.disengaged_2027(i));
+    m.tick = 5120; // t = 256.00 s (6.0 s alive)
+    assert!(m.disengaged_2027(i));
+}
+
+#[test]
+fn sentry_posture_cooling_rounds_to_integer_and_enhanced_attack_clears_heat_immediately() {
+    let mut m = match_();
+    let s = robot(&m, "red-7");
+    m.robots[s].posture = "defense".into();
+    m.robots[s].cooling_rate = 30.0;
+    m.robots[s].cooling_bonus = 10.0; // (30 + 10) * (1/3) = 13.333... -> rounds to integer 13/s -> 1.3 per 0.1s
+    m.robots[s].heat = 50.0;
+    m.settle_heat_power_2027(s);
+    assert!((m.robots[s].heat - 48.7).abs() < 1e-9, "got {}", m.robots[s].heat);
+    // Switching into enhanced attack posture immediately zeroes heat and clears non-permanent overheat.
+    m.robots[s].heat = 280.0;
+    m.robots[s].overheated = true;
+    m.robots[s].posture_ready_at = 0.0;
+    m.posture_rpc(s, &json!({"posture": "attack", "posture_enhanced": true}));
+    assert_eq!(m.robots[s].heat, 0.0);
+    assert!(!m.robots[s].overheated);
+}
+
+#[test]
+fn overheat_disconnects_operator_fpv_but_does_not_dim_automatic_sentry() {
+    let mut m = match_();
+    let r3 = robot(&m, "red-3");
+    let r7 = robot(&m, "red-7");
+    let b3 = robot(&m, "blue-3");
+    place(&mut m, r3, 10.0, 7.5);
+    place(&mut m, r7, 10.0, 8.5);
+    place(&mut m, b3, 14.0, 7.5);
+    m.robots[r3].heading = 0.0;
+    m.robots[r3].aim = 0.0;
+    m.robots[r7].heading = 0.0;
+    m.robots[r7].aim = 0.0;
+    m.physics = Some(physics::PhysicsWorld::new(&m.arena, &m.robots, &config().robot_designs));
+    // Overheat infantry red-3: FPV camera disconnects until heat reaches 0, while radar still works.
+    m.robots[r3].overheated = true;
+    m.robots[r3].heat = 50.0;
+    let obs3 = m.observation_without_arena("red", Some(&[3]));
+    assert!(obs3["vision"].as_object().unwrap().is_empty());
+    assert!(obs3["enemies"].as_array().unwrap().is_empty());
+    assert_eq!(obs3["radar"].as_array().unwrap().len(), 4);
+    // Overheat automatic sentry red-7: no human operator FPV, keeps full 20m onboard vision range.
+    m.robots[r7].overheated = true;
+    m.robots[r7].heat = 270.0;
+    assert!((m.effective_vision(&m.robots[r7]) - 20.0).abs() < 1e-9);
+    let obs7 = m.observation_without_arena("red", Some(&[7]));
+    assert!(obs7["vision"].as_object().unwrap().contains_key("7"));
+    assert_eq!(obs7["vision"]["7"]["fpv_dimmed"].as_bool(), Some(false));
+}
+
+#[test]
+fn permanent_overheat_emits_event_and_attack_buff_settles_at_hit_time() {
+    let mut m = match_();
+    let r3 = robot(&m, "red-3");
+    m.robots[r3].ammo = 10;
+    m.robots[r3].max_heat = 40.0;
+    m.robots[r3].heat = 135.0; // Q2 = 140; next 17mm (+10) -> 145 >= Q2 permanent lock
+    let frame = m.step(&json!({"red": {"3": {"fire": true}}}));
+    assert!(m.robots[r3].heat_permanent_lock);
+    assert!(frame["events"].as_array().unwrap().iter().any(|e| {
+        e["type"] == "overheat" && e["robot"] == "red-3" && e["permanent"] == true
+    }));
+
+    // Attack buff settles at hit time rather than launch time.
+    let mut m2 = match_();
+    let r3 = robot(&m2, "red-3");
+    let b3 = robot(&m2, "blue-3");
+    m2.robots[b3].defense_buff = 0.0;
+    m2.robots[r3].attack_multiplier = 2.0;
+    let hit_x = m2.robots[b3].x + 0.25;
+    let hit_y = m2.robots[b3].y;
+    let hit_z = m2.robots[b3].z + m2.robots[b3].armor_center_z_m;
+    let p = Projectile {
+        id: 10, source: "red-3".into(), team: "red".into(), role: "infantry".into(),
+        x: hit_x, y: hit_y, z: hit_z, vx: -20.0, vy: 0.0, vz: 0.0,
+        remaining: 10.0, damage: 20.0, radius: 0.0084, deployed: false,
+    };
+    let hp_before = m2.robots[b3].hp;
+    m2.robot_hit_2027(b3, &p, hit_x, hit_y, hit_z);
+    assert_eq!(m2.robots[b3].hp, hp_before - 40.0);
+    // Buff expires in flight -> next hit deals base 20.
+    m2.tick += 2;
+    m2.robots[r3].attack_multiplier = 1.0;
+    m2.robot_hit_2027(b3, &p, hit_x, hit_y, hit_z);
+    assert_eq!(m2.robots[b3].hp, hp_before - 60.0);
+}
+
+#[test]
+fn heavy_42mm_mask_persists_after_dead_revive_until_ammo_positive() {
+    let mut m = match_();
+    let h = robot(&m, "red-1");
+    m.robots[h].last_shot_time = 10.0;
+    m.robots[h].alive = false;
+    m.robots[h].death_time = 10.0;
+    m.robots[h].ammo = 0;
+    m.tick = 260; // t = 13.0 s (3.0 s dead)
+    m.update_heavy_42_masks();
+    assert!(m.robots[h].heavy_42_masked);
+    assert!(!m.heavy_42_enabled("red"));
+    // Revive with 0 ammo while still within 4 s of last_shot_time: mask MUST persist!
+    m.tick = 265; // t = 13.25 s
+    m.respawn_2027(h, true);
+    assert!(m.robots[h].alive && m.robots[h].ammo == 0);
+    m.update_heavy_42_masks();
+    assert!(!m.heavy_42_enabled("red"));
+    // Once ammo > 0, mask clears.
+    m.robots[h].ammo = 1;
+    m.update_heavy_42_masks();
+    assert!(m.heavy_42_enabled("red"));
+
+    // Same-tick pending_ammo delivery + immediate 42mm fire MUST unmask during before_step_2027
+    // (before physics substeps / after_step_2027), so point-blank same-tick hits are never dropped.
+    let mut m2 = match_();
+    let h2 = robot(&m2, "red-1");
+    let b3 = robot(&m2, "blue-3");
+    m2.robots[h2].ammo = 0;
+    m2.robots[h2].heavy_42_masked = true;
+    m2.robots[h2].weak = false;
+    m2.robots[h2].weak_until = None;
+    m2.robots[h2].launcher = "installed".into();
+    m2.robots[h2].last_shot_time = -10.0;
+    m2.robots[h2].pending_ammo.push((0.0, 5));
+    let mut actions = vec![Action::default(); m2.robots.len()];
+    actions[h2].fire = true;
+    m2.before_step_2027(&actions);
+    assert!(
+        !m2.robots[h2].heavy_42_masked,
+        "before_step_2027 must unmask heavy_42_masked after pending_ammo delivery"
+    );
+    m2.fire_2027(&actions);
+    assert!(m2.heavy_42_enabled("red"));
+    assert_eq!(m2.robots[h2].ammo, 4);
+    let mut shot = m2.projectiles.pop().expect("red-1 must spawn a 42mm projectile");
+    m2.robots[b3].zone_contacts.clear();
+    m2.robots[b3].invulnerable = false;
+    m2.robots[b3].defense_buff = 0.0;
+    m2.robots[b3].hp = 400.0;
+    m2.robots[b3].max_hp = 400.0;
+    let hit_x = m2.robots[b3].x + 0.25;
+    let hit_y = m2.robots[b3].y;
+    let hit_z = m2.robots[b3].z + m2.robots[b3].armor_center_z_m;
+    shot.vx = -15.6;
+    shot.vy = 0.0;
+    shot.vz = 0.0;
+    m2.robot_hit_2027(b3, &shot, hit_x, hit_y, hit_z);
+    assert_eq!(
+        m2.robots[b3].hp, 200.0,
+        "Same-tick 42mm hit before after_step_2027 must register full 200 HP damage"
+    );
+
+    // Same check for local buy_ammo RPC unmasking inside before_step_2027.
+    let mut m3 = match_();
+    let h3 = robot(&m3, "red-1");
+    let sup = zone_center(&m3, "red_supply");
+    place(&mut m3, h3, sup[0], sup[1]);
+    m3.update_buffs_2027();
+    m3.teams.get_mut("red").unwrap().resources = 500.0;
+    m3.robots[h3].ammo = 0;
+    m3.robots[h3].heavy_42_masked = true;
+    m3.robots[h3].weak = false;
+    m3.robots[h3].weak_until = None;
+    let mut buy_actions = vec![Action::default(); m3.robots.len()];
+    buy_actions[h3].rpc = json!({"buy_ammo": {"remote": false, "amount": 5}});
+    m3.before_step_2027(&buy_actions);
+    assert!(m3.robots[h3].ammo >= 5);
+    assert!(
+        !m3.robots[h3].heavy_42_masked,
+        "before_step_2027 must unmask heavy_42_masked after local buy_ammo RPC"
+    );
+}
+
+#[test]
+fn non_projectile_damage_and_kill_fallback_xp_include_capped_infantry() {
+    let mut m = match_();
+    let r3 = robot(&m, "red-3");
+    let r4 = robot(&m, "red-4");
+    // Cap red-3 at level 5 (2200 XP), leave red-4 at level 1 (0 XP).
+    m.robots[r3].level = 5;
+    m.robots[r3].experience = 2200.0;
+    m.robots[r4].level = 1;
+    m.robots[r4].experience = 0.0;
+    // Non-projectile damage (e.g. drone impact 200 HP -> 100 XP) splits across ALL 2 living infantry -> 50 XP each (red-3 capped, red-4 gets 50).
+    m.award_damage_xp_2027(None, "red", 100.0, None);
+    assert!((m.robots[r3].experience - 2200.0).abs() < 1e-6);
+    assert!((m.robots[r4].experience - 50.0).abs() < 1e-6);
+    // Kill fallback against level-5 victim: mean XP = (2200 + 50) / 2 = 1125 -> level 3 (threshold 1100).
+    // XP = 50 * 5 * (1 + 0.2 * (5 - 3)) = 350; split across 2 living infantry -> 175 to red-4 (NOT 450!).
+    m.award_kill_xp_2027(None, "red", 5, Some("17mm"));
+    assert!((m.robots[r4].experience - 225.0).abs() < 1e-6, "got {}", m.robots[r4].experience);
+}
+
+#[test]
+fn crossing_combo_uses_tunnel_through_remaining_and_cannot_infinite_refresh_50_defense() {
+    let mut m = match_();
+    let i = robot(&m, "red-3");
+    // 1. Trigger tunnel_through (120s cooling) at t = 0..2s, then road (5s) at t = 10s.
+    // Rule 5.6.4.5: 50% defense lasts max(112s remaining, 5s) = 112s -> until t = 122s.
+    for (tick, id) in [(0, "red_road_tunnel_0"), (20, "red_road_tunnel_1"), (40, "red_road_tunnel_2")] {
+        m.tick = tick;
+        let z = m.arena.zones.iter().find(|z| z.id == id).unwrap().clone();
+        m.robots[i].x = z.x; m.robots[i].y = z.y; m.robots[i].z = z.card_z_m.unwrap_or_else(|| height_at(&m.arena, z.x, z.y));
+        m.update_buffs_2027();
+    }
+    assert!(m.robots[i].crossing_buffs.contains_key("tunnel_through"));
+    for (tick, id) in [(180, "red_road_0"), (200, "red_road_1")] {
+        m.tick = tick;
+        let z = m.arena.zones.iter().find(|z| z.id == id).unwrap().clone();
+        m.robots[i].x = z.x; m.robots[i].y = z.y; m.robots[i].z = z.card_z_m.unwrap_or_else(|| height_at(&m.arena, z.x, z.y));
+        m.update_buffs_2027();
+    }
+    assert!((m.robots[i].defense_buff - 0.5).abs() < 1e-6);
+    assert!((m.robots[i].crossing_defense_until - 122.0).abs() < 1e-6, "got {}", m.robots[i].crossing_defense_until);
+
+    // 2. Repeating the same crossing type cannot extend 50% defense past its original combo expiry.
+    let mut m2 = match_();
+    let j = robot(&m2, "red-4");
+    for (tick, id) in [(0, "red_road_0"), (20, "red_road_1")] {
+        m2.tick = tick;
+        let z = m2.arena.zones.iter().find(|z| z.id == id).unwrap().clone();
+        m2.robots[j].x = z.x; m2.robots[j].y = z.y; m2.robots[j].z = height_at(&m2.arena, z.x, z.y);
+        m2.update_buffs_2027();
+    }
+    // t=2s: highland (30s) while road (until t=6s) is active -> 50% defense until t=32s.
+    for (tick, id) in [(30, "red_highland_low"), (40, "red_central")] {
+        m2.tick = tick;
+        let z = m2.arena.zones.iter().find(|z| z.id == id).unwrap().clone();
+        m2.robots[j].x = z.x; m2.robots[j].y = z.y; m2.robots[j].z = height_at(&m2.arena, z.x, z.y);
+        m2.update_buffs_2027();
+    }
+    assert!((m2.robots[j].crossing_combo_until - 32.0).abs() < 1e-6);
+    // t=15s: road has expired, repeat highland (30s -> t=45s) alone. Combo MUST remain 32s!
+    for (tick, id) in [(280, "red_highland_low"), (300, "red_central")] {
+        m2.tick = tick;
+        let z = m2.arena.zones.iter().find(|z| z.id == id).unwrap().clone();
+        m2.robots[j].x = z.x; m2.robots[j].y = z.y; m2.robots[j].z = height_at(&m2.arena, z.x, z.y);
+        m2.update_buffs_2027();
+    }
+    assert!((m2.robots[j].crossing_combo_until - 32.0).abs() < 1e-6);
+    // Move off central card and check t=33s: 50% expired, falls back to 25% highland defense!
+    m2.tick = 660;
+    place(&mut m2, j, 5.0, 7.5);
+    m2.robots[j].zone_contacts.clear();
+    m2.update_buffs_2027();
+    assert!((m2.robots[j].defense_buff - 0.25).abs() < 1e-6, "got {}", m2.robots[j].defense_buff);
+}
+
+#[test]
+fn enemy_fortress_hold_is_team_shared_and_retains_three_seconds_across_death() {
+    let mut m = match_();
+    m.tick = 3700; // t = 185s (> 180s)
+    m.positions.get_mut("red_outpost").unwrap().controller = "blue".into();
+    let b3 = robot(&m, "blue-3");
+    let b4 = robot(&m, "blue-4");
+    let rf = zone_center(&m, "red_fortress");
+    // blue-3 holds red_fortress for 6.0 s (120 ticks), then dies.
+    place(&mut m, b3, rf[0], rf[1]);
+    for _ in 0..120 {
+        m.update_buffs_2027();
+        m.tick += 1;
+    }
+    assert!(!m.bases["red"].armor_open);
+    assert!((m.bases["red"].fortress_enemy_hold - 6.0).abs() < 1e-6);
+    m.robots[b3].alive = false;
+    // Wait 2.0 s (< 3 s retention window): timer pauses and is retained.
+    for _ in 0..40 {
+        m.update_buffs_2027();
+        m.tick += 1;
+    }
+    assert!((m.bases["red"].fortress_enemy_hold - 6.0).abs() < 1e-6);
+    // Teammate blue-4 relays for remaining 4.0 s (80 ticks) -> opens red base armor!
+    place(&mut m, b4, rf[0], rf[1]);
+    for _ in 0..80 {
+        m.update_buffs_2027();
+        m.tick += 1;
+    }
+    assert!(m.bases["red"].armor_open);
+}
+
+#[test]
+fn large_rune_timeout_activation_increments_shrink_ring_count() {
+    let mut m = match_();
+    m.tick = 3600; // t = 180 s (large rune phase)
+    m.runes.get_mut("red").unwrap().large_chances = 2;
+    m.start_rune_2027("red");
+    let now = m.time();
+    {
+        let r = m.runes.get_mut("red").unwrap();
+        r.rounds = 4; // on final 5th group
+        r.hit_count = 5;
+        r.ring_sum = 40.0;
+        r.pair_deadline = now; // 1 s pair window expires right now
+    }
+    m.update_rune_motor_2027();
+    assert_eq!(m.runes["red"].status, "active");
+    assert_eq!(
+        m.rune_large_count.get("red").copied().unwrap_or(0),
+        1,
+        "Timeout completion of 5th group must still increment rune_large_count for Table 5-24 ring shrinking"
+    );
+}
+
+#[test]
+fn assembly_leave_two_second_delay_keeps_weapon_locked_with_invulnerability() {
+    let mut m = match_();
+    let h = robot(&m, "red-1");
+    m.robots[h].launcher = "installed".into();
+    m.robots[h].ammo = 10;
+    let az = zone_center(&m, "red_assembly");
+    place(&mut m, h, az[0], az[1]);
+    m.assemblies.get_mut("red").unwrap().stage = "inserting".into();
+    m.update_buffs_2027();
+    assert!(m.robot_invulnerable_2027(h));
+    assert_eq!(m.fire_block_reason_2027(h), Some("assembly"));
+    // Move heavy off the assembly card; 1 s later (within 2 s release delay) BOTH invulnerability and fire lock hold!
+    place(&mut m, h, 5.0, 7.5);
+    m.tick = 20;
+    m.update_buffs_2027();
+    assert!(m.robot_invulnerable_2027(h));
+    assert_eq!(m.fire_block_reason_2027(h), Some("assembly"));
+    // After 2 s release delay expires, both clear together.
+    m.tick = 41;
+    m.update_buffs_2027();
+    assert!(!m.robot_invulnerable_2027(h));
+    assert_eq!(m.fire_block_reason_2027(h), None);
+}
+
+#[test]
+fn yellow_card_exempts_sentry_fpv_and_keeps_cutoff_independent_from_overpower() {
+    let mut m = match_();
+    let r3 = robot(&m, "red-3");
+    let r7 = robot(&m, "red-7");
+    m.tick = 20; // t = 1.0 s
+    // Teammate yellow card blocks red-3 FPV (5s) but MUST NOT block automatic sentry red-7 FPV.
+    m.step(&json!({"referee": [{"kind": "yellow", "robot": "red-3", "reason": "test"}]}));
+    assert!(m.robots[r3].fpv_blocked_until > m.time());
+    assert_eq!(m.robots[r7].fpv_blocked_until, 0.0);
+    // yellow_both must also spare automatic sentry FPV.
+    m.step(&json!({"referee": [{"kind": "yellow_both", "reason": "test"}]}));
+    assert_eq!(m.robots[r7].fpv_blocked_until, 0.0);
+    // Sentry own yellow card (2s chassis off) must NOT stack onto active 5s overpower cutoff.
+    let now = m.time();
+    m.robots[r7].power_cutoff_until = now + 5.0;
+    m.step(&json!({"referee": [{"kind": "yellow", "robot": "red-7", "reason": "test"}]}));
+    assert!((m.robots[r7].power_cutoff_until - (now + 5.0)).abs() < 1e-6);
+    assert!((m.robots[r7].penalty_power_cutoff_until - (now + 2.0)).abs() < 1e-6);
+    assert_eq!(m.robots[r7].fpv_blocked_until, 0.0);
+}
+
+#[test]
+fn forfeit_does_not_inflate_winner_attack_damage() {
+    let mut m = match_();
+    let blue_before = m.teams["blue"].attack_damage;
+    m.step(&json!({"referee": [{"kind": "forfeit", "team": "red", "reason": "test"}]}));
+    assert_eq!(m.status, "finished");
+    assert_eq!(m.winner.as_deref(), Some("blue"));
+    assert_eq!(m.bases["red"].hp, 0.0);
+    assert_eq!(m.teams["blue"].attack_damage, blue_before);
+}
+
+#[test]
+fn drones_blocked_from_dart_station_airspace_but_allowed_over_enemy_base() {
+    let mut m = match_();
+    let air = robot(&m, "red-6");
+    // Place drone just outside red dart_station [0..2.3, 0..1.3] and fly toward (1.0, 0.6).
+    let start = [2.6, 0.6, 1.5];
+    m.robots[air].drones[0].state = "flying".into();
+    m.robots[air].drones[0].x = start[0];
+    m.robots[air].drones[0].y = start[1];
+    m.robots[air].drones[0].z = start[2];
+    m.physics.as_mut().unwrap().place_drone(air, 0, start, [-4.0, 0.0, 0.0]);
+    for _ in 0..20 {
+        m.step(&json!({"red": {"6": {"drones": {"1": {"goto": [1.0, 0.6, 1.5]}}}}}));
+    }
+    let d = &m.robots[air].drones[0];
+    assert!(
+        d.x >= 2.3,
+        "Drone entered dart_station forbidden airspace: ({}, {})",
+        d.x,
+        d.y
+    );
+    // Verify drone CAN enter blue base forbidden zone [24.639..26.539, 6.65..8.35] (R56 is ground-only).
+    let base_start = [24.4, 7.5, 1.5];
+    m.robots[air].drones[0].x = base_start[0];
+    m.robots[air].drones[0].y = base_start[1];
+    m.robots[air].drones[0].z = base_start[2];
+    m.physics.as_mut().unwrap().place_drone(air, 0, base_start, [3.0, 0.0, 0.0]);
+    for _ in 0..15 {
+        m.step(&json!({"red": {"6": {"drones": {"1": {"goto": [25.2, 7.5, 1.5]}}}}}));
+    }
+    assert!(
+        m.robots[air].drones[0].x > 24.7,
+        "Drone must be allowed over enemy base to perform aerial strikes: x={}",
+        m.robots[air].drones[0].x
+    );
+}
+
+#[test]
+fn non_transforming_model_7_cannot_crouch_under_tunnels() {
+    let mut m = Engine::new_with_lineups(
+        42,
+        60.0,
+        "rmuc2027",
+        lineup(&[(1, 2711), (3, 7), (4, 2732), (6, 2761), (7, 2771)]),
+    )
+    .unwrap();
+    let i = robot(&m, "red-3");
+    let nominal_muzzle = m.robots[i].muzzle_height_m;
+    for _ in 0..10 {
+        m.step(&json!({"red": {"3": {"crouch": true}}}));
+    }
+    assert!(!m.robots[i].crouched);
+    assert!((m.robots[i].muzzle_height_m - nominal_muzzle).abs() < 1e-9);
 }

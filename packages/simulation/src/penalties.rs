@@ -109,7 +109,6 @@ impl Engine {
         r.yellow_damage_ratio = ratio;
         let count = r.yellow_cards;
         let limit = n(&rule, "yellow_limit") as u32;
-        let sentry = r.role == "sentry";
         for j in 0..self.robots.len() {
             if self.robots[j].team != team {
                 continue;
@@ -122,10 +121,15 @@ impl Engine {
                     "teammate_fpv_s"
                 },
             );
-            if i == j && sentry {
-                // A sentry has no operator screen: its chassis loses power instead (7.1.2).
-                self.robots[j].power_cutoff_until =
-                    self.robots[j].power_cutoff_until.max(now) + n(&rule, "sentry_chassis_off_s");
+            if self.robots[j].role == "sentry" {
+                if i == j {
+                    // A sentry has no operator screen: its chassis loses power instead (7.1.2).
+                    // Penalty cutoff is independent from overpower cutoff (does not stack with it),
+                    // while consecutive yellow cards stack with each other.
+                    self.robots[j].penalty_power_cutoff_until =
+                        self.robots[j].penalty_power_cutoff_until.max(now)
+                            + n(&rule, "sentry_chassis_off_s");
+                }
             } else {
                 self.robots[j].fpv_blocked_until =
                     self.robots[j].fpv_blocked_until.max(now) + duration;
@@ -215,9 +219,11 @@ impl Engine {
                 "yellow_both" => {
                     let now = self.time();
                     for i in 0..self.robots.len() {
-                        self.robots[i].fpv_blocked_until =
-                            self.robots[i].fpv_blocked_until.max(now)
-                                + n(&self.rules["penalties"], "teammate_fpv_s");
+                        if self.robots[i].role != "sentry" {
+                            self.robots[i].fpv_blocked_until =
+                                self.robots[i].fpv_blocked_until.max(now)
+                                    + n(&self.rules["penalties"], "teammate_fpv_s");
+                        }
                         self.penalty_hp(i, n(&self.rules["penalties"], "teammate_hp_ratio"), 1.0);
                     }
                     self.event("yellow_both", json!({"reason":reason}));
@@ -225,11 +231,13 @@ impl Engine {
                 "forfeit" => {
                     let team = c["team"].as_str().unwrap();
                     let other = if team == "red" { "blue" } else { "red" };
-                    let damage = self.bases[team].hp;
                     self.bases.get_mut(team).unwrap().hp = 0.0;
-                    let t = self.teams.get_mut(other).unwrap();
-                    t.attack_damage += damage;
-                    t.score = t.attack_damage;
+                    if self.tick == 0 {
+                        for t in self.teams.values_mut() {
+                            t.attack_damage = 0.0;
+                            t.score = 0.0;
+                        }
+                    }
                     self.event("forfeit", json!({"team":team,"reason":reason}));
                     self.finish(Some(other.into()), "forfeit");
                     break;

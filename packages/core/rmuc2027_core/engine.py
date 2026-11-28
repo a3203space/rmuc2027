@@ -50,6 +50,7 @@ def decode_response_json(payload):
     """Decode trusted engine JSON with the available, tested response decoder."""
     return _response_json.loads(payload)
 
+from .models import validate_official_lineups
 from .paths import ROOT
 DT = 0.05
 POLICY_INTERVAL = 2
@@ -79,7 +80,9 @@ def binary_path():
 
 
 class Match:
-    def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None, physics_adapter=None):
+    def __init__(self, seed=42, duration=420, map_name="rmuc2027", replay_version=None, lineups=None, battle_settings=None, physics_adapter=None, strict_lineup=True):
+        if lineups is not None and strict_lineup:
+            validate_official_lineups(lineups)
         self.training_summary = False
         self.external_physics = physics_adapter
         environment = dict(os.environ)

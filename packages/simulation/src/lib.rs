@@ -218,6 +218,8 @@ pub struct Robot {
     pub power_w: f64,
     pub buffer_energy_j: f64,
     pub power_cutoff_until: f64,
+    #[serde(default)]
+    pub penalty_power_cutoff_until: f64,
     pub power_boost_until: f64,
     pub max_heat: f64,
     pub cooling_rate: f64,
@@ -244,6 +246,12 @@ pub struct Robot {
     pub last_damage_time: f64,
     pub death_time: f64,
     pub armor_hit_times: Vec<f64>,
+    #[serde(skip)]
+    pub armor_hit_times_17: Vec<f64>,
+    #[serde(skip)]
+    pub armor_hit_times_42: Vec<f64>,
+    #[serde(skip)]
+    pub heavy_42_masked: bool,
     pub invulnerable_until: f64,
     pub invulnerable: bool,
     pub weak: bool,
@@ -302,6 +310,8 @@ pub struct Robot {
     pub crossing_firsts: Vec<String>,
     pub crossing_defense: f64,
     pub crossing_defense_until: f64,
+    #[serde(skip)]
+    pub crossing_combo_until: f64,
     pub crossing_cooling_until: f64,
     pub road_cooldown_until: f64,
     /// R58 fly-slope run: 1 after the low end, 2 after reaching the crest from it (may
@@ -421,6 +431,16 @@ pub struct Base {
     pub rotation_stop_at: f64,
     pub rotation_stop_angle: f64,
     pub armor_hit_times: Vec<f64>,
+    #[serde(skip)]
+    pub armor_hit_times_17: Vec<f64>,
+    #[serde(skip)]
+    pub armor_hit_times_42: Vec<f64>,
+    #[serde(skip)]
+    pub armor_hit_times_impact: Vec<f64>,
+    #[serde(skip)]
+    pub fortress_enemy_hold: f64,
+    #[serde(skip)]
+    pub fortress_enemy_last_contact: f64,
     /// 2027: current owner of an outpost (control can hand it to the other team).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
@@ -1069,6 +1089,7 @@ impl Engine {
                     power_w: 0.0,
                     buffer_energy_j: 60.0,
                     power_cutoff_until: 0.0,
+                    penalty_power_cutoff_until: 0.0,
                     power_boost_until: 0.0,
                     max_heat: spec.max_heat,
                     cooling_rate: spec.cooling,
@@ -1086,6 +1107,9 @@ impl Engine {
                     last_damage_time: -1000.0,
                     death_time: -1000.0,
                     armor_hit_times: vec![-1000.0; 4],
+                    armor_hit_times_17: vec![-1000.0; 4],
+                    armor_hit_times_42: vec![-1000.0; 4],
+                    heavy_42_masked: false,
                     invulnerable_until: 0.0,
                     invulnerable: false,
                     weak: false,
@@ -1114,6 +1138,7 @@ impl Engine {
                     crossing_firsts: Vec::new(),
                     crossing_defense: 0.0,
                     crossing_defense_until: 0.0,
+                    crossing_combo_until: 0.0,
                     crossing_cooling_until: 0.0,
                     road_cooldown_until: 0.0,
                     fly_pass: 0,
@@ -1244,6 +1269,11 @@ impl Engine {
                     rotation_stop_at: -1000.0,
                     rotation_stop_angle: 0.0,
                     armor_hit_times: vec![-1000.0; 6],
+                    armor_hit_times_17: vec![-1000.0; 6],
+                    armor_hit_times_42: vec![-1000.0; 6],
+                    armor_hit_times_impact: vec![-1000.0; 6],
+                    fortress_enemy_hold: 0.0,
+                    fortress_enemy_last_contact: -1000.0,
                     owner: None,
                 },
             );
@@ -1265,6 +1295,11 @@ impl Engine {
                     rotation_stop_at: -1000.0,
                     rotation_stop_angle: 0.0,
                     armor_hit_times: vec![-1000.0; 6],
+                    armor_hit_times_17: vec![-1000.0; 6],
+                    armor_hit_times_42: vec![-1000.0; 6],
+                    armor_hit_times_impact: vec![-1000.0; 6],
+                    fortress_enemy_hold: 0.0,
+                    fortress_enemy_last_contact: -1000.0,
                     owner: (true).then(|| team.to_string()),
                 },
             );
@@ -1630,14 +1665,9 @@ impl Engine {
         [r.x + offset.x, r.y + offset.y, r.z + offset.z]
     }
     pub(crate) fn effective_vision(&self, r: &Robot) -> f64 {
+        // RMUC 2027 5.1.3: overheating disconnects the human operator's FPV camera
+        // (handled in observer filtering); automatic sentries have no operator FPV.
         self.specs[&r.role].vision
-            * if r.overheated && r.heat > 1e-8 {
-                self.sim["overheat_vision_range_multiplier"]
-                    .as_f64()
-                    .unwrap_or(0.35)
-            } else {
-                1.0
-            }
     }
     fn visible(&self, a: &Robot, b: &Robot) -> bool {
         if dist(a.x, a.y, b.x, b.y) > self.effective_vision(a) {
@@ -1709,10 +1739,14 @@ impl Engine {
             .iter()
             .copied()
             .filter(|r| {
+                // RMUC 2027 5.1.3: overheating (Q2 > Q1 > Q0) disconnects the operator's FPV
+                // feed until Q1 = 0; automatic sentries have no operator FPV screen.
+                let overheat_fpv_off = r.role != "sentry" && r.overheated && r.heat > 1e-8;
                 (r.alive || operator)
                     && (!operator || !r.red_card)
                     && !r.deployed
                     && self.time() >= r.fpv_blocked_until
+                    && !overheat_fpv_off
                     && slots.map(|s| s.contains(&r.slot)).unwrap_or(true)
                     // A 2027 hangar has no camera, and its automatic aerial robots report nothing.
                     && !(r.role == "aerial")
@@ -1752,7 +1786,7 @@ impl Engine {
                     .map(|d| d.id.clone())
                     .collect()
             };
-            vision.insert(a.slot.to_string(), json!({"enemies":foes,"allies":allies,"drones":drones,"outposts":self.visible_outpost_plates(a),"range_m":self.effective_vision(a),"fpv_dimmed":a.overheated&&a.heat>1e-8,"camera":self.camera_metadata(a)}));
+            vision.insert(a.slot.to_string(), json!({"enemies":foes,"allies":allies,"drones":drones,"outposts":self.visible_outpost_plates(a),"range_m":self.effective_vision(a),"fpv_dimmed":false,"camera":self.camera_metadata(a)}));
         }
         let enemies: Vec<Value> = self
             .robots
@@ -1814,44 +1848,14 @@ impl Engine {
                 .map(|d| json!({"id":d.id,"x":d.x,"y":d.y,"z":d.z,"vx":d.vx,"vy":d.vy,"vz":d.vz,"state":d.state}))
                 .collect()
         };
-        // RMUC 2027 Rulebook 5.7.4 Radar Info-Wave (信息波):
+        // RMUC 2027 Rulebook 5.7.4 & Protocol 0x0A01-0x0A05 Radar Info-Wave (信息波):
         // Parsed directly from the official RF transmitter at the radar base,
         // completely independent of any robot's camera line-of-sight or FOV.
-        // Exposes enemy ground robots' position, HP, ammo, buffs, and armor hits,
-        // without optical-only exterior pose, velocity, chassis model, or weapon heat.
-        let radar: Vec<Value> = self
-            .robots
-            .iter()
-            .filter(|r| r.team != team && r.role != "aerial")
-            .map(|r| {
-                json!({
-                    "id": r.id,
-                    "slot": r.slot,
-                    "team": r.team,
-                    "role": r.role,
-                    "x": r.x,
-                    "y": r.y,
-                    "hp": r.hp,
-                    "max_hp": r.max_hp,
-                    "alive": r.alive,
-                    "ammo": r.ammo,
-                    "invulnerable": r.invulnerable,
-                    "attack_multiplier": r.attack_multiplier,
-                    "defense_buff": r.defense_buff,
-                    "vulnerability": r.vulnerability,
-                    "cooling_multiplier": r.cooling_multiplier,
-                    "cooling_bonus": r.cooling_bonus,
-                    "posture": r.posture,
-                    "posture_enhanced": r.posture_enhanced,
-                    "crossing_buffs": r.crossing_buffs,
-                    "armor_hit_times": r.armor_hit_times
-                })
-            })
-            .collect();
+        let (radar, radar_team) = self.radar_info_wave_2027(team);
         let mut observation = json!({"api_version":3,"seed":self.seed,"tick":self.tick,"time":self.time(),"dt":DT,"policy_dt":0.1,
             "remaining":(self.duration-self.time()).max(0.0),"team":team,
             "controlled_ids":friends.iter().filter(|r|slots.map(|s|s.contains(&r.slot)).unwrap_or(true)).map(|r|r.slot.to_string()).collect::<Vec<_>>(),
-            "robots":friends,"robot_models":observed_models,"enemies":enemies,"radar":radar,"bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.observed_runes(team,&observers),"assemblies":self.assembly_snapshots(),"roster":self.roster(),"teams":self.observed_teams(team),"zones":self.zones,
+            "robots":friends,"robot_models":observed_models,"enemies":enemies,"radar":radar,"radar_team":radar_team,"bases":self.base_snapshots(),"outposts":self.outpost_snapshots(),"runes":self.observed_runes(team,&observers),"assemblies":self.assembly_snapshots(),"roster":self.roster(),"teams":self.observed_teams(team),"zones":self.zones,
             "projectiles":bullets,"vision":vision,"referee":self.referee_telemetry(team)});
         if include_static {
             observation["specs"] = json!(self.specs);

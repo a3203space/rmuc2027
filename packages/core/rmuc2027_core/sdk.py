@@ -102,6 +102,8 @@ class Observation(_TeamInbox):
     controlled_ids: list[str]
     robots: list[RobotState]
     enemies: list[RobotState]
+    radar: list[dict[str, Any]]
+    radar_team: dict[str, Any]
     vision: dict[str,dict[str,Any]]
     arena: dict[str, Any]
     bases: dict[str, Any]

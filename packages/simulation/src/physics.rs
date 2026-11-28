@@ -1201,9 +1201,13 @@ impl PhysicsWorld {
             }
             let a = &actions[i];
             let legged = d["chassis_type"] == "wheel_legged";
-            // The referee cuts chassis power on destruction, over-power cut-off or a flat
-            // battery: motors go limp, so the chassis coasts on its own momentum.
-            let powered = r.alive && now >= r.power_cutoff_until && r.battery_remaining_wh > 0.0;
+            // The referee cuts chassis power on destruction, over-power cut-off,
+            // penalty cutoff (sentry yellow card) or a flat battery: motors go limp,
+            // so the chassis coasts on its own momentum.
+            let powered = r.alive
+                && now >= r.power_cutoff_until
+                && now >= r.penalty_power_cutoff_until
+                && r.battery_remaining_wh > 0.0;
             r.powered = powered;
             let disabled = !powered || r.deployed;
             let wheel_r = n(d, "wheel_radius_m");
@@ -1745,36 +1749,6 @@ impl PhysicsWorld {
                 r.supercap_energy_j = (r.supercap_energy_j + r.charging_power_w * PHYSICS_DT * 0.9)
                     .min(n(d, "supercap_nominal_j"));
             }
-            if r.design_slot() == 7 && r.crouched != a.crouch {
-                let proposed = Self::hull(d, a.crouch, None, true, None).build();
-                let clear = a.crouch
-                    || self
-                        .queries
-                        .intersection_with_shape(
-                            &self.bodies,
-                            &self.colliders,
-                            &pose,
-                            proposed.shape(),
-                            QueryFilter::default().exclude_rigid_body(h),
-                        )
-                        .is_none();
-                if clear {
-                    r.crouched = a.crouch;
-                    self.colliders[self.hulls[i]].set_shape(proposed.shared_shape().clone());
-                    let mut com = p3(&d["com_m"]);
-                    if r.crouched {
-                        com.z -= 0.035;
-                    }
-                    self.bodies[h].set_additional_mass_properties(
-                        MassProperties::new(
-                            point![com.x, com.y, com.z],
-                            r.mass_kg,
-                            p3(&d["inertia_kgm2"]),
-                        ),
-                        true,
-                    );
-                }
-            }
             if r.transform_allowed {
                 let target = if a.transform.unwrap_or(a.crouch) {
                     1.0
@@ -1813,11 +1787,8 @@ impl PhysicsWorld {
                     0.785398 + (0.139626 - 0.785398) * r.transform_progress,
                 );
             } else {
-                r.muzzle_height_m = if r.crouched {
-                    0.185
-                } else {
-                    n(d, "muzzle_z_m")
-                };
+                r.crouched = false;
+                r.muzzle_height_m = n(d, "muzzle_z_m");
             }
             let local_velocity = pose.rotation.inverse() * velocity;
             let local_angular = pose.rotation.inverse() * angular;
@@ -1952,12 +1923,23 @@ impl PhysicsWorld {
             }
             self.last[i] = [r.x, r.y, r.z];
         }
-        // 2027 aerial robots: read their bodies back.
+        // 2027 aerial robots: enforce R64 dart-station forbidden airspace and read bodies back.
         for (i, r) in robots.iter_mut().enumerate() {
+            let drone_r = n(&self.designs[i]["drone"], "radius_m");
             for (k, handle) in self.drone_bodies[i].iter().enumerate() {
+                let d = &mut r.drones[k];
+                let p = *self.bodies[*handle].translation();
+                let illegal_dart = arena.forbidden.iter().any(|z| {
+                    z["kind"] == "dart_station" && in_zone_rect(z, p.x, p.y, drone_r)
+                });
+                if illegal_dart {
+                    self.bodies[*handle]
+                        .set_translation(vector![d.x, d.y, p.z], true);
+                    let vz = self.bodies[*handle].linvel().z;
+                    self.bodies[*handle].set_linvel(vector![0.0, 0.0, vz], true);
+                }
                 let body = &self.bodies[*handle];
                 let (p, v) = (body.translation(), body.linvel());
-                let d = &mut r.drones[k];
                 d.x = p.x;
                 d.y = p.y;
                 d.z = p.z;

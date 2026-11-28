@@ -789,6 +789,8 @@ impl Engine {
         r.cooling = cooling;
         r.lit.clear();
         if !small {
+            let count = self.rune_large_count.get(team).copied().unwrap_or(0) + 1;
+            self.rune_large_count.insert(team.to_string(), count);
             let recipients: Vec<usize> = self
                 .robots
                 .iter()

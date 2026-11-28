@@ -129,15 +129,18 @@ def encode_observation(obs, state, slot=7, rl_seconds=1.0, witness=None, control
         if vis is None and rad is None:
             values += [0.0] * 11
             continue
-        # RMUC 2027 Rulebook 5.7.4 Radar Info-Wave (信息波): enemy ground
-        # coordinates, HP, alive, and invulnerable are decoded from radar RF
-        # independently of camera visibility; optical LOS adds (vx, vy) and
-        # visual terrain-witness evidence.
+        # RMUC 2027 Rulebook 5.7.4 & Protocol 0x0A01-0x0A05 Radar Info-Wave (信息波):
+        # enemy ground coordinates, HP, alive, and invulnerable are decoded from
+        # radar RF independently of camera visibility; optical LOS adds (vx, vy)
+        # and visual terrain-witness evidence. Because 0x0A02 broadcasts current
+        # HP without max_hp, radar-backed HP is normalized by role ceiling
+        # (600 heavy, 400 infantry/sentry) unless an explicit max_hp is provided.
         src = rad if rad is not None else vis
         vx = (vis.get('vx', 0.0) if vis is not None else 0.0) * sign / 10
         vy = (vis.get('vy', 0.0) if vis is not None else 0.0) * sign / 10
-        hp_ratio = _ratio(src.get('hp', 0.0), src.get('max_hp', 1.0)) if 'hp' in src else (
-            _ratio(vis['hp'], vis['max_hp']) if vis is not None else 0.0
+        hp_ref = src.get('max_hp') or (600.0 if s == 1 else 400.0)
+        hp_ratio = _ratio(src.get('hp', 0.0), hp_ref) if 'hp' in src else (
+            _ratio(vis['hp'], vis.get('max_hp') or (600.0 if s == 1 else 400.0)) if vis is not None else 0.0
         )
         alive_flag = float(src['alive']) if 'alive' in src else (
             float(vis.get('alive', True)) if vis is not None else 1.0

@@ -1977,11 +1977,12 @@ class Stage3FixRegressionTests(unittest.TestCase):
 
     def test_radar_station_blind_spot_coordinates_in_obs_v5(self):
         # 1. Real Rust Match observation exposes all 4 enemy ground robots via the RMUC 2027 5.7.4
-        #    radar info-wave (obs['radar']), completely independent of camera LOS, while keeping
-        #    obs['enemies'] strictly optical camera LOS.
+        #    & 0x0A01-0x0A05 radar info-wave (obs['radar'] + obs['radar_team']), completely
+        #    independent of camera LOS, while keeping obs['enemies'] strictly optical camera LOS.
         with Match(42, 30, 'rmuc2027') as match:
             obs_r = match.observation('red', [7])
             self.assertIn('radar', obs_r)
+            self.assertIn('radar_team', obs_r)
             radar_slots = {r['slot'] for r in obs_r['radar']}
             self.assertEqual(radar_slots, {1, 3, 4, 7})
             self.assertNotIn(6, radar_slots)
@@ -1991,25 +1992,35 @@ class Stage3FixRegressionTests(unittest.TestCase):
                 self.assertEqual(entry['team'], 'blue')
                 self.assertTrue(entry['alive'])
                 self.assertGreater(entry['hp'], 0.0)
-                self.assertGreaterEqual(entry['max_hp'], entry['hp'])
                 self.assertIn('ammo', entry)
                 self.assertIn('invulnerable', entry)
-                for optical_only in ('vx', 'vy', 'z', 'model_slot', 'chassis_type', 'heading', 'aim', 'heat'):
-                    self.assertNotIn(optical_only, entry)
+                self.assertIn('weak', entry)
+                self.assertIn('primary_state', entry)
+                self.assertIn('recovery_buff', entry)
+                for forbidden in (
+                    'vx', 'vy', 'z', 'model_slot', 'chassis_type', 'heading', 'aim', 'heat',
+                    'max_hp', 'crossing_buffs', 'cooling_multiplier',
+                ):
+                    self.assertNotIn(forbidden, entry)
+            self.assertEqual(obs_r['radar_team']['team'], 'blue')
+            self.assertIn('resources', obs_r['radar_team'])
+            self.assertIn('total_resources', obs_r['radar_team'])
+            self.assertIn('zones', obs_r['radar_team'])
             vec = encode_observation(obs_r, {}, 7, 0.5)
             self.assertEqual(len(vec), OBS_SIZE)
-            # Enemy ground slots are encoded with presence=1.0, exact radar (x, y), HP ratio, alive
-            # and invulnerable completely independently of camera visibility.
+            # Enemy ground slots are encoded with presence=1.0, exact radar (x, y), role-normalized HP,
+            # alive, and invulnerable completely independently of camera visibility.
             w, h = obs_r['arena']['width'], obs_r['arena']['height']
             by_slot = {r['slot']: r for r in obs_r['radar']}
             for s in GROUND_SLOTS:
                 off = 18 + 4 * 7 + SLOTS.index(s) * 11
                 r = by_slot[s]
+                hp_ref = 600.0 if s == 1 else 400.0
                 self.assertEqual(vec[off], 1.0)
                 self.assertAlmostEqual(vec[off + 1], 2 * r['x'] / w - 1, places=5)
                 self.assertAlmostEqual(vec[off + 2], 2 * r['y'] / h - 1, places=5)
                 self.assertEqual(vec[off + 3:off + 5], [0.0, 0.0])  # vx, vy only when optically tracked
-                self.assertAlmostEqual(vec[off + 5], r['hp'] / r['max_hp'], places=5)
+                self.assertAlmostEqual(vec[off + 5], r['hp'] / hp_ref, places=5)
                 self.assertEqual(vec[off + 6], 1.0)
                 self.assertEqual(vec[off + 7], float(r['invulnerable']))
                 self.assertEqual(vec[off + 8:off + 11], [0.0, 0.0, 0.0])  # no prior leak
@@ -2031,13 +2042,13 @@ class Stage3FixRegressionTests(unittest.TestCase):
         }]
         obs['radar'] = [
             {'id': 'blue-3', 'slot': 3, 'team': 'blue', 'role': 'infantry',
-             'x': 12.0, 'y': 7.5, 'hp': 150.0, 'max_hp': 200.0, 'alive': True, 'invulnerable': False},
+             'x': 12.0, 'y': 7.5, 'hp': 150.0, 'alive': True, 'invulnerable': False},
             {'id': 'blue-4', 'slot': 4, 'team': 'blue', 'role': 'infantry',
-             'x': 0.80, 'y': 8.12, 'hp': 120.0, 'max_hp': 200.0, 'alive': True, 'invulnerable': True},
+             'x': 0.80, 'y': 8.12, 'hp': 120.0, 'alive': True, 'invulnerable': True},
             {'id': 'blue-1', 'slot': 1, 'team': 'blue', 'role': 'heavy',
-             'x': 20.0, 'y': 7.5, 'hp': 0.0, 'max_hp': 400.0, 'alive': False, 'invulnerable': False},
+             'x': 20.0, 'y': 7.5, 'hp': 0.0, 'alive': False, 'invulnerable': False},
             {'id': 'blue-6', 'slot': 6, 'team': 'blue', 'role': 'aerial',
-             'x': 25.0, 'y': 1.0, 'hp': 0.0, 'max_hp': 0.0, 'alive': True, 'invulnerable': False},
+             'x': 25.0, 'y': 1.0, 'hp': 0.0, 'alive': True, 'invulnerable': False},
         ]
         witness = TerrainWitness(use_prior=False)
         witness._tunnel[4] = True
@@ -2049,13 +2060,13 @@ class Stage3FixRegressionTests(unittest.TestCase):
         self.assertEqual(encoded[off3], 1.0)
         self.assertAlmostEqual(encoded[off3 + 3], 0.2, places=5)   # optical vx/10
         self.assertAlmostEqual(encoded[off3 + 4], -0.1, places=5)  # optical vy/10
-        self.assertAlmostEqual(encoded[off3 + 5], 0.75, places=5)  # HP ratio
-        # Occluded slot 4 gets exact radar coordinates, HP=0.6, alive=1.0, invulnerable=1.0, presence=1.0!
+        self.assertAlmostEqual(encoded[off3 + 5], 150.0 / 400.0, places=5)  # role-ref HP
+        # Occluded slot 4 gets exact radar coordinates, HP=120/400=0.3, alive=1.0, invulnerable=1.0, presence=1.0!
         self.assertEqual(encoded[off4], 1.0)
         self.assertAlmostEqual(encoded[off4 + 1], 2 * 0.80 / 28.0 - 1, places=5)
         self.assertAlmostEqual(encoded[off4 + 2], 2 * 8.12 / 15.0 - 1, places=5)
         self.assertEqual(encoded[off4 + 3:off4 + 5], [0.0, 0.0])
-        self.assertAlmostEqual(encoded[off4 + 5], 0.6, places=5)
+        self.assertAlmostEqual(encoded[off4 + 5], 120.0 / 400.0, places=5)
         self.assertEqual(encoded[off4 + 6], 1.0)
         self.assertEqual(encoded[off4 + 7], 1.0)
         self.assertEqual(encoded[off4 + 8:off4 + 11], [1.0, 0.0, 0.0])  # latched witness preserved
@@ -2065,6 +2076,32 @@ class Stage3FixRegressionTests(unittest.TestCase):
         self.assertEqual(encoded[off1 + 6], 0.0)
         # Aerial slot 6 radar entry ignored.
         self.assertEqual(encoded[off6:off6 + 11], [0.0] * 11)
+
+    def test_official_lineup_r35_validation_and_sandbox_override(self):
+        from rmuc2027_core.models import validate_official_lineups
+        valid_min = {
+            'red': [{'slot': 1, 'model': 2711}, {'slot': 3, 'model': 2731}, {'slot': 7, 'model': 2771}],
+            'blue': [{'slot': 1, 'model': 2711}, {'slot': 3, 'model': 2731}, {'slot': 7, 'model': 2771}],
+        }
+        validate_official_lineups(valid_min)
+        too_few_ground = {
+            'red': [{'slot': 1, 'model': 2711}, {'slot': 3, 'model': 2731}, {'slot': 6, 'model': 2761}],
+            'blue': valid_min['blue'],
+        }
+        with self.assertRaisesRegex(ValueError, 'R35'):
+            validate_official_lineups(too_few_ground)
+        with self.assertRaisesRegex(ValueError, 'R35'):
+            Match(42, 10, 'rmuc2027', lineups=too_few_ground)
+        two_heavies = {
+            'red': [{'slot': 1, 'model': 2711}, {'slot': 2, 'model': 2712}, {'slot': 3, 'model': 2731}],
+            'blue': valid_min['blue'],
+        }
+        with self.assertRaisesRegex(ValueError, 'heavy'):
+            validate_official_lineups(two_heavies)
+        # Sandbox override still allows 1v1 fixtures when explicitly requested.
+        sandbox = {'red': [{'slot': 1, 'model': 2711}], 'blue': [{'slot': 1, 'model': 2711}]}
+        with Match(42, 10, 'rmuc2027', lineups=sandbox, strict_lineup=False) as m:
+            self.assertEqual(len(m._frame['robots']), 2)
 
 
 if __name__ == '__main__':

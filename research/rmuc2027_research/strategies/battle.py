@@ -105,7 +105,7 @@ class Battle:
             # Explicit experimental selection; full acceptance is still pending.
             from ..rl.warp_kinematic.batching import make_adapter
             adapter = make_adapter(sim_device)
-        self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter), sandbox, [], False
+        self.match, self.sandbox, self.policies, self.closed = Match(seed, duration, map_name, lineups=lineups, battle_settings=battle_settings, physics_adapter=adapter, strict_lineup=decks is None), sandbox, [], False
         if self.timed_assembly:
             # Fixed opening navigation executes in this process. Build its
             # static clearance graph before timed policy decisions begin.

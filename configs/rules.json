@@ -29,7 +29,7 @@
     "adaptations": {
       "excluded_systems": [
         "dart",
-        "radar",
+        "radar_marking_and_adaptive_armor",
         "electronic_countermeasures"
       ],
       "team_size": 5,
@@ -51,7 +51,6 @@
       "semi_automatic_sentry_unavailable": "no human commander exists in this arena",
       "adaptive_armor_excluded": "only the radar can select the reinforced centre (5.2); all armor stays default x1",
       "radar_marking_and_double_vulnerability_excluded": true,
-      "information_and_jamming_waves_excluded": true,
       "dart_hits_and_dart_buff_suspension_excluded": true,
       "commander_interventions_excluded": true,
       "minimum_first_game_lineup_ground_robots": 3,
@@ -64,7 +63,12 @@
         108,
         110,
         112
-      ]
+      ],
+      "radar_info_wave_enabled": true,
+      "radar_info_wave_note": "5.7.4 / 0x0A01-0x0A05 radar info-wave is decoded by default (obs.radar & obs.radar_team); radar visual marking P, double vulnerability, adaptive armor, and jamming waves remain excluded",
+      "jamming_waves_excluded": true,
+      "collision_damage_excluded": "Table 5-2 2 HP armor collision damage is omitted (only collision events are emitted); only projectile and aerial impact damage apply",
+      "minute_boundary_convention": "180s/240s thresholds use exact elapsed minutes (1s offset from Table 2-1 countdown wording)"
     },
     "damage": {
       "17mm": 20,
@@ -1291,7 +1295,8 @@
             "positioning",
             "main_controller",
             "power_management",
-            "light_bar"
+            "light_bar",
+            "supercap_manager"
           ],
           "pages": [
             26,
@@ -1505,9 +1510,9 @@
     "aerial_flight_altitude_m": 1.9,
     "gravity_mps2": 9.81,
     "vision_range_m": {
-      "hero": 18,
-      "engineer": 15,
+      "heavy": 18,
       "infantry": 18,
+      "sentry": 20,
       "aerial": 24
     },
     "infantry_trigger_interval_s": 0.05,
@@ -1564,7 +1569,7 @@
     ],
     "physics_engine": "rapier3d-f64 0.26.1 enhanced-determinism; 120Hz rigid bodies and ray suspension",
     "physics_dt_s": 0.008333333333333333,
-    "robot_hardware": "19 selectable symmetric hardware designs; default six-model lineup preserved; construction bounds enforced",
+    "robot_hardware": "20 selectable symmetric hardware designs; default five-entity RMUC 2027 lineup preserved; construction bounds enforced",
     "hardware_authority": "robot_designs is authoritative; family specs speed/acceleration are retained only for old SDK compatibility",
     "air_density_kgpm3": 1.225,
     "sphere_drag_coefficient": 0.47,
@@ -1574,9 +1579,24 @@
       "note": "Ground FPV follows the physical muzzle direction and chassis pose. Own robot state and referee telemetry remain unrestricted; aerial vision keeps its existing coverage."
     },
     "timed_assembly_profile": {
-      "duration_s": [10, 15, 20, 30],
-      "single_probability": [0.95, 0.85, 0.70, 0.50],
-      "dual_probability": [0.98, 0.92, 0.85, 0.70]
+      "duration_s": [
+        10,
+        15,
+        20,
+        30
+      ],
+      "single_probability": [
+        0.95,
+        0.85,
+        0.7,
+        0.5
+      ],
+      "dual_probability": [
+        0.98,
+        0.92,
+        0.85,
+        0.7
+      ]
     },
     "assembly_difficulties": [
       {
@@ -1654,7 +1674,8 @@
     "hangar_recharge_w": 0,
     "sentry_supply_card": "supply zone polygon",
     "arm_lift_speed_mps": 0.15,
-    "arm_flip_speed_deg_s": 180
+    "arm_flip_speed_deg_s": 180,
+    "overheat_fpv_policy": "RMUC 2027 5.1.3: overheating disconnects human-operated robot FPV until heat reaches 0; automatic sentry has no operator FPV"
   },
   "robot_designs": {
     "2773": {
@@ -1815,9 +1836,9 @@
         0.58
       ],
       "extended_m": [
-        0.66,
-        0.66,
-        0.8
+        1.05,
+        1.02,
+        1.09
       ],
       "chassis_size_m": [
         0.42,
@@ -2099,16 +2120,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.21,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "power",
       "weapon_profile": "cooling",
       "armor_count": 4,
@@ -2253,7 +2265,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "4": {
       "slot": 4,
@@ -2318,16 +2342,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.27,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "power",
       "weapon_profile": "burst",
       "armor_count": 4,
@@ -2453,7 +2468,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "7": {
       "slot": 7,
@@ -2518,16 +2545,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.275,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "hp",
       "weapon_profile": "cooling",
       "armor_count": 4,
@@ -2653,7 +2671,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "301": {
       "slot": 301,
@@ -2718,16 +2748,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.23,
-        0,
-        0.13
-      ],
+      "charge_receiver": false,
       "chassis_profile": "hp",
       "weapon_profile": "cooling",
       "armor_count": 4,
@@ -2859,7 +2880,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "302": {
       "slot": 302,
@@ -2924,16 +2957,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.27,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "power",
       "weapon_profile": "burst",
       "armor_count": 4,
@@ -3063,7 +3087,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "303": {
       "slot": 303,
@@ -3128,16 +3164,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.275,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "power",
       "weapon_profile": "cooling",
       "armor_count": 4,
@@ -3266,7 +3293,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "304": {
       "slot": 304,
@@ -3329,16 +3368,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.21,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "power",
       "weapon_profile": "cooling",
       "armor_count": 4,
@@ -3488,7 +3518,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "305": {
       "slot": 305,
@@ -3551,16 +3593,7 @@
       ],
       "supercap_nominal_j": 1800,
       "supercap_max_current_a": 12,
-      "charge_receiver": true,
-      "coil_size_m": [
-        0.1,
-        0.1
-      ],
-      "coil_offset_m": [
-        0.21,
-        0,
-        0.16
-      ],
+      "charge_receiver": false,
       "chassis_profile": "power",
       "weapon_profile": "cooling",
       "armor_count": 4,
@@ -3715,7 +3748,19 @@
           }
         ],
         "obstruction_boxes_m": []
-      }
+      },
+      "referee_modules": [
+        "main_controller",
+        "power_management",
+        "light_bar",
+        "small_armor_x4",
+        "speed_17mm",
+        "field_interaction",
+        "positioning",
+        "uv_charger",
+        "supercap_manager",
+        "video_transmitter"
+      ]
     },
     "2711": {
       "slot": 2711,

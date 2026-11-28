@@ -333,7 +333,7 @@ class ArenaService:
                 if selected!=season_rules.default_lineup(season) or season!=season_rules.DEFAULT_SEASON:lineups=mirrored_lineups(selected,season)
             fielded = lineups or mirrored_lineups(season_rules.default_lineup(season),season)
             skins = {team: self.custom_models.resolve(team, getattr(args, team + "_skins"), {d["model"] for d in fielded[team]}) for team in ("red", "blue")}
-            with Match(args.seed, args.duration, args.map, lineups=lineups, battle_settings=args.battle_settings) as match:
+            with Match(args.seed, args.duration, args.map, lineups=lineups, battle_settings=args.battle_settings, strict_lineup=not decks) as match:
                 self.frame = match.snapshot()
             self.error, self.paused, self.stopping, self.battle = None, False, False, None
             self.match_id = uuid.uuid4().hex[:16]

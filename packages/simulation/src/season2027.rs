@@ -284,11 +284,24 @@ impl Engine {
         let r = &self.robots[i];
         r.role == "infantry" && r.alive && !r.red_card && r.level < self.teams[&r.team].level_cap
     }
-    /// Table 5-14: only living infantry can receive unattributed XP. None denotes
-    /// non-projectile damage; infantry cannot normally deal 42 mm damage.
+    /// Table 5-14: all living infantry on `team`, including those at `level_cap`
+    /// (used as denominator and mean-XP level basis for non-projectile damage & kill fallback).
+    fn all_alive_infantry_2027(&self, team: &str) -> Vec<usize> {
+        self.robots
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.team == team && r.role == "infantry" && r.alive && !r.red_card)
+            .map(|(i, _)| i)
+            .collect()
+    }
+    /// Table 5-14: projectile damage fallback uses living infantry able to gain XP;
+    /// non-projectile damage (caliber=None) splits across all living infantry.
     fn fallback_xp_recipients_2027(&self, team: &str, caliber: Option<&str>) -> Vec<usize> {
         if caliber == Some("42mm") {
             return Vec::new();
+        }
+        if caliber.is_none() {
+            return self.all_alive_infantry_2027(team);
         }
         self.robots
             .iter()
@@ -329,7 +342,13 @@ impl Engine {
         let direct = source.filter(|i| self.robots[*i].team == team && self.can_gain_xp_2027(*i));
         let recipients = match direct {
             Some(i) => vec![i],
-            None => self.fallback_xp_recipients_2027(team, caliber),
+            None => {
+                if caliber == Some("42mm") {
+                    Vec::new()
+                } else {
+                    self.all_alive_infantry_2027(team)
+                }
+            }
         };
         if recipients.is_empty() {
             return;
@@ -487,6 +506,9 @@ impl Engine {
                 o.max_hp = hp;
                 o.owner = Some(controller.into());
                 o.armor_hit_times = vec![-1000.0; 6];
+                o.armor_hit_times_17 = vec![-1000.0; 6];
+                o.armor_hit_times_42 = vec![-1000.0; 6];
+                o.armor_hit_times_impact = vec![-1000.0; 6];
                 self.event(
                     "outpost_rebuilt",
                     json!({"team":controller,"position":id,"hp":hp}),
@@ -510,6 +532,7 @@ impl Engine {
     // ---- Per-tick rules before physics ------------------------------------------------
     pub(super) fn before_step_2027(&mut self, actions: &[Action]) {
         self.update_referee_locks();
+        self.update_heavy_42_masks();
         let now = self.time();
         let second = self.tick / 20;
         let whole = self.tick % 20 == 0;
@@ -659,6 +682,9 @@ impl Engine {
                 self.rulebook_rpc_2027(i, &actions[i].rpc);
             }
         }
+        // Re-evaluate 42 mm masks after pending_ammo deliveries, respawns, and buy_ammo RPCs
+        // so freshly armed heavy robots never suffer a 1-tick masked hit on the same tick.
+        self.update_heavy_42_masks();
         self.update_rune_motor_2027();
     }
     fn supply_heal_rate(&self, i: usize) -> f64 {
@@ -678,11 +704,15 @@ impl Engine {
                 && self.contacted_zone_2027(i, "outpost", Some(owner))
         })
     }
-    fn disengaged_2027(&self, i: usize) -> bool {
+    pub(super) fn disengaged_2027(&self, i: usize) -> bool {
         let r = &self.robots[i];
+        let now = self.time();
+        // Table 2-1 (p.16): disengaged at match start (respawned_at == 0); after respawn,
+        // requires 6 continuous seconds alive without firing or taking damage.
         r.alive
-            && self.time() - r.last_shot_time >= 6.0 - 1e-8
-            && self.time() - r.last_damage_time >= 6.0 - 1e-8
+            && now - r.last_shot_time >= 6.0 - 1e-8
+            && now - r.last_damage_time >= 6.0 - 1e-8
+            && (r.respawned_at <= 1e-8 || now - r.respawned_at >= 6.0 - 1e-8)
     }
     /// Posture effect values: (cooling multiplier, cooling ratio, power ratio, power multiplier,
     /// fixed power, defense, vulnerability, no heat).
@@ -701,16 +731,17 @@ impl Engine {
         };
         Some(self.rules["sentry"]["posture"][&r.posture][state].clone())
     }
-    fn settle_heat_power_2027(&mut self, i: usize) {
+    pub(super) fn settle_heat_power_2027(&mut self, i: usize) {
         let now = self.time();
         let r = self.robots[i].clone();
         let posture = self.posture_effect(&r);
         let p = posture.clone().unwrap_or(Value::Null);
-        // Same-kind gains take the maximum; posture reductions multiply afterwards.
+        // Same-kind gains take the maximum; posture reductions multiply afterwards
+        // and round to integer values per Table 5-28 (p.109).
         let mut cooling =
             (r.cooling_rate * r.cooling_multiplier).max(r.cooling_rate + r.cooling_bonus);
         if p["cooling_ratio"].is_number() {
-            cooling *= n(&p, "cooling_ratio");
+            cooling = (cooling * n(&p, "cooling_ratio")).round();
         }
         let actor = &mut self.robots[i];
         actor.heat = (actor.heat - cooling * 0.1).max(0.0);
@@ -724,7 +755,9 @@ impl Engine {
             return;
         }
         let limit = actor.power_limit;
-        actor.power_w = if active_until(actor.power_cutoff_until, now) {
+        actor.power_w = if active_until(actor.power_cutoff_until, now)
+            || active_until(actor.penalty_power_cutoff_until, now)
+        {
             0.0
         } else {
             actor.power_w
@@ -796,6 +829,13 @@ impl Engine {
         r.buffer_energy_j = 60.0;
         r.zone_contacts.clear();
         r.crossing_buffs.clear();
+        r.crossing_defense = 0.0;
+        r.crossing_defense_until = 0.0;
+        r.crossing_combo_until = 0.0;
+        r.crossing_cooling_until = 0.0;
+        if r.role == "heavy" && r.ammo > 0 {
+            r.heavy_42_masked = false;
+        }
         if instant {
             r.instant_revives += 1;
             r.power_boost_until = now + 4.0;
@@ -984,7 +1024,7 @@ impl Engine {
             self.start_rune_2027(&team);
         }
     }
-    fn posture_rpc(&mut self, i: usize, rpc: &Value) {
+    pub(super) fn posture_rpc(&mut self, i: usize, rpc: &Value) {
         let now = self.time();
         let r = self.robots[i].clone();
         let wanted = rpc
@@ -1009,6 +1049,10 @@ impl Engine {
             let actor = &mut self.robots[i];
             actor.posture = next.clone();
             actor.posture_enhanced = next_enhanced;
+            if next == "attack" && next_enhanced {
+                actor.heat = 0.0;
+                actor.overheated = actor.heat_permanent_lock;
+            }
             actor.posture_ready_at = now + n(&self.rules["sentry"]["posture"], "switch_cooldown_s");
             self.event(
                 "posture",
@@ -1260,11 +1304,65 @@ impl Engine {
             state.occupants = occupants;
         }
         self.update_positions();
+        // Rule 5.6.4.9 (p.107): enemy fortress 10 s hold to open base armor is shared by the
+        // attacking team (any living non-weak attacker occupying enemy fortress advances it, and
+        // progress pauses & is retained for 3 s across death or momentary deactivation).
+        let f_rule = self.rules["buffs"]["fortress"].clone();
+        let hold_target = n(&f_rule, "enemy_hold_to_open_base_s");
+        let retention = n(&f_rule, "enemy_timer_retention_s");
+        for owner in ["red", "blue"] {
+            if self.bases[owner].armor_open {
+                continue;
+            }
+            let zone_id = format!("{owner}_fortress");
+            let enemy_prefix = format!("{}-", opponent(owner));
+            let enemy_occupants: Vec<String> = self
+                .zones
+                .get(&zone_id)
+                .map(|z| {
+                    z.occupants
+                        .iter()
+                        .filter(|id| id.starts_with(&enemy_prefix))
+                        .cloned()
+                        .collect()
+                })
+                .unwrap_or_default();
+            let mut opened_by: Option<String> = None;
+            {
+                let b = self.bases.get_mut(owner).unwrap();
+                if !enemy_occupants.is_empty() {
+                    if b.fortress_enemy_hold > 0.0
+                        && now - b.fortress_enemy_last_contact > retention + 1e-8
+                    {
+                        b.fortress_enemy_hold = 0.0;
+                    }
+                    b.fortress_enemy_hold += DT;
+                    b.fortress_enemy_last_contact = now;
+                    if b.fortress_enemy_hold >= hold_target - 1e-8 {
+                        b.armor_open = true;
+                        opened_by = Some(enemy_occupants[0].clone());
+                    }
+                } else if b.fortress_enemy_hold > 0.0
+                    && now - b.fortress_enemy_last_contact > retention + 1e-8
+                {
+                    b.fortress_enemy_hold = 0.0;
+                }
+            }
+            if let Some(opener) = opened_by {
+                self.event(
+                    "base_armor_opened",
+                    json!({"team": owner, "robot": opener, "reason": "enemy_fortress"}),
+                );
+            }
+        }
         // Compose each robot's buffs: same kinds take the maximum (5.6.4.1).
         for i in 0..self.robots.len() {
             let r = self.robots[i].clone();
             let team = r.team.clone();
-            if now - r.fortress_last_contact > 3.0 + 1e-8 {
+            let enemy_base = &self.bases[opponent(&team)];
+            if enemy_base.fortress_enemy_hold <= 0.0
+                || now - enemy_base.fortress_enemy_last_contact > retention + 1e-8
+            {
                 self.robots[i].fortress_hold = 0.0;
             }
             let rune = self.runes[&team].clone();
@@ -1286,8 +1384,29 @@ impl Engine {
                 .crossing_buffs
                 .retain(|_, until| *until > now + 1e-8);
             let held = self.robots[i].crossing_buffs.clone();
-            if active_until(r.crossing_defense_until, now) {
-                defense = defense.max(r.crossing_defense);
+            let combo_active = active_until(r.crossing_combo_until, now);
+            let mut single_def = 0.0_f64;
+            let mut single_until = 0.0_f64;
+            for (k, &until) in &held {
+                if let Some(d) = self.rules["buffs"]["crossings"][k]["defense"].as_f64() {
+                    if d > single_def || (d == single_def && until > single_until) {
+                        single_def = d;
+                        single_until = until;
+                    }
+                }
+            }
+            let (eff_cdef, eff_cuntil) = if combo_active {
+                (
+                    n(&self.rules["buffs"], "different_crossing_defense"),
+                    r.crossing_combo_until,
+                )
+            } else {
+                (single_def, single_until)
+            };
+            self.robots[i].crossing_defense = eff_cdef;
+            self.robots[i].crossing_defense_until = eff_cuntil;
+            if eff_cdef > 0.0 {
+                defense = defense.max(eff_cdef);
             }
             if held.contains_key("tunnel_through") {
                 cooling = cooling.max(n(
@@ -1344,22 +1463,12 @@ impl Engine {
                                 }
                                 t.fortress_capacity = cap;
                                 t.fortress_ammo = t.fortress_ammo.min(cap);
-                            } else if !self.bases[&o].armor_open {
-                                vuln = vuln.max(n(f, "enemy_vulnerability"));
-                                let elapsed = (now - self.robots[i].fortress_last_contact).max(0.0);
-                                if elapsed <= DT + 1e-8 {
-                                    self.robots[i].fortress_hold += elapsed;
+                            } else {
+                                if !self.bases[&o].armor_open {
+                                    vuln = vuln.max(n(f, "enemy_vulnerability"));
                                 }
+                                self.robots[i].fortress_hold = self.bases[&o].fortress_enemy_hold;
                                 self.robots[i].fortress_last_contact = now;
-                                if self.robots[i].fortress_hold
-                                    >= n(f, "enemy_hold_to_open_base_s") - 1e-8
-                                {
-                                    self.bases.get_mut(&o).unwrap().armor_open = true;
-                                    self.event(
-                                        "base_armor_opened",
-                                        json!({"team":o,"robot":r.id,"reason":"enemy_fortress"}),
-                                    );
-                                }
                             }
                         }
                         _ => {}
@@ -1451,8 +1560,6 @@ impl Engine {
                 } else {
                     "tunnel_over".into()
                 });
-            } else if fresh && previous_order == Some(1) {
-                completed = Some("tunnel_through".into());
             }
             if completed.is_none() {
                 self.robots[i].crossings.insert(group.into(), now);
@@ -1480,28 +1587,32 @@ impl Engine {
         }
         let v = self.rules["buffs"]["crossings"][&buff].clone();
         let duration = n(&v, "duration_s");
-        // Holding a different crossing buff raises the defense to 50% (5.6.4.5).
-        let other = self.robots[i]
-            .crossing_buffs
-            .iter()
-            .any(|(k, until)| k != &buff && *until > now + 1e-8);
+        // Rule 5.6.4.5 (p.106): holding a different crossing buff (including tunnel_through)
+        // upgrades defense to 50% for max(remaining of held crossing buffs, new duration).
+        // Repeating the same crossing type never extends an existing 50% combo duration.
+        let mut other = false;
+        let mut held_remaining = 0.0_f64;
+        for (k, &until) in &self.robots[i].crossing_buffs {
+            if k != &buff && until > now + 1e-8 {
+                other = true;
+                held_remaining = held_remaining.max(until - now);
+            }
+        }
+        if other && active_until(self.robots[i].crossing_combo_until, now) {
+            held_remaining = held_remaining.max(self.robots[i].crossing_combo_until - now);
+        }
         self.robots[i]
             .crossing_buffs
             .insert(buff.clone(), now + duration);
         let r = &mut self.robots[i];
-        if v["defense"].is_number() || other {
-            let remaining = (r.crossing_defense_until - now).max(0.0);
-            let value = if other {
-                n(&self.rules["buffs"], "different_crossing_defense")
-            } else {
-                n(&v, "defense").max(if active_until(r.crossing_defense_until, now) {
-                    r.crossing_defense
-                } else {
-                    0.0
-                })
-            };
-            r.crossing_defense = value;
-            r.crossing_defense_until = now + duration.max(remaining);
+        if other {
+            r.crossing_combo_until = now + duration.max(held_remaining);
+            r.crossing_defense = n(&self.rules["buffs"], "different_crossing_defense");
+            r.crossing_defense_until = r.crossing_combo_until;
+        } else if v["defense"].is_number() && !active_until(r.crossing_combo_until, now) {
+            let single_rem = (r.crossing_defense_until - now).max(0.0);
+            r.crossing_defense = n(&v, "defense");
+            r.crossing_defense_until = now + duration.max(single_rem);
         }
         if buff == "road" {
             r.road_cooldown_until = now + n(&v, "cooldown_s");
@@ -1525,16 +1636,33 @@ impl Engine {
     }
 
     // ---- Firing, hits and damage ------------------------------------------------------
-    fn heavy_42_enabled(&self, team: &str) -> bool {
+    pub(super) fn update_heavy_42_masks(&mut self) {
         let now = self.time();
+        let dead_mask_s = n(&self.rules["damage"], "heavy_dead_42_mask_s");
+        for i in 0..self.robots.len() {
+            if self.robots[i].role != "heavy" {
+                continue;
+            }
+            let has_reserve = self.fire_reserve_2027(i).0;
+            let h = &mut self.robots[i];
+            if !h.alive && now - h.death_time >= dead_mask_s - 1e-9 {
+                h.heavy_42_masked = true;
+            } else if h.alive && (h.ammo > 0 || has_reserve) {
+                h.heavy_42_masked = false;
+            }
+        }
+    }
+    pub(super) fn heavy_42_enabled(&self, team: &str) -> bool {
+        let now = self.time();
+        let idle_mask_s = n(&self.rules["damage"], "heavy_idle_42_mask_s");
+        let dead_mask_s = n(&self.rules["damage"], "heavy_dead_42_mask_s");
         self.robots
             .iter()
             .filter(|r| r.team == team && r.role == "heavy")
             .any(|h| {
-                now - h.last_shot_time < n(&self.rules["damage"], "heavy_idle_42_mask_s") - 1e-9
-                    && (h.alive
-                        || now - h.death_time
-                            < n(&self.rules["damage"], "heavy_dead_42_mask_s") - 1e-9)
+                !h.heavy_42_masked
+                    && now - h.last_shot_time < idle_mask_s - 1e-9
+                    && (h.alive || now - h.death_time < dead_mask_s - 1e-9)
             })
     }
     fn fire_reserve_2027(&self, i: usize) -> (bool, u32) {
@@ -1560,8 +1688,10 @@ impl Engine {
         if r.role == "heavy" && !["fitted", "installed"].contains(&r.launcher.as_str()) {
             return Some("launcher");
         }
+        // Rule 5.6.4.1 & 5.6.4.7: assembly weapon power-off shares the 2 s release delay
+        // with assembly invulnerability.
         if r.role == "heavy" && self.assembly_active_for(&r.team)
-            && self.raw_zone(i, "assembly", Some(&r.team)) { return Some("assembly"); }
+            && self.contacted_zone_2027(i, "assembly", Some(&r.team)) { return Some("assembly"); }
         if r.overspeed_permanent_lock || active_until(r.overspeed_lock_until, now) {
             return Some("overspeed");
         }
@@ -1606,6 +1736,9 @@ impl Engine {
             }
             self.robots[i].cooldown = interval;
             self.robots[i].last_shot_time = now;
+            if heavy {
+                self.robots[i].heavy_42_masked = false;
+            }
             let no_heat = self
                 .posture_effect(&r)
                 .map(|p| p["no_heat"] == true)
@@ -1616,11 +1749,15 @@ impl Engine {
                 if self.robots[i].heat >= q2 {
                     self.robots[i].heat_permanent_lock = true;
                     self.robots[i].overheated = true;
+                    self.event(
+                        "overheat",
+                        json!({"robot":r.id,"heat":self.robots[i].heat,"limit":r.max_heat,"permanent":true}),
+                    );
                 } else if self.robots[i].heat > r.max_heat {
                     self.robots[i].overheated = true;
                     self.event(
                         "overheat",
-                        json!({"robot":r.id,"heat":self.robots[i].heat,"limit":r.max_heat}),
+                        json!({"robot":r.id,"heat":self.robots[i].heat,"limit":r.max_heat,"permanent":false}),
                     );
                 }
             }
@@ -1646,11 +1783,8 @@ impl Engine {
                 vy: direction[1] * speed + r.vy,
                 vz: direction[2] * speed + r.vz,
                 remaining: 40.0,
-                damage: if install_shot {
-                    0.0
-                } else {
-                    spec.damage * r.attack_multiplier
-                },
+                // Store raw base damage; attack buffs settle at hit time (5.6.4.1).
+                damage: if install_shot { 0.0 } else { spec.damage },
                 radius: if heavy { 0.02125 } else { 0.0084 },
                 deployed: false,
             });
@@ -1740,17 +1874,32 @@ impl Engine {
                 "armor_interval_17_s"
             },
         );
-        if self.time() - target.armor_hit_times[face] < interval - 1e-8 {
+        let last_hit = if heavy {
+            target.armor_hit_times_42[face]
+        } else {
+            target.armor_hit_times_17[face]
+        };
+        if self.time() - last_hit < interval - 1e-8 {
             return;
         }
-        let amount = (p.damage * (1.0 - target.defense_buff + target.vulnerability))
+        let source = self.robots.iter().position(|r| r.id == p.source);
+        let attack = source
+            .map(|si| self.robots[si].attack_multiplier)
+            .unwrap_or_else(|| {
+                let rune = &self.runes[&p.team];
+                if rune.status == "active" {
+                    rune.attack
+                } else {
+                    1.0
+                }
+            });
+        let amount = (p.damage * attack * (1.0 - target.defense_buff + target.vulnerability))
             .round()
             .max(0.0)
             .min(target.hp);
         if amount <= 0.0 {
             return;
         }
-        let source = self.robots.iter().position(|r| r.id == p.source);
         let victim_level = self.xp_level(index);
         let attacker = opponent(&target.team).to_string();
         let caliber = Some(if heavy { "42mm" } else { "17mm" });
@@ -1759,6 +1908,11 @@ impl Engine {
         r.hp -= amount;
         r.last_damage_time = now;
         r.armor_hit_times[face] = now;
+        if heavy {
+            r.armor_hit_times_42[face] = now;
+        } else {
+            r.armor_hit_times_17[face] = now;
+        }
         self.record_damage_2027(
             source,
             &attacker,
@@ -1781,7 +1935,10 @@ impl Engine {
             r.vx = 0.0;
             r.vy = 0.0;
             r.crossing_buffs.clear();
+            r.crossing_defense = 0.0;
             r.crossing_defense_until = 0.0;
+            r.crossing_combo_until = 0.0;
+            r.crossing_cooling_until = 0.0;
             r.pending_heal = None;
             r.respawn_progress = 0.0;
             r.respawn_required =
@@ -1906,15 +2063,37 @@ impl Engine {
                 "armor_interval_17_s"
             },
         );
-        if self.time() - b.armor_hit_times[plate.face] < interval - 1e-8 {
+        let last_hit = if heavy {
+            b.armor_hit_times_42[plate.face]
+        } else {
+            b.armor_hit_times_17[plate.face]
+        };
+        if self.time() - last_hit < interval - 1e-8 {
             return;
         }
-        let damage = (p.damage * (1.0 - self.structure_defense(team, outpost)))
+        let source = self.robots.iter().position(|r| r.id == p.source);
+        let attack = source
+            .map(|si| self.robots[si].attack_multiplier)
+            .unwrap_or_else(|| {
+                let rune = &self.runes[&p.team];
+                if rune.status == "active" {
+                    rune.attack
+                } else {
+                    1.0
+                }
+            });
+        let damage = (p.damage * attack * (1.0 - self.structure_defense(team, outpost)))
             .round()
             .max(0.0);
-        let source = self.robots.iter().position(|r| r.id == p.source);
         let attacker = p.team.clone();
-        let actual = self.damage_structure_2027(team, outpost, plate.face, damage, &attacker);
+        let actual = self.damage_structure_2027(
+            team,
+            outpost,
+            plate.face,
+            damage,
+            &attacker,
+            if heavy { 1 } else { 0 },
+        );
         if actual <= 0.0 {
             return;
         }
@@ -1946,6 +2125,7 @@ impl Engine {
         );
     }
     /// Applies structure damage and its consequences; returns the HP actually removed.
+    /// `hit_kind`: 0 = 17 mm, 1 = 42 mm, 2 = aerial impact (independent armor cooldowns).
     fn damage_structure_2027(
         &mut self,
         team: &str,
@@ -1953,6 +2133,7 @@ impl Engine {
         face: usize,
         damage: f64,
         attacker: &str,
+        hit_kind: u8,
     ) -> f64 {
         let now = self.time();
         let b = if outpost {
@@ -1962,6 +2143,11 @@ impl Engine {
         };
         let taken = damage.min(b.hp);
         b.armor_hit_times[face] = now;
+        match hit_kind {
+            0 => b.armor_hit_times_17[face] = now,
+            1 => b.armor_hit_times_42[face] = now,
+            _ => b.armor_hit_times_impact[face] = now,
+        }
         if taken <= 0.0 {
             return 0.0;
         }
@@ -2048,7 +2234,7 @@ impl Engine {
                         {
                             continue;
                         }
-                        let fresh = now - b.armor_hit_times[plate.face] >= interval - 1e-8
+                        let fresh = now - b.armor_hit_times_impact[plate.face] >= interval - 1e-8
                             && now - dr.last_strike >= interval - 1e-8;
                         let attack = if self.runes[&team].status == "active" {
                             self.runes[&team].attack
@@ -2060,7 +2246,7 @@ impl Engine {
                             * (1.0 - self.structure_defense(&owner, outpost)))
                         .round();
                         let actual = if fresh {
-                            self.damage_structure_2027(&owner, outpost, plate.face, damage, &team)
+                            self.damage_structure_2027(&owner, outpost, plate.face, damage, &team, 2)
                         } else {
                             0.0
                         };
@@ -2792,7 +2978,7 @@ impl Engine {
     }
 
     // ---- Rune -------------------------------------------------------------------------
-    fn start_rune_2027(&mut self, team: &str) {
+    pub(super) fn start_rune_2027(&mut self, team: &str) {
         let was_activating = self.runes[team].status == "activating";
         self.start_rune(team);
         if !was_activating
@@ -2819,7 +3005,7 @@ impl Engine {
             self.rune_a * self.rune_omega * phase.cos(),
         )
     }
-    fn update_rune_motor_2027(&mut self) {
+    pub(super) fn update_rune_motor_2027(&mut self) {
         self.update_rune_motor();
     }
     pub(super) fn rune_hit_2027(&mut self, p: &Projectile, arm: usize, x: f64, y: f64, z: f64) {
@@ -2847,22 +3033,181 @@ impl Engine {
                 }
             }
         }
-        let before = self.runes[&p.team].status.clone();
         self.rulebook_rune_hit(p, arm, x, y, z);
-        let after = &self.runes[&p.team];
-        if before != "active" && after.status == "active" && after.mode == "large" {
-            let team = p.team.clone();
-            let count = self.large_activations(&team) + 1;
-            self.rune_large_count.insert(team, count);
-        }
     }
     fn large_activations(&self, team: &str) -> u32 {
         self.rune_large_count.get(team).copied().unwrap_or(0)
     }
 
+    // ---- Radar Info-Wave (5.7.4 & Protocol 0x0A01-0x0A05) -----------------------------
+    pub(super) fn radar_info_wave_2027(&self, team: &str) -> (Vec<Value>, Value) {
+        let enemy = opponent(team);
+        let enemy_prefix = format!("{enemy}-");
+        let own_prefix = format!("{team}-");
+        let fortress_zone_id = format!("{enemy}_fortress");
+        let radar: Vec<Value> = self
+            .robots
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.team == enemy && r.role != "aerial")
+            .map(|(i, r)| {
+                let fortress_bonus = if self.fortress_active(enemy)
+                    && self
+                        .zones
+                        .get(&fortress_zone_id)
+                        .map(|z| z.occupants.contains(&r.id))
+                        .unwrap_or(false)
+                {
+                    let per_shot = if is_42(&r.role) {
+                        n(&self.rules["buffs"]["fortress"], "heavy_reserve_per_42mm").max(1.0)
+                            as u32
+                    } else {
+                        1
+                    };
+                    self.teams[enemy].fortress_ammo / per_shot
+                } else {
+                    0
+                };
+                let recovery_buff = if r.alive && !r.weak {
+                    let supply = self.contacted_zone_2027(i, "supply", Some(enemy));
+                    let rate = self.supply_heal_rate(i);
+                    let outpost = !supply && self.on_controlled_outpost(i);
+                    let frac = if supply {
+                        rate
+                    } else if outpost {
+                        rate * n(&self.rules["heal"], "outpost_ratio_of_supply")
+                    } else {
+                        0.0
+                    };
+                    (frac * 100.0).round() as u32
+                } else {
+                    0
+                };
+                let effective_cooling =
+                    (r.cooling_rate * r.cooling_multiplier).max(r.cooling_rate + r.cooling_bonus);
+                let cooling_gain = (effective_cooling - r.cooling_rate).max(0.0).round();
+                let primary_state: u32 = if !r.alive {
+                    1
+                } else if r.invulnerable && r.weak {
+                    3
+                } else if r.invulnerable {
+                    2
+                } else {
+                    0
+                };
+                json!({
+                    "id": r.id,
+                    "slot": r.slot,
+                    "team": r.team,
+                    "role": r.role,
+                    "x": r.x,
+                    "y": r.y,
+                    "hp": r.hp,
+                    "alive": r.alive,
+                    "ammo": r.ammo + fortress_bonus,
+                    "recovery_buff": recovery_buff,
+                    "cooling_bonus": cooling_gain,
+                    "defense_buff": r.defense_buff,
+                    "vulnerability": r.vulnerability,
+                    "attack_multiplier": r.attack_multiplier,
+                    "invulnerable": r.invulnerable,
+                    "weak": r.weak,
+                    "primary_state": primary_state,
+                    "posture": r.posture,
+                    "posture_enhanced": r.posture_enhanced,
+                    "armor_hit_times": r.armor_hit_times
+                })
+            })
+            .collect();
+
+        let mut pos_map = serde_json::Map::new();
+        for pos_id in ["red_outpost", "blue_outpost", "red_base", "blue_base"] {
+            let state = self
+                .positions
+                .get(pos_id)
+                .map(|p| {
+                    if p.controller == enemy {
+                        p.control.as_str()
+                    } else {
+                        "none"
+                    }
+                })
+                .unwrap_or("none");
+            pos_map.insert(pos_id.into(), json!(state));
+        }
+
+        let mut zone_map = serde_json::Map::new();
+        let enemy_supply_active = self
+            .zones
+            .get(&format!("{enemy}_supply"))
+            .map(|z| z.occupants.iter().any(|id| id.starts_with(&enemy_prefix)))
+            .unwrap_or(false);
+        let enemy_hp_active = self
+            .zones
+            .get(&format!("{enemy}_high_point"))
+            .map(|z| z.occupants.iter().any(|id| id.starts_with(&enemy_prefix)))
+            .unwrap_or(false);
+        zone_map.insert("supply_active".into(), json!(enemy_supply_active));
+        zone_map.insert("high_point_active".into(), json!(enemy_hp_active));
+        for (zone_id, pos_id) in [
+            ("red_fortress", "red_base"),
+            ("blue_fortress", "blue_base"),
+            ("red_base", "red_base"),
+            ("blue_base", "blue_base"),
+            ("red_central", "red_outpost"),
+            ("blue_central", "blue_outpost"),
+            ("red_outpost", "red_outpost"),
+            ("blue_outpost", "blue_outpost"),
+        ] {
+            let status = if !self.controls(pos_id, enemy) {
+                "unknown"
+            } else if let Some(z) = self.zones.get(zone_id) {
+                let has_enemy = z.occupants.iter().any(|id| id.starts_with(&enemy_prefix));
+                let has_own = z.occupants.iter().any(|id| id.starts_with(&own_prefix));
+                match (has_enemy, has_own) {
+                    (true, true) => "both",
+                    (true, false) => "enemy",
+                    (false, true) => "own",
+                    (false, false) => "none",
+                }
+            } else {
+                "none"
+            };
+            zone_map.insert(zone_id.into(), json!(status));
+        }
+        let mut crossing_cards: Vec<String> = self
+            .arena
+            .zones
+            .iter()
+            .filter(|z| z.group.is_some())
+            .filter(|z| {
+                self.robots.iter().any(|r| {
+                    r.team == enemy
+                        && r.role != "aerial"
+                        && r.alive
+                        && !r.weak
+                        && r.zone_contacts.contains_key(&z.id)
+                })
+            })
+            .map(|z| z.id.clone())
+            .collect();
+        crossing_cards.sort();
+        zone_map.insert("crossing_cards".into(), json!(crossing_cards));
+
+        let radar_team = json!({
+            "team": enemy,
+            "resources": self.teams[enemy].resources,
+            "total_resources": self.teams[enemy].total_resources,
+            "positions": Value::Object(pos_map),
+            "zones": Value::Object(zone_map),
+        });
+        (radar, radar_team)
+    }
+
     // ---- After physics ----------------------------------------------------------------
     pub(super) fn after_step_2027(&mut self) {
         self.update_referee_locks();
+        self.update_heavy_42_masks();
         let now = self.time();
         self.assembly_after_step_2027();
         self.update_launcher_unlocks();
